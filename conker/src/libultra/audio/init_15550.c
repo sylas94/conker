@@ -2,7 +2,9 @@
 
 
 typedef struct {
-    s32 pad0;
+    u8  pad0[2];
+    u8  unk2; // used
+    u8  pad3;
     u8  unk4;
     s8  unk5; // used
 } struct152;
@@ -19,13 +21,62 @@ typedef struct {
     f32 unk34;  // used
 } struct154;
 
+typedef struct {
+    u8   pad0[0x34];
+    f32  unk34;  // 0x34
+    s32 *unk38;  // 0x38
+    u8   pad3C[0x8];
+    s16  unk44;  // 0x44
+    u8   pad46[0x9];
+    u8   unk4F;  // 0x4F
+    u8   unk50;  // 0x50
+    u8   unk51;  // 0x51
+    u8   pad52;
+    u8   unk53;  // 0x53
+} N_ALVoiceCfg;
+
+typedef struct N_ALList {
+    struct N_ALList  *unk0;  // 0x0
+    struct N_ALList **unk4;  // 0x4
+    s32               unk8;  // 0x8
+} N_ALList;
+
+typedef struct N_ALVoiceLink {
+    struct N_ALVoiceLink  *unk0;  // 0x0
+    struct N_ALVoiceLink **unk4;  // 0x4
+    u8                     pad8[0x50];
+} N_ALVoiceLink;
+
+typedef struct {
+    s32     unk0;   // 0x0
+    s32     unk4;   // 0x4
+    s32     unk8;   // 0x8
+    ALHeap *unkC;   // 0xC
+    s32     unk10;  // 0x10
+    u16     unk14;  // 0x14
+} N_ALSndpConfig2;
+
+typedef struct {
+    u8  pad0[0x54];
+    s32 unk54;
+} SndExt;
+
+typedef struct {
+    u16 unk0;  // 0x0
+    u8  pad2[2];
+    s32 unk4;  // 0x4
+} N_ALListSub;
+
 extern N_ALUnknownStruct1 *D_8002BA20;
 extern N_ALUnknownStruct1 *D_8002BA24;
 extern N_ALUnknownStruct1 *D_8002BA28;
 extern N_ALSndPlayer *D_8002BA2C;
 extern s16 D_8002BA30;
+extern u16 *D_800428B8;
 
 void func_10017298(N_ALUnknownStruct1 *arg0);
+void func_10016F80(N_ALList *arg0, s32 arg1, u16 arg2);
+s32 func_10015878(N_ALSndPlayer *sp);
 
 void func_10015550(N_ALCSPlayer *csp, s32 arg1) {
     N_ALEvent event;
@@ -36,7 +87,47 @@ void func_10015550(N_ALCSPlayer *csp, s32 arg1) {
     n_alEvtqPostEvent(&csp->evtq, &event, 0, 2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_15550/func_100155A0.s")
+void func_100155A0(N_ALSndpConfig2 *arg0) {
+    u32 i;
+    void *alloc;
+    N_ALEvent event;
+    N_ALVoiceLink *base;
+    N_ALVoiceLink *el;
+    N_ALVoiceLink *after;
+
+    D_8002BA2C->maxSounds = arg0->unk8;
+    D_8002BA2C->target = 0;
+    D_8002BA2C->drvr = n_syn;
+    D_8002BA2C->frameTime = 0x3E80;
+    alloc = alHeapDBAlloc(0, 0, arg0->unkC, arg0->unk0, 0x58);
+    D_8002BA2C->sndState = alloc;
+    ((SndExt *)D_8002BA2C)->unk54 = arg0->unk10;
+    alloc = alHeapDBAlloc(0, 0, arg0->unkC, arg0->unk4, 0x1C);
+    n_alEvtqNew(&D_8002BA2C->evtq, alloc, arg0->unk4);
+    D_8002BA28 = (N_ALUnknownStruct1 *)D_8002BA2C->sndState;
+    for (i = 1; i < arg0->unk0; i++) {
+        base = (N_ALVoiceLink *)D_8002BA2C->sndState;
+        el = &base[i];
+        after = &base[i] - 1;
+        el->unk0 = after->unk0;
+        el->unk4 = &after->unk0;
+        if (after->unk0 != 0) {
+            after->unk0->unk4 = &el->unk0;
+        }
+        after->unk0 = el;
+    }
+    D_800428B8 = alHeapDBAlloc(0, 0, arg0->unkC, 2, arg0->unk14);
+    for (i = 0; i < arg0->unk14; i++) {
+        D_800428B8[i] = 0x7FFF;
+    }
+    D_8002BA2C->node.next = NULL;
+    D_8002BA2C->node.handler = (ALVoiceHandler)func_10015878;
+    D_8002BA2C->node.clientData = D_8002BA2C;
+    n_alSynAddPlayer(&D_8002BA2C->node);
+    event.type = 32;
+    n_alEvtqPostEvent(&D_8002BA2C->evtq, &event, D_8002BA2C->frameTime, 3);
+    D_8002BA2C->nextDelta = n_alEvtqNextEvent(&D_8002BA2C->evtq, &D_8002BA2C->nextEvent);
+}
 
 s32 func_10015878(N_ALSndPlayer *sp) {
     N_ALSndPlayer *alsp;
@@ -86,53 +177,48 @@ void func_10016F00(struct154 *arg0) {
     n_alEvtqPostEvent(&D_8002BA2C->evtq, &event, 33333, 2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_15550/func_10016F80.s")
-// void func_10016F80(void *arg0, s32 arg1, u16 arg2) {
-//     void *sp3C;
-//     void *sp38;
-//     void *sp34;
-//     void *sp30;
-//     void *sp2C;
-//     s32 sp28;
-//     void *sp24;
-//     void *sp20;
-//     void *sp1C;
-//
-//     sp28 = osSetIntMask(1);
-//     sp3C = arg0->unk8;
-//     if (sp3C != 0) {
-// loop_1:
-//         sp38 = *sp3C;
-//         sp34 = sp3C;
-//         sp30 = sp38;
-//         sp2C = sp34 + 0xC;
-//         if ((sp2C->unk4 == arg1) && ((sp2C->unk0 & arg2) != 0)) {
-//             if (sp30 != 0) {
-//                 sp30->unk8 = (s32) (sp30->unk8 + sp34->unk8);
-//             }
-//             sp24 = sp3C;
-//             if (sp24->unk0 != 0) {
-//                 sp24->unk0->unk4 = (s32) sp24->unk4;
-//             }
-//             if (sp24->unk4 != 0) {
-//                 *sp24->unk4 = (s32) sp24->unk0;
-//             }
-//             sp20 = sp3C;
-//             sp1C = arg0;
-//             sp20->unk0 = (s32) *sp1C;
-//             sp20->unk4 = sp1C;
-//             if (*sp1C != 0) {
-//                 (*sp1C)->unk4 = sp20;
-//             }
-//             *sp1C = sp20;
-//         }
-//         sp3C = sp38;
-//         if (sp3C != 0) {
-//             goto loop_1;
-//         }
-//     }
-//     osSetIntMask(sp28);
-// }
+void func_10016F80(N_ALList *arg0, s32 arg1, u16 arg2) {
+    N_ALList *sp3C;
+    N_ALList *sp38;
+    N_ALList *sp34;
+    N_ALList *sp30;
+    N_ALListSub *sp2C;
+    s32 sp28;
+    N_ALList *sp24;
+    N_ALList *sp20;
+    N_ALList **sp1C;
+
+    sp28 = osSetIntMask(1);
+    sp3C = (N_ALList *)arg0->unk8;
+    while (sp3C != 0) {
+        sp38 = sp3C->unk0;
+        sp34 = sp3C;
+        sp30 = sp38;
+        sp2C = (N_ALListSub *)((u8 *)sp34 + 0xC);
+        if (sp2C->unk4 == arg1 && (sp2C->unk0 & arg2) != 0) {
+            if (sp30 != 0) {
+                sp30->unk8 = sp30->unk8 + sp34->unk8;
+            }
+            sp24 = sp3C;
+            if (sp24->unk0 != 0) {
+                sp24->unk0->unk4 = sp24->unk4;
+            }
+            if (sp24->unk4 != 0) {
+                *sp24->unk4 = sp24->unk0;
+            }
+            sp20 = sp3C;
+            sp1C = &arg0->unk0;
+            sp20->unk0 = *sp1C;
+            sp20->unk4 = sp1C;
+            if (*sp1C != 0) {
+                (*sp1C)->unk4 = &sp20->unk0;
+            }
+            *sp1C = sp20;
+        }
+        sp3C = sp38;
+    }
+    osSetIntMask(sp28);
+}
 
 N_ALUnknownStruct1 *func_10017100(s32 arg0, s16 arg1) {
     N_ALUnknownStruct1 *sp24;
@@ -233,48 +319,45 @@ s32 func_100173C4(N_ALUnknownEvent2 *arg0) {
     return ret;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_15550/func_10017438.s")
-// void *func_10017438(s32 arg0, s16 arg1, u16 arg2, u8 arg3, f32 arg4, u8 arg5, u8 arg6, void *arg7) {
-//     void *sp34;
-//     void *sp30;
-//     s16 sp2E;
-//     s32 sp28;
-//     void *sp1C;
-//     s16 sp18;
-//
-//     sp30 = NULL;
-//     sp2E = 0;
-//     if (arg1 != 0) {
-// loop_1:
-//         sp34 = func_10017100(arg0, arg1 - 1);
-//         if (sp34 != 0) {
-//             (*(void *)0x8002BA2C)->unk3C = sp34;
-//             sp18 = 0x4000;
-//             sp1C = sp34;
-//             sp34->unk4F = arg3;
-//             sp34->unk44 = arg2;
-//             sp34->unk34 = arg4;
-//             sp34->unk50 = arg5;
-//             sp34->unk51 = arg6;
-//             sp28 = 0;
-//             n_alEvtqPostEvent(D_8002BA2C + 20, &sp18, sp28 + 1, 2);
-//             sp30 = sp34;
-//         }
-//         arg1 = (u16)0;
-//         if (arg1 != 0) {
-//             if (sp34 != 0) {
-//                 goto loop_1;
-//             }
-//         }
-//         if ((sp30 == 0) || (sp30->unk53 = (u8) (sp30->unk53 | 1), sp30->unk38 = arg7, (sp2E != 0))) {
-//
-//         }
-//     }
-//     if (arg7 != 0) {
-//         *arg7 = sp30;
-//     }
-//     return sp30;
-// }
+void *func_10017438(s32 arg0, s16 arg1, u16 arg2, u8 arg3, f32 arg4, u8 arg5, u8 arg6, s32 *arg7) {
+    N_ALVoiceCfg *v;
+    N_ALVoiceCfg *last;
+    s16 flag;
+    s32 sp28;
+    N_ALEvent event;
+
+    last = NULL;
+    flag = 0;
+    if (arg1 != 0) {
+        do {
+            v = (N_ALVoiceCfg *)func_10017100(arg0, arg1 - 1);
+            if (v != 0) {
+                D_8002BA2C->target = (s32)v;
+                event.type = 0x4000;
+                event.msg.unknown1.unk0 = (N_ALUnknownStruct1 *)v;
+                v->unk4F = arg3;
+                v->unk44 = arg2;
+                v->unk34 = arg4;
+                v->unk50 = arg5;
+                v->unk51 = arg6;
+                sp28 = 0;
+                n_alEvtqPostEvent(&D_8002BA2C->evtq, &event, sp28 + 1, 2);
+                last = v;
+            }
+            arg1 = 0;
+        } while (arg1 != 0 && v != 0);
+        if (last != 0) {
+            last->unk53 |= 1;
+            last->unk38 = arg7;
+            if (flag != 0) {
+            }
+        }
+    }
+    if (arg7 != 0) {
+        *arg7 = (s32)last;
+    }
+    return last;
+}
 
 void func_10017594(N_ALUnknownStruct1 *arg0) {
     N_ALEvent event;
@@ -287,32 +370,24 @@ void func_10017594(N_ALUnknownStruct1 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_15550/func_10017604.s")
-// NON-MATCHING: stack isnt quite right
-// void func_10017604(u8 arg0) {
-//     s32 mask;
-//     struct31 *sp20;
-//     u16 foo;
-//     s16 sp1C;
-//     struct31 *sp18;
-//
-//     mask = osSetIntMask(1);
-//     sp18 = D_8002BA20;
-//     if (sp18 != 0) {
-//         do
-//         {
-//             sp1C = 1024;
-//             sp20 = sp18;
-//             if ((sp18->unk53 & arg0) == arg0) {
-//                 sp20->unk53 = sp20->unk53 & -0x11;
-//                 n_alEvtqPostEvent(D_8002BA2C + 20, &sp1C, 0, 2);
-//             }
-//             sp18 = sp18->unk0;
-//         }
-//         while (sp18);
-//     }
-//     osSetIntMask(mask);
-// }
+void func_10017604(u8 arg0) {
+    s32 mask;
+    N_ALEvent event;
+    N_ALUnknownStruct1 *ptr;
+
+    mask = osSetIntMask(1);
+    ptr = D_8002BA20;
+    while (ptr) {
+        event.type = 1024;
+        event.msg.unknown1.unk0 = ptr;
+        if ((ptr->unk53 & arg0) == arg0) {
+            event.msg.unknown1.unk0->unk53 &= -0x11;
+            n_alEvtqPostEvent(&D_8002BA2C->evtq, &event, 0, 2);
+        }
+        ptr = ptr->node.next;
+    }
+    osSetIntMask(mask);
+}
 
 void func_100176C4(void) {
     func_10017604(1);
@@ -333,35 +408,21 @@ void func_10017714(s32 arg0, s16 type, s32 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_15550/func_10017780.s")
-// NON-MATCHING: far from matching
-// void func_10017780(u8 arg0, u16 arg1) {
-//     s32 sp34;
-//     struct31 *sp30;
-//     s32 sp2C;
-//     struct31 *sp20;
-//     s16 sp1C;
-//     struct31 *temp_t4;
-//     struct31 *temp_t4_2;
-//
-//     sp34 = osSetIntMask(1);
-//     sp30 = D_8002BA20;
-//     D_800428B8[arg0] = arg1;
-//     sp2C = 0;
-//     if (sp30 != 0) {
-//         do
-//         {
-//             temp_t4 = sp30->unkC;
-//             // if ((temp_t4 != 0) && ((temp_t4->unk4->unk2 & 0x1F) == arg0)) {
-//             //     sp1C = 1024;
-//             //     sp20 = sp30;
-//             //     n_alEvtqPostEvent(D_8002BA2C + 20, &sp1C, 0, 2);
-//             // }
-//             sp2C = sp2C + 1;
-//             temp_t4_2 = sp30->unk0;
-//             sp30 = temp_t4_2;
-//         }
-//         while (temp_t4_2 != 0);
-//     }
-//     osSetIntMask(sp34);
-// }
+void func_10017780(u8 arg0, u16 arg1) {
+    s32 mask;
+    N_ALUnknownStruct1 *ptr;
+    s32 count;
+    N_ALEvent event;
+
+    mask = osSetIntMask(1);
+    ptr = D_8002BA20;
+    D_800428B8[arg0] = arg1;
+    for (count = 0; ptr != 0; count = count + 1, ptr = ptr->node.next) {
+        if (ptr->unkC != 0 && (((struct153 *)ptr->unkC)->unk4->unk2 & 0x1F) == arg0) {
+            event.type = 0x800;
+            event.msg.unknown1.unk0 = ptr;
+            n_alEvtqPostEvent(&D_8002BA2C->evtq, &event, 0, 2);
+        }
+    }
+    osSetIntMask(mask);
+}

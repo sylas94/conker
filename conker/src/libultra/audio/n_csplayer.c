@@ -97,12 +97,53 @@ void n_alCSPNew(N_ALCSPlayer *seqp, ALSeqpConfig *c)
 }
 
 // jump table
+// UNMATCHABLE via C switch: dispatches through EXTERNAL jump table jtbl_8002C460
+// (splat keeps it in 2C460.rodata.s; a C `switch` emits a LOCAL .rodata table that
+// cannot match the external reference). Left as pragma.
 #pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/n_csplayer/__n_CSPVoiceHandler.s")
 
 extern void (*jtbl_8002C4CC[])(void);
 // jump table
+// UNMATCHABLE via C switch: dispatches through EXTERNAL jump table jtbl_8002C4CC
+// (kept by splat in 2C460.rodata.s; the expected object has no local .rodata for it).
+// A C `switch` emits a LOCAL .rodata table that cannot match the external reference.
+// Best hand-reconstruction below reaches score 510 (all instructions match; residual is
+// purely the local jump-table data + external-vs-local reloc). Left as pragma.
+// static void __n_CSPHandleNextSeqEvent(N_ALCSPlayer *seqp)
+// {
+//     N_ALEvent   evt;
+//     if (!seqp->target || seqp->state == 3) {
+//     } else {
+//         n_alCSeqNextEvent(seqp->target, &evt, 1);   /* real proto has 3rd arg */
+//         switch (evt.type) {
+//             case AL_SEQ_MIDI_EVT:
+//                 __n_CSPHandleMIDIMsg(seqp, &evt);
+//                 __n_CSPPostNextSeqEvent(seqp);
+//                 break;
+//             case AL_TEMPO_EVT:
+//                 __n_CSPHandleMetaMsg(seqp, &evt);
+//                 __n_CSPPostNextSeqEvent(seqp);
+//                 break;
+//             case AL_SEQ_END_EVT:
+//                 seqp->state = AL_STOPPING;
+//                 evt.type = AL_SEQP_STOPPING_EVT;
+//                 n_alEvtqPostEvent(&seqp->evtq, &evt, AL_EVTQ_END, 0);
+//                 break;
+//             case AL_CSP_LOOPSTART:
+//             case AL_CSP_LOOPEND:
+//             case AL_CSP_NOTEOFF_EVT:
+//                 __n_CSPPostNextSeqEvent(seqp);
+//                 break;
+//             default:
+//                 break;
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/n_csplayer/__n_CSPHandleNextSeqEvent.s")
 // jump table
+// UNMATCHABLE via C switch: dispatches through EXTERNAL jump table jtbl_8002C520
+// (splat keeps it in 2C460.rodata.s; a C `switch` emits a LOCAL .rodata table that
+// cannot match the external reference). Left as pragma.
 #pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/n_csplayer/__n_CSPHandleMIDIMsg.s")
 
 void __n_CSPHandleMetaMsg(N_ALCSPlayer *seqp, N_ALEvent *event)
@@ -175,7 +216,41 @@ void __n_CSPHandleMetaMsg(N_ALCSPlayer *seqp, N_ALEvent *event)
   }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/n_csplayer/__n_CSPRepostEvent.s")
+void __n_CSPRepostEvent(ALEventQueue *evtq, N_ALEventListItem *item)
+{
+    N_ALEventListItem *thisNode;
+    N_ALEventListItem *next;
+
+    for (thisNode = (N_ALEventListItem *)&evtq->allocList; thisNode;
+         thisNode = (N_ALEventListItem *)thisNode->node.next) {
+        if (thisNode->node.next == 0) {
+            ALLink *element = (ALLink *)item;
+            ALLink *after = (ALLink *)thisNode;
+            element->next = after->next;
+            element->prev = after;
+            if (after->next)
+                after->next->prev = element;
+            after->next = element;
+            break;
+        } else {
+            next = (N_ALEventListItem *)thisNode->node.next;
+            if (item->delta < next->delta) {
+                next->delta -= item->delta;
+                {
+                    ALLink *element = (ALLink *)item;
+                    ALLink *after = (ALLink *)thisNode;
+                    element->next = after->next;
+                    element->prev = after;
+                    if (after->next)
+                        after->next->prev = element;
+                    after->next = element;
+                }
+                break;
+            }
+            item->delta -= next->delta;
+        }
+    }
+}
 
 void __n_setUsptFromTempo (N_ALCSPlayer *seqp, f32 tempo)
 {
