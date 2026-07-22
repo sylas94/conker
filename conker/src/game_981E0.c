@@ -642,7 +642,15 @@ void func_1506D570(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506D584.s")
 // ???
-#pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506D6B4.s")
+void func_1506D6B4(void) {
+    struct127 *p = D_800D154C;
+    s32 sel;
+    if (D_80099D4C == p->unk118) { return; }
+    if (p->unk118 < (f32) p->unk1A6) { return; }
+    if (p->health >= 2) { sel = 0x2C; } else { sel = 0x29; }
+    D_800D1580 = (D_800D1580 & 0xFFFF) | (sel = (sel << 10) << 14);
+    func_1506D584();
+}
 void func_1506D74C(void) {
     f32 sp34;
     f32 sp30;

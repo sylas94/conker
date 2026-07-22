@@ -871,7 +871,18 @@ void func_1505A184(u16 arg0, f32 arg1, f32 arg2, f32 *arg3, f32 *arg4, f32 *arg5
     *arg3 = s2 * arg1;
     *arg4 = -c2 * arg1;
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505A250.s")
+void func_1505A250(f32 arg0, f32 arg1, f32 arg2, f32 *arg3, f32 *arg4) {
+    f32 dx = arg0 - *arg3, dy = arg1 - *arg4, mag, sx, sy;
+    if (dx == 0.0f) { if (dy == 0.0f) return; }
+    mag = sqrtf((dx * dx) + (dy * dy));
+    arg2 *= D_800D1550[0];
+    sx = fabsf((dx / mag) * arg2);
+    sy = fabsf((dy / mag) * arg2);
+    if (0.0f <= dx) { *arg3 = *arg3 + sx; if (arg0 < *arg3) *arg3 = arg0; }
+    else            { *arg3 = *arg3 - sx; if (*arg3 < arg0) *arg3 = arg0; }
+    if (0.0f <= dy) { *arg4 = *arg4 + sy; if (arg1 < *arg4) *arg4 = arg1; }
+    else            { *arg4 = *arg4 - sy; if (*arg4 < arg1) *arg4 = arg1; }
+}
 
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505A3A8.s")

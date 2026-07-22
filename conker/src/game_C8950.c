@@ -178,7 +178,25 @@ s32 func_1509B8FC(s16 arg0) {
     func_1509B950(temp_v0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_C8950/func_1509B950.s")
+struct248 *func_1509B950(struct248 *arg0) {
+    struct248 *new_var;
+    s32 pad;
+
+    pad = 8 - (((s32)arg0 + arg0->unk4) & 7);
+    arg0->unkA = arg0->unk4 + pad;
+    arg0->unk4 = arg0->unkA + arg0->unk6;
+    arg0->unk4 = (arg0->unk4 - (((s32)arg0 + arg0->unk4) & 7)) + 8;
+
+    new_var = allocate_memory(arg0->unk4, 0xFF, 2, 0);
+    if (new_var == NULL) {
+        while (1) {}
+    }
+
+    bcopy(arg0, new_var, arg0->unk4);
+    bzero((u8 *)new_var + new_var->unkA, new_var->unk6);
+    func_10004074(arg0);
+    return new_var;
+}
 
 extern s32 D_8003C8E0;
 extern s32 D_800BE9F0;

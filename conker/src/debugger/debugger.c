@@ -486,7 +486,25 @@ void func_16001390(s16 arg0, s16 arg1, register s16 arg2, s16 arg3)
 #pragma GLOBAL_ASM("asm/nonmatchings/debugger/debugger/func_160014F0.s")
 
 // splat into framebuffer
-#pragma GLOBAL_ASM("asm/nonmatchings/debugger/debugger/func_1600160C.s")
+s32 func_1600160C(s32 arg0) {
+    s32 row;
+    s32 width;
+    s32 tmp;
+    s32 w2;
+
+    tmp = arg0 & 0xFFE0;
+    row = tmp;
+    width = D_160038A8;
+    if (width != 0x124) {
+        row = (tmp >> 2) + tmp;
+    }
+    w2 = width * 2;
+    row = (row >> 2) * w2;
+    row += (arg0 & 0x1F) << 4;
+    row += width * 4;
+    row += 0x10;
+    return D_8002AAE8[D_16003888] + row;
+}
 
 // contains delay slot
 void func_16001678(void) {

@@ -1,6 +1,13 @@
 #include <n_libaudio.h>
 #include "n_sndp.h"
 
+f32  func_1001CEA4(s32 arg0);
+void func_1001CA90(N_ALVoice *v, f32 pitch);
+void __n_seqpReleaseVoice(N_ALSeqPlayer *seqp, N_ALVoice *voice, ALMicroTime deltaTime);
+void func_1001A704(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3);
+extern f32 fabsf(f32);
+#pragma intrinsic (fabsf)
+
 
 void func_10019B50(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 vol) {
     N_ALSoundState *state;
@@ -40,7 +47,26 @@ void func_10019D6C(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
     seqp->chanState[chan].unk8 = arg3;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_19B50/func_10019D98.s")
+void func_10019D98(N_ALCSPlayer *seqp, u8 chan) {
+    N_ALSoundState *state;
+    s16 pan;
+    s8 keyoff;
+    f32 pb;
+
+    keyoff = seqp->chanState[chan].unk15 - 0x40;
+    pb = seqp->chanState[chan].pitchBend;
+
+    for (state = seqp->vAllocHead; state != NULL; state = state->voice.node.next) {
+        if (state->chan == chan) {
+            pan = seqp->chanState[chan].unk14;
+            n_alSynSetPan(&state->voice.node.prev, pan);
+            if (pan != 0) {
+                func_1001CA90(&state->voice.node.prev,
+                    func_1001CEA4((state->unk36 - (*(ALSound **)((u8 *)state + 0x24))->keyMap->keyBase) + keyoff) * 440.0f * pb);
+            }
+        }
+    }
+}
 
 void func_10019ED8(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
     seqp->chanState[chan].unk14 = arg3;
@@ -62,7 +88,36 @@ void func_10019F98(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_19B50/func_1001A030.s")
+void func_1001A030(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
+    N_ALSoundState *state;
+
+    seqp->chanState[chan].sustain = arg3;
+
+    for (state = seqp->vAllocHead; state != NULL; state = state->voice.node.next) {
+        if (state->chan == chan && *((u8 *)state + 0x39) != 3) {
+            if ((u32)arg3 >= 0x40) {
+                if (*((u8 *)state + 0x39) == 0) {
+                    *((u8 *)state + 0x39) = 2;
+                }
+            } else if (*((u8 *)state + 0x39) == 2) {
+                *((u8 *)state + 0x39) = 0;
+            } else if (*((u8 *)state + 0x39) == 4) {
+                *((u8 *)state + 0x39) = 3;
+                if (*((u8 *)&seqp->chanState[chan] + 0x28) != 0) {
+                    __n_seqpReleaseVoice(seqp, &state->voice.node.prev,
+                        (*(s32 *)((u8 *)&seqp->chanState[chan] + 0x24) < 0x3E80)
+                            ? 0x3E80
+                            : *(s32 *)((u8 *)&seqp->chanState[chan] + 0x24));
+                } else {
+                    __n_seqpReleaseVoice(seqp, &state->voice.node.prev,
+                        ((*(ALSound **)((u8 *)state + 0x24))->envelope->releaseTime < 0x3E80)
+                            ? 0x3E80
+                            : (*(ALSound **)((u8 *)state + 0x24))->envelope->releaseTime);
+                }
+            }
+        }
+    }
+}
 
 void func_1001A224(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
     N_ALSoundState *state;
@@ -101,8 +156,39 @@ void func_1001A3FC(struct24 *arg0, s32 arg1, s32 arg2, s32 arg3) {
     func_1001263C(arg0->unk36 * 100 + arg3, 0x7FFF, 0x40);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_19B50/func_1001A45C.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_19B50/func_1001A508.s")
+void func_1001A45C(N_ALCSPlayer *seqp, u8 chan) {
+    N_ALSoundState *state;
+    s16 tmp;
+    for (state = seqp->vAllocHead; state != NULL; state = state->voice.node.next) {
+        if ((state->chan == chan) && (state->unk38 != 3)) {
+            tmp = __n_vsVol(state, seqp);
+            n_alSynSetVol(&state->voice.node.prev, tmp, __n_vsDelta(state, seqp->curTime));
+        }
+    }
+}
+void func_1001A508(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
+    f32 delta;
+
+    if (seqp->chanState[chan].unkF == 0) {
+        seqp->chanState[chan].unkF = 0x88;
+    }
+    if (seqp->chanState[chan].unkE != arg3) {
+        delta = (f32)(arg3 - seqp->chanState[chan].unkD);
+        seqp->chanState[chan].unk10 = delta / (f32)(seqp->chanState[chan].unkF & 0x7F);
+        seqp->chanState[chan].unk10 = fabsf(seqp->chanState[chan].unk10);
+        if (seqp->chanState[chan].unkE == seqp->chanState[chan].unkD) {
+            seqp->chanState[chan].unkE = arg3;
+        } else {
+            seqp->chanState[chan].unkE = arg3;
+            return;
+        }
+        goto call_block;
+    }
+    return;
+call_block:
+    *((u8 *)arg1 + 0x9) = 0xFE;
+    func_1001A704(seqp, arg1, chan, arg3);
+}
 
 void func_1001A704(N_ALCSPlayer *seqp, s32 arg1, s32 chan, s32 arg3) {
     u8 sp2F;

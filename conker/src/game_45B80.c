@@ -227,7 +227,18 @@ Gfx *func_150195A0(Gfx *arg0, s16 arg1)
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_45B80/func_150198FC.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_45B80/func_15019BB8.s")
+void func_15019BB8(Gfx *arg0, s32 arg1) {
+    gSPViewport(arg0++, (s32)((u8 *)D_800BE628 + arg1 * 0x180) + D_800BE9C0 * 0x10 + 64);
+    arg0 = (Gfx *)func_1501A490((s32)arg0, arg1, 0, 0, 0, 0);
+    arg0 = (Gfx *)func_1517F4D8((s32)arg0, arg1);
+    arg0 = (Gfx *)func_1517F3A0((s32)arg0, arg1);
+    arg0 = (Gfx *)func_15180580((s32)arg0, arg1);
+    if ((D_800D18A0 & (1 << arg1)) || (D_800D18A2 & (1 << arg1))) {
+        arg0 = (Gfx *)func_1507DB6C((s32)arg0, arg1);
+    }
+    arg0 = (Gfx *)func_151674F8(arg0, 4, arg1, 0);
+    arg0 = (Gfx *)func_151674F8(arg0, 4, arg1, 1);
+}
 // NON-MATCHING: need to figure out what is going on
 // void func_15019BB8(struct14 *arg0, s32 arg1) {
 //     s32 temp_v0;

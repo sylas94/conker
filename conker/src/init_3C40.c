@@ -54,7 +54,15 @@ void func_10004308(void) {
     osSetIntMask(mask);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_3C40/func_100043B4.s")
+void func_100043B4(s32 *arg0, u32 arg1) {
+    OSIntMask mask;
+    struct54 *node;
+
+    mask = osSetIntMask(1);
+    node = (struct54 *)((u32)arg0 - 0xC);
+    node->unk8 = (node->unk8 & 0xFFFFFF) | (arg1 << 24);
+    osSetIntMask(mask);
+}
 // NON-MATCHING: missing an addiu
 // void func_100043B4(s32 *arg0, u32 arg1) {
 //     OSIntMask mask = osSetIntMask(1);

@@ -578,7 +578,43 @@ void func_15125690(struct108 *arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151256BC.s")
+void func_151256BC(struct108 *arg0) {
+    f32 twoPi;
+    f32 f12;
+    f32 m1;
+    f32 m2;
+    u32 v;
+
+    if ((arg0->unk2C & 0x80000) ||
+        (((arg0->unk5F0 & 8) != 0) && ((arg0->unk2C << 13) >= 0))) {
+        v = func_150ADA20();
+        twoPi = D_800A3534;
+        F29C += 2.0f * (f32) (v % 3) * D_800A3538 * D_800BE9A4;
+        while (twoPi < F29C) {
+            F29C -= twoPi;
+        }
+        F5EC += ((sinf(F29C) * 4.0f) - F5EC) * D_800A353C;
+        f12 = F5EC * D_800A3540;
+        if (arg0->unk2C & 0x80000) {
+            m1 = 4.0f;
+            m2 = 4.0f;
+        } else {
+            m1 = 1.0f;
+            m2 = 20.0f;
+        }
+        func_1508EF80(&arg0->unk2F8, &arg0->unk2BC, f12 * m1, &arg0->unk2F8);
+        func_1508EF80(&arg0->unk2BC, &arg0->unk2F8, f12 * m2, &arg0->unk2BC);
+    } else {
+        if (F29C == 0.0f) {
+            return;
+        }
+        F29C -= F29C * D_800A3544;
+        F5EC += ((sinf(F29C) * 4.0f) - F5EC) * D_800A3548;
+        f12 = F5EC * D_800A354C;
+        func_1508EF80(&arg0->unk2F8, &arg0->unk2BC, f12, &arg0->unk2F8);
+        func_1508EF80(&arg0->unk2BC, &arg0->unk2F8, f12 * 20.0f, &arg0->unk2BC);
+    }
+}
 void func_15125924(struct108 *arg0) {
     s32 temp_v1;
     s32 temp_a1;
