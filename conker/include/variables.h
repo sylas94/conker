@@ -689,6 +689,7 @@ extern f32 D_800A5168;
 extern f32 D_800A5178;
 extern f32 D_800A45B4;
 extern f32 D_800A5644;
+extern f32 D_800A56A4;
 extern f32 D_800A56A8;
 extern f32 D_800A56AC;
 extern f32 D_800A56B4;
