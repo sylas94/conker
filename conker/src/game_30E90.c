@@ -18,6 +18,24 @@ void func_150045BC(void) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_30E90/func_150045C4.s")
+
+// PERMUTER CANDIDATE (best 2190): correct record-array traversal + comparison chain, but
+// register allocation differs (target: count->v0, p->a1; IDO: count->v1, p->v0) and the
+// initial tag load is CSE'd+re-sign-extended vs the target's separate lb reload.
+// typedef struct { s8 unk0; u8 pad1[2]; u8 unk3; s32 unk4; } Rec50049A4;
+// s32 func_150049A4(Rec50049A4 *a0, s32 add1, s32 add2) {
+//     s32 count = 0; Rec50049A4 *p = a0; s8 tag;
+//     if (a0->unk0 == -0x21) return 0;
+//     tag = a0->unk0;
+//     do {
+//         count++;
+//         if (tag == -0x24) { if (p->unk3 == 0xE) p->unk4 += add2; }
+//         else if (tag == 1) p->unk4 += add1;
+//         else if (tag == 0xDE) p->unk4 += add1;
+//         p = &a0[count]; tag = p->unk0;
+//     } while (tag != -0x21);
+//     return count;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_30E90/func_150049A4.s")
 void func_15004A4C(void) {
     s32 i;

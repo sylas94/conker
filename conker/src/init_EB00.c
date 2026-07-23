@@ -1,6 +1,7 @@
 #include <ultra64.h>
-
+#define func_1000F85C func_1000F85C_hdr
 #include "functions.h"
+#undef func_1000F85C
 #include "variables.h"
 
 s32 func_10010E78(s32 arg0, s32 arg1, u16 arg2, s16 arg3, u8 arg4,
@@ -150,7 +151,56 @@ s32 func_1000ECCC(struct_init_EB00_1000ECCC *arg0, s32 arg1, s32 arg2, s32 arg3,
 //     return 0;
 // }
 
+// PERMUTER CANDIDATE / JUSTREG (best 65). Byte-perfect instruction stream; the
+// hoisted `and (temp_v1 & 0xFFFF0000)` at 0x304 colors to t0 (mine) vs t9 (target),
+// shifting every downstream temp by one. Sibling of matched func_1000ECCC; differs
+// only by the unguarded func_10010630 call, which perturbs the global coloring.
+// Tried OR/AND operand swaps (65/70). Needs permuter to shift the temp rotation.
+// s32 func_1000EDA0(struct_init_EB00_1000ECCC *arg0, s32 arg1, s32 arg2, s32 arg3,
+//                   s32 arg4, s32 arg5, u16 *arg6) {
+//     s16 temp_a1; s16 temp_t4; s32 temp_v1;
+//     temp_v1 = arg0->unk18.w;
+//     temp_a1 = temp_v1;
+//     if (*arg6 != 0) {
+//         arg0->unk18.w = (*arg6 << 16) | (temp_v1 & 0xFFFF);
+//         arg0->unk0 = 0; *arg6 = 0; temp_v1 = arg0->unk18.w;
+//     }
+//     temp_a1 -= D_800BE9E4;
+//     temp_t4 = temp_v1 >> 16;
+//     if (temp_a1 <= 0) {
+//         *arg6 = temp_t4; arg0->unk0 = temp_t4;
+//         func_10010630(*arg6, arg0->unk1C, arg0->unkC, arg0->unkA, arg0->unk8);
+//         return 1;
+//     }
+//     arg0->unk18.w = (temp_v1 & 0xFFFF0000) | temp_a1;
+//     return 0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000EDA0.s")
+
+// PERMUTER CANDIDATE (best 1650). Body is byte-correct (float trunc block, all casts
+// match: unk1C & 0xFF -> lw+andi, (u32)unk184 -> srl). Blocked by the return-placement /
+// branch-likely heuristic (same class as func_1000CDA0, memory: "unfixable from C"):
+// target emits `beqzl obj, EPILOGUE; li v0,1` guards (return value in v0 delay slot),
+// but IDO gives `bnezl obj, continue` with the next load hoisted into the delay, forcing
+// the return value into v1 + a trailing `move v0,v1` that cascades a v0/v1 swap on every
+// obj access. Tried early-return / || / single-return-var / inverted-guard: 1650-1990.
+// typedef struct { u8 pad0[2]; s16 unk2; s16 unk4; s16 unk6; u8 pad8[0x10];
+//     struct127 *unk18; s32 unk1C; u8 pad20[4]; u16 unk24; } struct_init_EB00_EE70;
+// s32 func_1000EE70(struct_init_EB00_EE70 *arg0, s32 arg1, s32 *arg2, s32 arg3,
+//                   s32 arg4, s32 *arg5) {
+//     struct127 *obj = arg0->unk18;
+//     if (obj == 0) { return 1; }
+//     if (*arg2 == 0) { return 1; }
+//     if ((obj->interaction_state != 0) && (obj->unique_id == (arg0->unk1C & 0xFF))) {
+//         *arg5 = (((u32) obj->unk184 >> 3) & 0x30) << 1;
+//         arg0->unk2 = (s16) obj->x_position;
+//         arg0->unk4 = (s16) obj->y_position;
+//         arg0->unk6 = (s16) obj->z_position;
+//         return 0;
+//     }
+//     if (func_1000F44C(arg0->unk24) != 0) { return 1; }
+//     return 0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000EE70.s")
 
 s32 func_1000EF40(struct57 *arg0, struct57 *arg1, s32 *arg2, s32 arg3, s32 arg4, s32 arg5, u16 *arg6) {
@@ -284,7 +334,26 @@ s32 func_1000F4D8(u16 arg0)
 
 #pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000F568.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000F6B8.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000F85C.s")
+typedef struct {
+    struct31 *unk0;
+    u8 pad4[8];
+} struct_init_EB00_425E8;
+extern struct_init_EB00_425E8 D_800425E8[];
+
+void func_1000F85C(u16 arg0, s16 arg1, s32 arg2) {
+    if (arg0 < 0x10) {
+        return;
+    }
+    if (func_1000F3D0(arg0) != 0) {
+        if (arg1 == 0x10) {
+            f32 sp1C = alCents2Ratio(arg2);
+            arg2 = *(s32 *)&sp1C;
+        } else if (arg1 == 0x11) {
+            arg1 = 0x10;
+        }
+        func_10017714((s32) D_800425E8[arg0 & 0xF].unk0, arg1, arg2);
+    }
+}
 
 void func_1000F91C(u16 arg0, u16 arg1, s16 arg2, u8 arg3, s32 arg4,
                    s16 arg5, s16 arg6, s16 arg7, s16 arg8, s16 arg9) {
@@ -356,6 +425,24 @@ u16 func_1000FA64(u16 arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4,
     }
     return 0;
 }
+// PERMUTER CANDIDATE (best 280). Everything matches (arg promotion s2-s6, all 5 bnel
+// field compares incl. operand order, the func_100111C8 guard, unk10|=0x80) EXCEPT the
+// D_80042760 count reload placement after the call: target sinks it call-path-only (merge
+// at the ori), IDO puts it at the merge so the beqzl skip-path reloads count too. Pointer
+// vs base[i] indexing: 520 vs 280; for/do-while/operand-order all tried. Reload-sink heuristic.
+// typedef struct { u16 unk0; s16 unk2; s16 unk4; s16 unk6; u16 unk8; u8 padA[6];
+//     s32 unk10; u8 pad14[0x10]; u16 unk24; u8 pad26[0xA]; } struct_init_EB00_FC18;
+// void func_1000FC18(u16 arg0, s16 arg1, s16 arg2, s16 arg3, u16 arg4) {
+//     struct_init_EB00_FC18 *base = (struct_init_EB00_FC18 *) D_80041FE0;
+//     s32 i;
+//     for (i = 0; i < D_80042760; i++) {
+//         if ((base[i].unk0 == arg0) && (arg1 == base[i].unk2) && (arg2 == base[i].unk4) &&
+//             (arg3 == base[i].unk6) && ((base[i].unk8 & 0x7FFF) == arg4)) {
+//             if (base[i].unk24 != 0) { func_100111C8(base[i].unk24); }
+//             base[i].unk10 |= 0x80;
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000FC18.s")
 void func_1000FD38(s32 arg0, s32 arg1, s32 arg2) {
     struct15 *p;
@@ -376,7 +463,23 @@ void func_1000FD38(s32 arg0, s32 arg1, s32 arg2) {
         }
     }
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000FDF4.s")
+// PERMUTER CANDIDATE / JUSTREG (best 40). The index form below is byte-perfect in
+// structure, ordering, and every other register EXCEPT the loop count D_80042760:
+// target keeps it in v0 (blez/slt/reload), IDO gives mine v1. Pure caller-saved
+// coloring; resisted for/while/reversed-compare/explicit-guard/do-while forms (all 40)
+// and a fn-ptr-cast (682, adds addr load). Needs the permuter to flip v0<->v1.
+void func_1000FDF4(u16 arg0) {
+    s32 i;
+    struct15 *temp;
+    for (i = 0; i < D_80042760; i++) {
+        if (D_80041FE0[i].unk24 == arg0) {
+            if ((temp = D_80041FE0)[i].unk24) {
+                func_100111C8(D_80041FE0[i].unk24);
+            }
+            D_80041FE0[i].unk10 |= 0x80;
+        }
+    }
+}
 s32 func_1000FE88(struct15 *arg0, s32 arg1, s32 *arg2) {
     if (arg1 < *arg2) {
         if (((struct15 *)((u8 *)arg0 + (arg1 * 0x30)))->unk24 != 0) {
@@ -504,16 +607,22 @@ void func_10010558(u16 arg0, struct127 *arg1, s32 arg2, s16 arg3, u16 arg4, s32 
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_10010630.s")
+// PERMUTER CANDIDATE (best 2084). Arg mapping / all casts byte-correct. Blocked by a
+// register-allocation divergence: target promotes arg2 to saved reg s1 (2 saved regs)
+// and schedules the func_1000EE70 %hi/%lo address late (inside the else); IDO keeps arg2
+// on the stack (1 saved reg, reloads it) and hoists the address into the camera branch,
+// cascading every temp + float register. Local-copy of arg2 didn't force promotion.
 // void func_10010630(u16 arg0, struct127 *arg1, s32 arg2, s16 arg3, u16 arg4) {
 //     if (arg1->interaction_state != 0) {
 //         if (arg1->camera != 0) {
-//             func_10010F30(arg0, arg2 & 0xFFFF, 64, 0, (((u32) arg1->unk184 >> 3) & 0x30) * 2); //
+//             func_10010F30(arg0, arg2 & 0xFFFF, 64, 0, (((u32) arg1->unk184 >> 3) & 0x30) * 2);
 //         } else {
-//             func_1000FA64(arg0, arg1->x_position, arg1->y_position, arg1->z_position, arg2, arg4, arg3, (void *)func_1000EE70, arg1, arg1->unique_id, 0, 0);
+//             func_1000FA64(arg0, arg1->x_position, arg1->y_position, arg1->z_position, arg2,
+//                           arg4, arg3, (void *) func_1000EE70, arg1, arg1->unique_id, 0, 0);
 //         }
 //     }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_10010630.s")
 
 void func_10010720(u16 arg0, struct127 *arg1, s32 arg2, s16 arg3, u16 arg4, s32 arg5) {
     if (arg5 <= 0) {

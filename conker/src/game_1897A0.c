@@ -45,6 +45,8 @@ void *func_1515C2F0(Struct1515C2F0Arg0 *arg0, s32 arg1, void *arg2, s32 arg3, u8
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515C388.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515C534.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515C6F4.s")
+// PERMUTER CANDIDATE (best 215): logic byte-identical (element base + unk94 cached), only
+// register renames remain (unk94 vs element-base register swap, -1 temp).
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515CF9C.s")
 
 typedef struct {

@@ -1104,6 +1104,10 @@ void func_151DBBD4(struct17 *arg0, s32 arg1, u8 *arg2, u8 arg3, s32 arg4) {
     func_151D9B8C(tmp2.unkF, (tmp2.unk0 * 25.0f) + 10.0f, ((tmp2.unk4 % 0x38U) + 200), arg1 + 4, &tmp, (func_150ADA20() % 0x97U) + 150, 0, 1, 0, arg3, arg4);
 }
 
+// PERMUTER CANDIDATE best 2152 — both call paths match byte-for-byte; only the ~40-instr
+// constant-init block diverges (target schedules the D_800AB414 palette address computation
+// first; IDO front-loads constants). Pure scheduler cascade. Reconstruction in
+// scratchpad/dbcbc_best.c (StructC151DBCBC + func_151DBCBC).
 #pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DBCBC.s")
 
 struct Struct151DBE80 {
@@ -1180,6 +1184,11 @@ void func_151DBE80(u8 arg0, f32 arg1, f32 arg2, s16 arg3, struct17 *arg4, s32 ar
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC034.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC260.s")
+// PERMUTER CANDIDATE best 1390 - first struct-build + func_15153F18 call matches byte-for-byte;
+// second struct-build (func_15150178) is a float register-rotation cascade: 7 floats fill
+// f0+f4-f18, the reconstruction is rotated one slot (0.0f->f6 vs f4) - uncontrollable from C
+// source order. Full reconstruction (DC484_A/DC484_B + func_151DC484) in scratchpad/dc484_best.c.
+// Sibling funcs func_151DC260 / func_151DC034 share the identical two-struct structure.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC484.s")
 
 // typedef struct {

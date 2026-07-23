@@ -100,8 +100,13 @@ void func_151419D0(struct102 *arg0, struct A1_151419D0 *arg1, u8 arg2) {
         }
     }
 }
+// PERMUTER/HARD: reconstruction is logically correct (best 2673) but has structural mismatches the C
+// can't easily force: target reloads D_8008A0B4[idx].unk0 for the indirect call (mine CSEs the != 0
+// test value), keeps the list node in a temp (mine promotes to a saved reg -> one extra saved reg),
+// and wants beqz+nop where IDO hoists the unk2F4 load into a beqzl delay slot. Calls func_15141C0C /
+// func_1510F8CC / func_15141CC0 (indexed fn ptrs D_8008A084[]), func_15141E38, and the func_1514ECE0
+// linked-list iterator (node->unk10 = elem, elem->unk28 = idx, elem->unkE = s16, node->unk14 = next).
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15141A7C.s")
-// requires jump table
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15141C0C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15141CC0.s")
 
@@ -277,7 +282,19 @@ s32 func_151422F8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
     return arg4;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15142314.s")
+void func_15142314(Mtx *arg0, s32 arg1, f32 *arg2) {
+    if (D_800C3E90 != 0) {
+        s16 *ip = (s16 *)((s32)arg0 + arg1 * 0x40);
+        arg2[0] = ((f32)(ip[0xC] << 16) + (f32)ip[0x1C]) * (1.0f / 65536.0f);
+        arg2[1] = ((f32)(ip[0xD] << 16) + (f32)ip[0x1D]) * (1.0f / 65536.0f);
+        arg2[2] = ((f32)(ip[0xE] << 16) + (f32)ip[0x1E]) * (1.0f / 65536.0f);
+    } else {
+        f32 *fp = (f32 *)((s32)arg0 + arg1 * 0x40);
+        arg2[0] = fp[0xC];
+        arg2[1] = fp[0xD];
+        arg2[2] = fp[0xE];
+    }
+}
 f32 func_151423D8(u8 arg0) {
     s32 temp_v1;
     s32 temp_v0 = arg0;
@@ -490,6 +507,10 @@ Gfx *func_15142FBC(Gfx *gfx, s32 arg1, s32 arg2, u8 *arg3) {
 s16 func_15143044(u8 arg0, s32 arg1) {
     return 0x7FFF - arg0;
 }
+// BLOCKED: jump table. Logic matches (got 1160->920 with case-6 polarity fixed) but the IDO-generated
+// jump table is an anonymous .rodata local vs the target's named jtbl_800A562C, which asm-differ counts
+// as a large diff. Reconstruction (switch arg3 1..6): 1:D_800915B0 2:D_80091514 3:0 4:D_80091564[arg1]
+// 5:arg1 6:{x=*(s32*)arg0; (u32)x>=0x10000000 ? ((s32*)x)[arg2] : x} default:D_80090B60[arg1].unk0[arg2]
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514306C.s")
 void func_15143134(struct17 *arg0, f32 *arg1, Mtx *arg2) {
     f32 sp38[4][4];
@@ -635,6 +656,14 @@ void func_15143874(s32 arg0, f32 arg1, f32 *arg2, f32 *arg3) {
     *arg3 = arg1 * temp;
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_151438D8.s")
+// PERMUTER CANDIDATE, best 100 (JUSTREG: byte-identical ops; target uses v1/a1 where IDO picks v0/v1)
+// permuter NO ZERO, best 100
+// void func_15143D18(s32 *arg0, s32 *arg1, s32 arg2, s32 arg3) {
+//     if (arg3 < arg2) { s32 t = arg2 ^ arg3; s32 t2 = arg3 ^ t; arg3 = t2; arg2 = t ^ t2; }
+//     if (*arg1 < *arg0) { *arg0 = *arg0 ^ *arg1; *arg1 = *arg1 ^ *arg0; *arg0 = *arg0 ^ *arg1; }
+//     if (*arg0 < arg2) { *arg0 = arg2; }
+//     if (arg3 < *arg1) { *arg1 = arg3; }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15143D18.s")
 s32 func_15143DA8(s32 *arg0, s32 arg1, s32 arg2) {
     s32 **pp = &arg0;
@@ -676,6 +705,29 @@ f32 func_15143E64(struct17 *arg0) {
     return sqrtf(x * x + y * y + z * z);
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15143E94.s")
+extern u8 D_80090B64[];
+
+// PERMUTER CANDIDATE, best 120 (JUSTREG: byte-perfect ops, 23 register renames, no structural diffs).
+// Full reconstruction below (loop temp lands in $a0, target uses $t5; return-val/max reg pairing).
+// permuter NO ZERO, best 45 (2x600s, improved from 120/55, no zero)
+// s32 func_1514401C(u8 arg0, s32 *arg1, s32 *arg2, u8 arg3) {
+//     s32 v1 = 0;
+//     s32 b = D_80090B64[arg0 * 12];
+//     s32 max = (b << 16) - 1;
+//     s32 t5;
+//     s32 t1 = (*arg2 += *arg1 * D_800BE9E4);
+//     if (max < t1) {
+//         if (arg3 & 1) { v1 = 1; }
+//         else if (arg3 & 2) { *arg1 = 0; *arg2 = max; }
+//         else if (arg3 & 4) { *arg2 = max - (t1 % max); *arg1 = -*arg1; }
+//         else { do { t5 = t1 - max; *arg2 = t5; t1 = t5; } while (max < t5); }
+//     } else if ((t1 < 0) && ((arg3 & 8) == 0)) {
+//         if (arg3 & 0x10) { *arg1 = 0; *arg2 = 0; }
+//         else if (arg3 & 4) { *arg2 = (-t1) % max; *arg1 = -*arg1; }
+//         else { do { t5 = t1 + max; *arg2 = t5; t1 = t5; } while (t5 < 0); }
+//     }
+//     return v1;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514401C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_151441A4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_151442FC.s")
@@ -905,6 +957,33 @@ s32 func_151451F0(struct17 *arg0, struct17 *arg1, struct17 *arg2, f32 arg3, f32 
     }
     return 0;
 }
+// PERMUTER CANDIDATE, best 1637 (structure byte-perfect: every instruction corresponds in order,
+// whole first ~30-instr block 3968-39c0 byte-identical, and the entire tail matches instruction-for-
+// instruction). Remaining diffs are purely IDO float-register coloring (target dy=f12,dz=f14,B=f2;
+// IDO gives dy=f2,dz=f12,B=f14 -- a coloring-priority swap that cascades) PLUS the target spills
+// `disc` to 0x1c and reloads it before the bc1f (frame 0x70 vs 0x68, shifting all stack offsets by 4).
+// Neither forceable from C (tried arg3^2-early local, *(f32*)&disc address-of spill, decl reorder,
+// D-as-separate-var -- all no help). Ray-sphere intersection; args from func_151451F0's call site.
+// s32 func_151452C4(struct17 *arg0, struct17 *arg1, struct17 *arg2, f32 arg3, struct17 *arg4,
+//                   struct17 *arg5, f32 *arg6, f32 *arg7) {
+//     struct17 sp58, sp4C, sp28; f32 dx,dy,dz,b,disc,t,f12,p0,p1;
+//     dx = arg2->unk0 - arg0->unk0; dy = arg2->unk4 - arg0->unk4; dz = arg2->unk8 - arg0->unk8;
+//     sp58 = *arg1; sp4C = *arg0;
+//     b = dx*sp58.unk0 + dy*sp58.unk4 + dz*sp58.unk8;
+//     disc = (dx*dx + dy*dy + dz*dz) - b*b;
+//     if ((arg3*arg3) < disc) return 0;
+//     t = sqrtf((arg3*arg3) - disc);
+//     f12 = t; if (b < t) f12 = -t;
+//     p0 = b - f12; p1 = b + f12;
+//     arg4->unk0 = p0*sp58.unk0 + sp4C.unk0; arg4->unk4 = p0*sp58.unk4 + sp4C.unk4;
+//     arg4->unk8 = p0*sp58.unk8 + sp4C.unk8; *arg6 = p0;
+//     arg5->unk0 = p1*sp58.unk0 + sp4C.unk0; arg5->unk4 = p1*sp58.unk4 + sp4C.unk4;
+//     arg5->unk8 = p1*sp58.unk8 + sp4C.unk8; *arg7 = p1;
+//     sp28.unk0 = arg4->unk0 - arg0->unk0; sp28.unk4 = arg4->unk4 - arg0->unk4;
+//     sp28.unk8 = arg4->unk8 - arg0->unk8;
+//     if (func_15144A74(&sp28, arg1) < 0.0f) return 0;
+//     return 1;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_151452C4.s")
 
 s32 func_151454BC(u8 arg0, f32 arg1, struct17 *arg2) {
@@ -1046,8 +1125,42 @@ u8 func_15145C90(s32 arg0) {
     }
 }
 
+// PERMUTER CANDIDATE, best 1982 (loop body byte-identical; target coalesces arg0/arg1 into one saved
+// reg by spilling arg1 to its home, IDO keeps both -> one extra saved reg cascade). Reconstruction:
+// struct s15145CD0 { f32 unk0,unk4,unk8; s16 padC,padE,unk10,unk12,unk14; };
+// void func_15145CD0(struct s15145CD0 *a0, struct17 **a1, struct17 **a2, s32 a3) {
+//     f32 m[4][4]; struct17 *v0,*v1; s32 i;
+//     func_150A8050(m,a0->unk0,a0->unk4,a0->unk8);
+//     m[3][0]=(f32)a0->unk10; m[3][1]=(f32)a0->unk12; m[3][2]=(f32)a0->unk14;
+//     for(i=a3;i>0;i--){ v0=*a1; v1=*a2; func_150A7960(m[0],v0->unk0,v0->unk4,v0->unk8,&v1->unk0,&v1->unk4,&v1->unk8); a1++; a2++; }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15145CD0.s")
+// PERMUTER CANDIDATE, best 962 (same one-extra-saved-reg cascade as func_15145CD0; loop body identical).
+// Same as CD0 but flat struct17 arrays: src++ by one struct17, three dest pointers p0/p1/p2 += 3 floats.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15145DB4.s")
+// PERMUTER CANDIDATE, best 1876 (body byte-perfect, all registers match: s0=dest, s1=counter,
+// s2=src, s3=matrix; loop back-edge bgtz matches). ONLY diff: target spills the pointer args a0/a1
+// to their home slots (0xa0/0xa4) and reloads s2/s0 from home at each branch's loop guard, which
+// fills the guard delay slot -> blez; IDO here moves a0->s2, a1->s0 directly (nothing for the guard
+// delay -> blezl) + frame 0x98 vs 0xa0. Pure spill-strategy micro-decision (permuter reload-through-
+// memory mutation). Reconstruction (arg0=struct17** src, arg1=struct17** dst, arg2=Mtx, arg3=count):
+// void func_15145EA4(struct17 **arg0, struct17 **arg1, Mtx *arg2, s32 arg3) {
+//     f32 sp5C[4][4]; struct17 *v, *dst;
+//     if (D_800C3E90 != 0) {
+//         guMtxL2F(sp5C, arg2);
+//         while (arg3 > 0) { v = *arg0;
+//             if (v && (v->unk0!=0.0f || v->unk4!=0.0f || v->unk8!=0.0f)) { dst=*arg1;
+//                 func_150A7960(sp5C[0], v->unk0,v->unk4,v->unk8, &dst->unk0,&dst->unk4,&dst->unk8); }
+//             else { func_15142314(arg2, 0, (f32*)*arg1); }
+//             arg3--; arg0++; arg1++; }
+//     } else {
+//         while (arg3 > 0) { v = *arg0;
+//             if (v && (v->unk0!=0.0f || v->unk4!=0.0f || v->unk8!=0.0f)) { dst=*arg1;
+//                 func_150A7960((f32*)arg2, v->unk0,v->unk4,v->unk8, &dst->unk0,&dst->unk4,&dst->unk8); }
+//             else { func_15142314(arg2, 0, (f32*)*arg1); }
+//             arg3--; arg0++; arg1++; }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15145EA4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15146078.s")
 extern u8 D_800BE9C0;

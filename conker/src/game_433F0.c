@@ -3,6 +3,24 @@
 #include "variables.h"
 
 
+// INSTRUCTIONS MATCH 100% (score 205 is only the jump-table reloc): the compiler
+// emits a local .rodata jump table, but expected references external jtbl_800966C0
+// in asm/data/23B040.rodata.s. Needs jtbl_800966C0 removed from that data file so the
+// compiler-generated table is used (rodata migration) -- outside this .c file.
+// extern s32 func_151E5FAC(void);
+// void func_15015F40(s16 arg0, s32 arg1) {
+//     switch (arg1) {
+//     case 0x1A: case 0x24: case 0x2B: case 0x2D:
+//     case 0x30: case 0x33: case 0x34: case 0x3F:
+//         D_800BE616 = 1;
+//         D_800BE9E8 = func_151E5FAC() - 1;
+//         break;
+//     default:
+//         D_800BE616 = 0;
+//         D_800BE9E8 = arg0 - 1;
+//         break;
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_433F0/func_15015F40.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_433F0/func_15015FBC.s")

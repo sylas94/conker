@@ -3,6 +3,7 @@
 #include "functions.h"
 #include "variables.h"
 
+void func_1000DEC4(void);
 
 struct151 *func_1000B1B0(s32 arg0) {
     s32 i;
@@ -18,26 +19,32 @@ struct151 *func_1000B1B0(s32 arg0) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000B1FC.s")
-// NON-MATCHING: something like this, but not this.
+// permuter NO ZERO best 20 (2x600s on form B, base 225 -> internal 50, no zero)
+// PERMUTER CANDIDATE (register/CSE near-miss). Two shapes reached:
+//  (A) index form `for(i=0;i<3;i++)` -> score 20: byte-perfect structure AND
+//      register alloc (end pointer in v0, re-materialized per loop, matching the
+//      target), but the strength-reduced loop end emits reloc %hi/%lo(D_800417B0+0xc)
+//      instead of the target's symbol %hi/%lo(D_800417BC). i<3 never names D_800417BC.
+//  (B) do-while referencing &D_800417BC (below) -> score 245: reloc is CORRECT
+//      (D_800417BC), but IDO CSEs &D_800417BC into a3 shared across BOTH loops,
+//      whereas the target re-materializes it into v0 per loop. Shared/scoped 'end'
+//      locals scored worse (465). The v0-per-loop alloc only comes from the strength
+//      reduction (form A), which can't carry the D_800417BC symbol -> permuter needed.
 // struct151 *func_1000B1FC(s32 arg0) {
-//     struct151 *phi_v1_2;
-//     u32 i;
-//
-//     for (i = 0; i < D_800417BC; i += 4) {
-//         if ( D_800417B0[i] != 0 &&  D_800417B0[i]->unk4 == arg0) {
-//             return  D_800417B0[i];
+//     s32 i; struct00 *temp;
+//     i = 0;
+//     do {
+//         if ((D_800417B0[i] != 0) && (arg0 == D_800417B0[i]->unk4)) return D_800417B0[i];
+//         i++;
+//     } while (&D_800417B0[i] < (struct151 **)&D_800417BC);
+//     i = 0;
+//     do {
+//         if (D_800417B0[i] != 0) {
+//             temp = D_800417B0[i]->unk60;
+//             if ((temp != 0) && (arg0 == temp->unk4)) return (struct151 *)temp;
 //         }
-//     }
-//
-//     for (i = 0; i < D_800417BC; i += 4) {
-//         if ( D_800417B0[i] != 0) {
-//             phi_v1_2 =  D_800417B0[i]->unk60;
-//             if (phi_v1_2 != 0 && phi_v1_2->unk4 == arg0) {
-//                 return phi_v1_2;
-//             }
-//         }
-//     }
-//
+//         i++;
+//     } while ((struct151 **)&D_800417BC != &D_800417B0[i]);
 //     return NULL;
 // }
 
@@ -720,6 +727,47 @@ s32 func_1000CD40(s32 arg0, s32 arg1, s32 arg2) {
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000CDA0.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000CEAC.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000D2F8.s")
+// PERMUTER CANDIDATE / near-miss (best 74): logic is BYTE-PERFECT — every instruction matches
+// 1:1. The ONLY diff is the frame size: target uses -0x40, this reconstruction -0x38 (8 bytes
+// smaller). The target reserves one extra 4-byte -g3 debug slot at 0x28 (never accessed) which
+// pushes the two accumulator spills +4 (acc_t1 0x28->0x2c, acc_a3 0x34->0x38) and the param homes
+// +8 (0x38/3c/40 -> 0x40/44/48). That slot is a debug slot for a register-resident local in the
+// original that DCE removes here (unused/aliased/array locals all get eliminated at -O2 -g3, and
+// distinct loop counters instead break the s0-reuse -> 1406). A permuter that adds one dummy stack
+// word closes it. sig: (f32 arg0, f32 arg1, s32 arg2) all homed & reloaded for the func_1000D2F8
+// loop. D_8002B074 field is read as a WORD via ((s32*)&D_8002B074[unk4])[1]; D_800427F4 as u16 (lhu).
+// void func_1000D758(f32 arg0, f32 arg1, s32 arg2) {
+//     s32 acc_a3, acc_t0, acc_s1, acc_t1, i, cls; struct151 *temp_v0;
+//     acc_a3 = acc_t0 = acc_s1 = acc_t1 = 0;
+//     if (D_80041F00 != 0) return;
+//     for (i = 0; i < 3; i++) {
+//         temp_v0 = D_800417B0[i];
+//         if (temp_v0 != NULL && temp_v0->unk4 > 0) {
+//             s32 field = ((s32 *)&D_8002B074[temp_v0->unk4])[1];
+//             cls = field & ~0xF0;
+//             if (field & 0x40)               acc_t0 |= (1 << i);
+//             if (cls == 5)                    acc_a3 |= (1 << i);
+//             else if (cls == 4 || cls == 3)   acc_s1 |= (1 << i);
+//             else if (cls == 1 || cls == 2)   acc_t1 |= (1 << i);
+//         }
+//     }
+//     if (acc_a3 != 0) {
+//         func_1000CBF0(0x1770, 0x400, (acc_a3 ^ 0xFF) ^ acc_t0);
+//         func_1000CBF0(0x8000, 0x6400, acc_a3);
+//     } else if (acc_s1 != 0) {
+//         func_1000CBF0(0x1F4, 0x400, acc_s1 ^ 0xFF);
+//         func_1000CBF0(0x8000, 0x800, acc_s1);
+//     } else {
+//         s32 v;
+//         if ((func_151F2CDC() == 1) &&
+//             ((((v = *(u16 *)&D_800427F4) < 0x7D) || (v >= 0x81)) && v < 0x1C9 && v != 0x170 && v != 0x171))
+//             func_1000CBF0(0x36B0, 0x200, acc_t1 ^ 0xFF);
+//         else
+//             func_1000CBF0(0x8000, 0x800, 0xFF);
+//     }
+//     for (i = 0; i < 3; i++) func_1000CEAC(i);
+//     for (i = 0; i < 3; i++) func_1000D2F8(i, arg0, arg1, arg2);
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000D758.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000D96C.s")
 void func_1000DE1C(s32 arg0, s32 arg1) {

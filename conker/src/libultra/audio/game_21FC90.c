@@ -2,6 +2,7 @@
 
 extern s32  D_800E0E00;
 extern s32  D_800E0E04;
+extern s32  D_800E0E08;
 extern s32  D_800E0E10;
 extern s16  D_800E0E14;
 extern s16  D_800E0E16;
@@ -149,42 +150,7 @@ void func_151F2E4C(s32 arg0, s32 arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/game_21FC90/func_151F2E88.s")
 
-void func_151F39E4(Voice39E4 *arg0) {
-    if ((arg0->unkE != arg0->unk88) || (arg0->unkC != arg0->unk94)) {
-        if (arg0->unk28 >= arg0->unk2C) {
-            arg0->unk1C = (D_8002BC10[arg0->unkC] * arg0->unkE) >> 15;
-            arg0->unk22 = (D_8002BD0E[-arg0->unkC] * arg0->unkE) >> 15;
-            arg0->unk28 = arg0->unk2C;
-            arg0->unk10 = arg0->unk1C;
-            arg0->unk12 = arg0->unk22;
-        } else {
-            arg0->unk10 = _getVol(arg0->unk10, arg0->unk28, arg0->unk1A, arg0->unk18);
-            arg0->unk12 = _getVol(arg0->unk12, arg0->unk28, arg0->unk20, arg0->unk1E);
-        }
-        if (arg0->unk10 == 0) {
-            arg0->unk10 = 1;
-        }
-        if (arg0->unk12 == 0) {
-            arg0->unk12 = 1;
-        }
-        arg0->unkE = arg0->unk88;
-        if ((arg0->unkE == 0) && (arg0->unk90 != 0)) {
-            func_151F2BA8();
-        }
-        if (arg0->unkC != arg0->unk94) {
-            if (D_800428C2 != 0) {
-                arg0->unkC = (arg0->unk94 >> 1) + 0x20;
-            } else if (D_800428C1 != 0) {
-                arg0->unkC = 0x40;
-            } else {
-                arg0->unkC = arg0->unk94;
-            }
-        }
-        arg0->unk28 = 0;
-        arg0->unk2C = ((arg0->unk90 + 0xB7) / 0xB8) * 0xB8;
-        arg0->unk24 = 1;
-    }
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/game_21FC90/func_151F39E4.s")
 
 void func_151F3C1C(s32 arg0) {
     D_800E0E00 = arg0;
@@ -194,32 +160,6 @@ void func_151F3C34(s32 arg0) {
     D_800E0DFC = arg0;
 }
 
-s32 func_151F3C4C(s32 arg0, void *arg1, s32 arg2, s32 arg3) {
-    s32 addr;
-    ALDMAproc dmaproc;
+#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/game_21FC90/func_151F3C4C.s")
 
-    if (arg3 != -1) {
-        D_800E0DE4 = arg3;
-    }
-    if (D_800E0DE4 + arg2 > D_800E0DE0) {
-        arg2 = D_800E0DE0 - D_800E0DE4;
-    }
-    dmaproc = N_SYN_DMA(n_syn)(&addr);
-    addr = dmaproc(D_800E0D80 + D_800E0DE4, arg2, 0);
-    if (addr == 0) {
-        return 0;
-    }
-    addr += 0x80000000;
-    osInvalDCache((void *)addr, arg2);
-    bcopy((void *)addr, arg1, arg2);
-    D_800E0DE4 += arg2;
-    return arg2;
-}
-
-void func_151F3D78(void) {
-    void *state;
-    ALDMAproc dmaproc;
-
-    dmaproc = N_SYN_DMA(n_syn)(&state);
-    dmaproc(D_800E0D80 + D_800E0DE4, 0x810, 0);
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/game_21FC90/func_151F3D78.s")

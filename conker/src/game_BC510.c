@@ -6,8 +6,36 @@
 extern s32 func_1510D0EC(s32, s32, s32, s32);
 void func_15042D94(s32, s32, u8, s32 *, ...);
 extern u8 D_D16[];
+extern u8 D_11AD[];
+extern s32 D_800D2450;
+void func_150A7D00(s32, f32, f32, f32);
+extern Gfx D_80084160[];
+extern Gfx D_80083440[];
+extern Gfx D_800835C0[];
+extern Gfx D_80084190[];
+extern f32 D_8009DD40;
+extern f32 D_8009DD44;
+extern f32 D_8009DD48;
+
+typedef struct {
+    Mtx  unk00[2];   /* 0x00 */
+    Gfx *unk80;      /* 0x80 */
+    Gfx *unk84[7];   /* 0x84 */
+    f32  unkA0;      /* 0xA0 */
+    f32  unkA4;      /* 0xA4 */
+    f32  unkA8;      /* 0xA8 */
+    s32  unkAC;      /* 0xAC */
+    u16  unkB0;      /* 0xB0 */
+    u16  unkB2;      /* 0xB2 */
+    u16  unkB4;      /* 0xB4 */
+    u16  unkB6;      /* 0xB6 */
+    u16  unkB8;      /* 0xB8 */
+    u8   unkBA;      /* 0xBA */
+} StructD24C8;
 
 // need to figure out D_800D2460
+// best 635: IDO folds constant index 2 to base=arr[0]; target keeps runtime
+// `li 2; sll; addu` base at arr[2] (de-optimized) — non-foldable, uncrackable from C.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_1508F060.s")
 
 void func_1508F0A4(void) {
@@ -51,6 +79,37 @@ void func_1508F9C4(void) {
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_15090630.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_1509093C.s")
 
+// PERMUTER CANDIDATE (best 7174, all display-list commands byte-correct):
+//  (1) IDO rematerializes &D_800D24C8 (lui/%lo) at every field access; target keeps
+//      it in saved reg s1 throughout. Neither u8*+cast nor struct-ptr forces promotion.
+//  (2) frame size 0xa8 (scratch at 0x90 passed to func_1510D0EC); scratch-array sizing
+//      overshoots/undershoots. Both are register-alloc/remat heuristics — permuter needed.
+// Gfx *func_150911F4(Gfx *arg0) {
+//     StructD24C8 *base = (StructD24C8 *)&D_800D24C8;
+//     s32 sp90[6]; s32 t0, t1, t2, t3;
+//     if (base->unkBA == 0) return arg0;
+//     gSPDisplayList(arg0++, D_80084160);
+//     gSPSetGeometryMode(arg0++, 0x400);
+//     gSPClearGeometryMode(arg0++, 0x0E0201);
+//     gSPClearGeometryMode(arg0++, 0x420000);
+//     if (base->unkBA < 0xFF) gSPSegment(arg0++, 8, D_80083440);
+//     else                    gSPSegment(arg0++, 8, D_800835C0);
+//     func_15043D90(&base->unk00[D_800BE9C0], -1.0f - base->unkA0, -11.0f + base->unkA8,
+//                   0.0f, D_8009DD40, D_8009DD40, D_8009DD40, D_8009DD44, 152.0f, D_8009DD48);
+//     gSPMatrix(arg0++, &base->unk00[D_800BE9C0], G_MTX_PROJECTION|G_MTX_LOAD|G_MTX_PUSH);
+//     gDPSetFogColor(arg0++, 0, 0, 0, 0xFF);
+//     gDPSetPrimColor(arg0++, 0xF2, 0, 0, 0, 0, 0);
+//     gDPSetEnvColor(arg0++, 0, 0, 0, base->unkBA);
+//     gSPSegment(arg0++, 3, &base->unk00[D_800BE9C0]);
+//     gSPSegment(arg0++, 1, base->unk84[D_800BE9C0]);
+//     t0 = base->unkB0; if (t0) gSPSegment(arg0++, 6, func_1510D0EC(t0,(s32)sp90,3,0));
+//     t1 = base->unkB2; if (t1) gSPSegment(arg0++, 7, func_1510D0EC(t1,(s32)sp90,3,0));
+//     t2 = base->unkB4; if (t2) gSPSegment(arg0++, 0xA, func_1510D0EC(t2,(s32)sp90,3,0));
+//     t3 = base->unkB6; if (t3) gSPSegment(arg0++, 0xB, func_1510D0EC(t3,(s32)sp90,3,0));
+//     gSPDisplayList(arg0++, base->unk80);
+//     gSPDisplayList(arg0++, D_80084190);
+//     return arg0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_150911F4.s")
 
 Gfx* func_15091534(Gfx* arg0, struct257 *arg1, u8 *arg2) {
@@ -123,5 +182,26 @@ void func_15093878(void) {
     D_800D244C = allocate_memory(0x80, 1, 1, 0);
 }
 
+// PERMUTER CANDIDATE (best 2014, logic byte-correct — all ops match):
+//  (1) saved-reg rotation: target s4=&D_11AD, s5=&D_800D2450, s6=30, s7=60;
+//      IDO gives s4=&D_800D2450, s5=30, s6=60, s7=&D_11AD (first-use order).
+//  (2) float args: target does runtime `li; mtc1; cvt.s.w` on 120/129/-303;
+//      IDO folds (f32)const / 120.0f / bare-int to immediate float bits (lui/ori).
+// Gfx *func_150938BC(Gfx *arg0) {
+//     s32 i, val, tex;
+//     val = (D_800D2450 / 30) % 60;
+//     i = 4;
+//     do {
+//         tex = func_1510D0EC((s32)&D_11AD[val % 10], 0, 3, 0);
+//         if (tex == (s32)0x80000000) return arg0;
+//         gSPSegment(arg0++, i, tex);
+//         if (i == 3) val = (D_800D2450 / 30) / 60; else val = val / 10;
+//         i--;
+//     } while (i != 0);
+//     func_150A7D00((D_800BE9C0 << 6) + D_800D244C, 120.0f, 129.0f, -303.0f);
+//     gSPMatrix(arg0++, (D_800BE9C0 << 6) + D_800D244C, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_PUSH);
+//     gSPDisplayList(arg0++, D_800D2448);
+//     return arg0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_150938BC.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_15093B58.s")

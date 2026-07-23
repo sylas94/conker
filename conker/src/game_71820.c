@@ -23,11 +23,15 @@ extern f32 D_80098D60;
 extern f32 D_80098D64;
 extern f32 D_80098D68;
 extern f32 sqrtf(f32);
+extern s32 D_800CBD9C;
+extern s32 func_15145C90(s32);
 s32 func_15044964(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
 
 #pragma function sqrtf
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_71820/func_15044370.s")
+void func_15044370(void) {
+    D_800CBD9C = 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_71820/func_15044380.s")
 
@@ -385,6 +389,14 @@ s32 func_15045800(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_71820/func_15045F8C.s")
 
+/* func_150461D0: PERMUTER CANDIDATE (best hand score 120, no register diffs).
+   Reconstruction in scratchpad/func_1504715C_recon.c. Follows the matched
+   func_150466F8 min/max template; sole diff is one delay-slot instruction: the
+   sp27 spill (func_15045880 result) is scheduled ASAP vs the target's ALAP into
+   func_15045D48's delay slot. */
+// PERMUTER-VERIFIED source exists (matches golden IN ISOLATION, score 0) but does NOT transfer
+// to the whole-file build (pscore 560) — IDO -g3 codegen is TU-context-dependent and the permuter
+// compiles single-function in isolation. See memory/conker-permuter-setup.md. Best in-file: 560.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_71820/func_150461D0.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_71820/func_15046460.s")
@@ -607,6 +619,11 @@ s32 func_150470B0(struct conker15045714 *a0, s32 a1, struct conker150472C0_dst *
     return 0;
 }
 
+/* func_1504715C: PERMUTER CANDIDATE (best hand score 2090, semantically correct).
+   Full reconstruction saved to scratchpad/func_1504715C_recon.c. Sole blocker is the
+   float bounding-box load/compute order: IDO schedules iz (feeds +-1000 arith) before
+   the plain-copy iy (ix/iz/iy -> a0/v1/v0 vs target ix/iy/iz -> t0/t3/t6), cascading
+   into the 6/1/%hi(D_800DBEF4) constant hoists. Everything else matches byte-for-byte. */
 #pragma GLOBAL_ASM("asm/nonmatchings/game_71820/func_1504715C.s")
 
 void func_150472C0(struct conker150472C0_dst *arg0, struct conker150472C0_src *arg1)

@@ -261,6 +261,30 @@ void func_1506B370(void) {
 void func_1506B3B0(void) {
 }
 
+// PERMUTER CANDIDATE (best 1479): logic byte-correct (all diffs are register-rename/schedule/frame,
+// no wrong ops). Residual: obj(D_800D154C) wants a1 (IDO gives a3, cascades all temps); target keeps
+// a redundant `v0 = mag` copy for the 2nd/3rd threshold compares; %hi(D_80099A3C) base is hoisted
+// early to before the call; frame 0x20 vs my 0x28 (one extra spill); +3/+4 tail wants bgezl (IDO
+// emits plain bgez). Header note: D_80099A3C is really a u8[] (header says s16[]); D_80099A3E is u8
+// (header s16). Reconstruction (byte-correct logic):
+// void func_1506B3B8(void) {
+//     s16 sdiff; s32 mag; u8 sel = 0;
+//     sdiff = (D_800D154C->unk7A + (D_800D154C->unk1FD << 8)) -
+//             func_1505A630(D_800CC2D0[0].x_position - D_800D154C->x_position,
+//                           D_800D154C->z_position - D_800CC2D0[0].z_position, 0);
+//     mag = (sdiff >> 8) & 0xFF;
+//     if ((mag & 0x80) != 0) mag = (-mag) & 0xFF;
+//     if (mag < ((u8 *)D_80099A3C)[0]) {
+//         sel = 1;
+//     } else {
+//         if (D_80099A43 < mag) sel = 5;
+//         else if (*(u8 *)&D_80099A3E < mag) sel = 2;
+//         if (sdiff >= 0) sel = (sel + 3) & 0xFF; else sel = (sel + 4) & 0xFF;
+//     }
+//     D_800D154C->unk138 = 0;
+//     D_800D154C->unk244 = ((u8 *)D_80099A3C)[sel];
+//     D_800D154C->unk21C = 0x4E20;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506B3B8.s")
 // NON-MATCHING: 5% there...
 // void func_1506B3B8(void) {
@@ -640,6 +664,25 @@ void func_1506D570(void) {
     D_800D154C->unk6E = 0;
 }
 
+// HARD (best 4385): needs IDO's SOFT float->int truncation (fcsr save + ctc1 RZ + cvt.w.s + 2^31
+// overflow retry) for `(s32)((f32)(u16 val)/divisor)`, but the same cast here emits a single
+// trunc.w.s. Both forms occur per-construct in this file; the source construct that routes this
+// division-result cast through the soft library sequence wasn't found. Input (u32->f32) conversion
+// already matches. Reconstruction:
+// extern f32 D_80099D48;
+// extern void func_1507E7E4(struct127 *, s32, s32, s32, s32);
+// void func_1506D584(void) {
+//     struct127 *obj = D_800D154C;
+//     s32 cmd; f32 divisor; u32 val;
+//     if (((u8 *)obj)[0x70] != 0x2A) {
+//         cmd = D_800D1580;
+//         divisor = obj->unk2D0->unk10;
+//         val = cmd & 0xFFFF;
+//         if (divisor == 0.0f) divisor = D_80099D48;
+//         if (val != 0xFFFF) val = (s32)((f32)val / divisor) & 0xFFFF;
+//         func_1507E7E4(obj, (cmd >> 24) & 0xFF, (cmd >> 16) & 0xFF, val, 0);
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506D584.s")
 // ???
 void func_1506D6B4(void) {
@@ -810,6 +853,34 @@ void func_1506DE04(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506E0EC.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506E2CC.s")
+// PERMUTER/REGALLOC CANDIDATE (best 4009): logic byte-close but cmd wants register a3 (IDO gives v1)
+// which cascades all temp regs; v1=cmd&0x7FFF wants early compute + spill to 0x18 (IDO computes it
+// late); first test wants plain bgez (IDO emits bgezl). Reconstruction:
+// extern s32 func_151F2CDC(struct127 *);
+// extern s32 *D_800BE5A8[];
+// s32 func_1506E46C(struct127 *arg0, s32 *arg1, s32 arg2) {
+//     s32 cmd = *arg1;
+//     s32 v1 = cmd & 0x7FFF;
+//     if ((cmd << 10) < 0) {
+//         if (arg2 == 0)      { if (func_100107F8(arg0) != 0) return 0; }
+//         else if (arg2 == 1) { if (func_10010894(arg0) != 0) return 0; }
+//         else if (arg2 == 2) { if (func_151F2CDC(arg0) == 1) return 0; }
+//     }
+//     if (v1 >= 0x7D0) {
+//         s32 v0 = D_800BE5A8[((u8 *)arg0)[0x288]][v1 - 0x7D0];
+//         if (v0 == 0) return 0;
+//         if ((cmd & 0xFF200000) != 0) cmd = (cmd & 0xFF200000) | (v0 & 0xFFFFFF);
+//         else cmd = cmd | v0;
+//     }
+//     v1 = (u32)cmd >> 16;
+//     if (v1 != 0) {
+//         if (((u32)cmd >> 24) < (u32)(func_150ADA20() & 0xFF)) return 0;
+//         if ((v1 & 0x1F) != 0) cmd = func_1000F568(cmd & 0x7FFF, v1 & 0x1F);
+//         else cmd = cmd & 0x7FFF;
+//     }
+//     *arg1 = cmd;
+//     return 1;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506E46C.s")
 
 void func_1506E5FC(void) {
@@ -1070,6 +1141,16 @@ void func_1506EEF4(void) {
 }
 
 // TBD whats goins on here
+// PERMUTER CANDIDATE (best 190, void): all instructions byte-identical, pure register
+// rename (target keeps &D_800D154C in a2; IDO picks a0). No C form flips it.
+// permuter NO ZERO, best 150 (2x600s, no zero)
+// void func_1506EF5C(void) {
+//     s32 temp = D_800D1580;
+//     *(u16 *)&D_800D154C->unk282 = 0xFFFF;
+//     D_800D154C->unk276 = 5;
+//     *(u8 *)((u8 *)D_800D154C + ((temp >> 16) & 0xFF) * 2 + 0x284) = temp >> 8;
+//     *(u8 *)((u8 *)D_800D154C + ((temp >> 16) & 0xFF) * 2 + 0x285) = temp;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506EF5C.s")
 
 void func_1506EFB4(void) {
@@ -1219,6 +1300,119 @@ void func_1506F524(s32 arg0) {
     func_15197A7C(D_800D154C);
 }
 
+// NEAR-MISS (best 4124, store-order without the f22/fE24/fE28 locals). Giant stack-struct
+// initializer using the SAME struct (func_1506F1A8_stack) and the SAME call
+// func_151994B8(0, &sp, 0xFF, 0) as the already-matched func_1506F1A8. All 89 field values are
+// verified correct (extracted mechanically via scratchpad/parse_init.py). Residual: IDO spills 2
+// float temps so the frame is 0x140 vs the target's 0x138 => every stack offset shifts +8 (~90
+// 's' marks) plus a float-load schedule diff. No hand-found assignment order avoids the spill
+// (store-order 4124, func_1506F1A8-order 4779, both +CSE-locals worse). Permuter/ordering candidate.
+/* Reconstruction (values correct; scheduling near-miss):
+extern f32 D_80099E24, D_80099E28, D_80099E2C, D_80099E30, D_80099E34, D_80099E38, D_80099E3C;
+extern f32 D_80099E40, D_80099E44, D_80099E48, D_80099E4C, D_80099E50, D_80099E54, D_80099E58;
+extern f32 D_80099E5C, D_80099E60, D_80099E64, D_80099E68, D_80099E6C, D_80099E70, D_80099E74;
+extern f32 D_80099E78, D_80099E7C, D_80099E80, D_80099E84, D_80099E88, D_80099E8C, D_80099E90, D_80099E94;
+
+void func_1506F54C(s32 arg0) {
+    struct func_1506F1A8_stack sp1C;
+    struct127 *obj;
+    f32 f22 = 22.0f;
+    f32 fE24 = D_80099E24;
+    f32 fE28 = D_80099E28;
+
+    obj = D_800D154C;
+    sp1C.unk04 = obj;
+    sp1C.unk14 = 165.0f;
+    sp1C.unk20 = 193.0f;
+    sp1C.unk24 = D_80099E2C;
+    sp1C.unk28 = D_80099E30;
+    sp1C.unk2C = 370.0f;
+    sp1C.unk40 = D_80099E34;
+    sp1C.unk30 = D_80099E38;
+    sp1C.unk34 = D_80099E3C;
+    sp1C.unk44 = -191.0f;
+    sp1C.unk48 = D_80099E40;
+    sp1C.unk58 = D_80099E44;
+    sp1C.unk5C = D_80099E48;
+    sp1C.unk6C = D_80099E50;
+    sp1C.unk68 = D_80099E54;
+    sp1C.unk70 = D_80099E58;
+    sp1C.unk64 = D_80099E4C;
+    sp1C.unk74 = D_80099E5C;
+    sp1C.unk78 = D_80099E60;
+    sp1C.unk7C = 0.0f;
+    sp1C.unk80 = D_80099E64;
+    sp1C.unk84 = D_80099E68;
+    sp1C.unk88 = D_80099E6C;
+    sp1C.unk90 = D_80099E70;
+    sp1C.unk98 = D_80099E74;
+    sp1C.unkA0 = 58.0f;
+    sp1C.unkA4 = 212.0f;
+    sp1C.unkAC = D_80099E78;
+    sp1C.unkBC = 6.0f;
+    sp1C.unkC0 = 10.0f;
+    sp1C.unkC4 = D_80099E7C;
+    sp1C.unkCC = 37.0f;
+    sp1C.unkD0 = D_80099E80;
+    sp1C.unkD4 = D_80099E84;
+    sp1C.unkE4 = 130.0f;
+    sp1C.unk08 = obj->unique_id;
+    sp1C.unkE8 = 306.0f;
+    sp1C.unk09 = 0xD;
+    sp1C.unk3E = 0x9F;
+    sp1C.unk00 = 0xF;
+    sp1C.unk54 = 1;
+    sp1C.unk50 = 0x3C;
+    sp1C.unk51 = 0xFF;
+    sp1C.unk52 = 0xEB;
+    sp1C.unk53 = 0x52;
+    sp1C.unkEC = D_80099E88;
+    sp1C.unk39 = -1;
+    sp1C.unk4C = -1;
+    sp1C.unk60 = 0x23;
+    sp1C.unk62 = 0xA;
+    sp1C.unk94 = 0x50;
+    sp1C.unk95 = 0x50;
+    sp1C.unkB0 = 3;
+    sp1C.unkB4 = 2;
+    sp1C.unkB8 = 0x19;
+    sp1C.unkBA = 0xA;
+    sp1C.unk0C = f22;
+    sp1C.unk10 = f22;
+    sp1C.unk18 = f22;
+    sp1C.unk1C = f22;
+    sp1C.unk38 = 0;
+    sp1C.unk3A = 0;
+    sp1C.unk3B = 0;
+    sp1C.unk3C = 0;
+    sp1C.unk3D = 0;
+    sp1C.unk8C = 0xF;
+    sp1C.unk8E = 0x11;
+    sp1C.unk9C = f22;
+    sp1C.unkA8 = fE24;
+    sp1C.unkC8 = fE24;
+    sp1C.unkD8 = 0x50;
+    sp1C.unkDA = 0x50;
+    sp1C.unkDC = 0xF;
+    sp1C.unkDE = 0x11;
+    sp1C.unkE0 = f22;
+    sp1C.unkF4 = 0x23;
+    sp1C.unkF6 = 0xF;
+    sp1C.unkF8 = 0x50;
+    sp1C.unkFA = 0x64;
+    sp1C.unk104 = fE28;
+    sp1C.unk108 = fE28;
+    sp1C.unk118 = 0xF;
+    sp1C.unk11A = 0x11;
+    sp1C.unkF0 = D_80099E8C;
+    sp1C.unkFC = 198.0f;
+    sp1C.unk100 = 102.0f;
+    sp1C.unk10C = 89.0f;
+    sp1C.unk110 = D_80099E90;
+    sp1C.unk114 = D_80099E94;
+    func_151994B8(0, &sp1C, 0xFF, 0);
+}
+*/
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506F54C.s")
 
 void func_1506F8C0(s32 arg0) {
@@ -1900,6 +2094,23 @@ void func_150727AC(void) {
     D_800D154C->unk2D0->unk10 = D_800D154C->animation_speed;
 }
 
+// HARD/SPLIT-SYMBOL blocked (best 50 natural / 85 struct-byte-identical). Same family as
+// game_83300 func_1505EEF4/func_150626EC: IDO unrolls this small-bodied loop x4, which needs a
+// static trip count => same-base loop bounds (D_800CC2D0+addend). But the target's loop bounds are
+// DISTINCT symbols D_800CC5FC (=&elem1, start) and D_800D121C (=&elem25, end). Naming those symbols
+// (pointer loop) makes IDO emit a remainder-handling prologue (score ~3700). Naming only the start
+// (D_800CC5FC[] array, i<24) + separate entry-0 via D_800CC335/D_800CC4E8/D_800CC502 gets the START
+// symbol + clean unroll but leaves the END as D_800CC5FC+0x4c20 (target D_800D121C) => best 85. Not
+// permuter-fixable (reloc symbol, not registers). Natural reconstruction (best 50):
+// void func_150727F0(void) {
+//     s32 i;
+//     for (i = 0; i < 25; i++) {
+//         if (D_800CC2D0[i].interaction_state != 0 && (D_800C3E78 + 1) == D_800CC2D0[i].unk65) {
+//             D_800CC2D0[i].unk218 = 0;
+//             D_800CC2D0[i].unk232 = D_800D1580;
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_150727F0.s")
 
 void func_15072918(void) {
@@ -2077,6 +2288,29 @@ void func_15073A28(void) {
     D_800D154C->unk44 = (f32) D_800D1580;
 }
 
+// PERMUTER CANDIDATE (best 664): byte-identical ops, register renames (target loads obj into
+// v1 and reuses v0 for unk124-index then val=D_800D1580; IDO gives obj=v0, index=t6, val=v1)
+// plus two scheduler slots (immune=0 store fills the lw a1 load-delay; D_800D154C reload hoisted
+// above the immune=0x14 store). No C form flips the v0/v1 root allocation.
+// extern void func_1505D024(struct127 *, s32, s32, s32);
+// extern f32 D_8009A0D8;
+// void func_15073A50(void) {
+//     struct127 *obj = D_800D154C;
+//     struct127 *e = &D_800CC2D0[obj->unk124];
+//     s32 val;
+//     if (e->unk65 != 0) {
+//         val = D_800D1580;
+//         obj->unk13C = 0;
+//         e->immune = 0;
+//         func_1505D024(e, D_800D1580 & 0xFF00FF, 0, D_800C3E78);
+//         e->unk1CC = D_8009A0D8;
+//         if ((val << 1) < 0) {
+//             e->unk1CC = D_800D154C->y_position;
+//         }
+//         e->immune = 0x14;
+//         e->unk76 = D_800D154C->unk7A + val;
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_15073A50.s")
 
 void func_15073B38(void) {
@@ -2252,7 +2486,21 @@ void func_15074870(void) {
     D_800D154C->unk24F = (s8) D_800D1580;
 }
 
-// ??
+// PERMUTER CANDIDATE (best 395): ops byte-identical, register renames (target v1/a2 for
+// D_800D1580/D_800D154C; IDO gives v0/v1) + one extra move on the flag/result path.
+// void func_1507488C(void) {
+//     s32 temp = D_800D1580;
+//     struct127 *p = D_800D154C;
+//     s32 mask = (temp >> 8) & 0xFF;
+//     s32 flag = temp & 1;
+//     s32 result = flag;
+//     if (((&p->unk2E4)[(temp >> 16) & 0xFF] & mask) != 0) {
+//         result = (flag ^ 1) & 0xFF;
+//     }
+//     if (result != 0) {
+//         p->unk138 = p->unk138 + (temp >> 24);
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1507488C.s")
 
 void func_150748F4(void) {

@@ -530,6 +530,19 @@ s32 func_15125490(struct108 *arg0) {
     }
 }
 
+// PERMUTER CANDIDATE (best 558): logic + operand/store order all match; only two IDO
+// scheduling diffs remain (D_800A352C load placed after `sw ra`; a1-reload vs 0x670 store).
+// void func_151254F4(struct108 *arg0, s32 arg1) {
+//     f32 tmp = D_800A352C;
+//     arg0->unk3A0 = arg0->unk380 * tmp;
+//     arg0->unk398 = arg0->unk388 * tmp;
+//     func_15124AB4(arg0);
+//     func_151239CC(arg0, 1);
+//     arg0->unk3D4->unk198 = 0;
+//     arg0->unk73C = 0;
+//     arg0->unk670 = 0.0f;
+//     arg0->unk3D0 = &D_800CC2D0[arg1];
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151254F4.s")
 // NON-MATCHING: first statements in wrong order
 // void func_151254F4(struct108 *arg0, s32 arg1) {
@@ -567,7 +580,14 @@ void func_15125608(struct108 *arg0) {
     arg0->unk250 = 2.5f;
 }
 
-// ???
+// PERMUTER/CODEGEN CANDIDATE: logic correct, but IDO materializes each timer's address
+// (lui+addiu, load/store via one reg) where target folds %lo separately per access.
+// void func_15125628(void) {
+//     if (D_800DBFF4[0] != 0) D_800DBFF4[0]--;
+//     if (D_800DBFF5 != 0) D_800DBFF5--;
+//     if (D_800DBFF6 != 0) D_800DBFF6--;
+//     if ((&D_800DBFF6)[1] != 0) (&D_800DBFF6)[1]--;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_15125628.s")
 
 void func_15125690(struct108 *arg0, s32 arg1) {
@@ -578,43 +598,10 @@ void func_15125690(struct108 *arg0, s32 arg1) {
     }
 }
 
-void func_151256BC(struct108 *arg0) {
-    f32 twoPi;
-    f32 f12;
-    f32 m1;
-    f32 m2;
-    u32 v;
+// Was left as non-compiling live C (F29C/F5EC undefined -> really arg0->0x29C/0x5EC
+// float fields); it has a nonmatching .s, so revert to pragma to un-poison the TU.
+#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151256BC.s")
 
-    if ((arg0->unk2C & 0x80000) ||
-        (((arg0->unk5F0 & 8) != 0) && ((arg0->unk2C << 13) >= 0))) {
-        v = func_150ADA20();
-        twoPi = D_800A3534;
-        F29C += 2.0f * (f32) (v % 3) * D_800A3538 * D_800BE9A4;
-        while (twoPi < F29C) {
-            F29C -= twoPi;
-        }
-        F5EC += ((sinf(F29C) * 4.0f) - F5EC) * D_800A353C;
-        f12 = F5EC * D_800A3540;
-        if (arg0->unk2C & 0x80000) {
-            m1 = 4.0f;
-            m2 = 4.0f;
-        } else {
-            m1 = 1.0f;
-            m2 = 20.0f;
-        }
-        func_1508EF80(&arg0->unk2F8, &arg0->unk2BC, f12 * m1, &arg0->unk2F8);
-        func_1508EF80(&arg0->unk2BC, &arg0->unk2F8, f12 * m2, &arg0->unk2BC);
-    } else {
-        if (F29C == 0.0f) {
-            return;
-        }
-        F29C -= F29C * D_800A3544;
-        F5EC += ((sinf(F29C) * 4.0f) - F5EC) * D_800A3548;
-        f12 = F5EC * D_800A354C;
-        func_1508EF80(&arg0->unk2F8, &arg0->unk2BC, f12, &arg0->unk2F8);
-        func_1508EF80(&arg0->unk2BC, &arg0->unk2F8, f12 * 20.0f, &arg0->unk2BC);
-    }
-}
 void func_15125924(struct108 *arg0) {
     s32 temp_v1;
     s32 temp_a1;

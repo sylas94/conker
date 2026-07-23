@@ -120,23 +120,57 @@ void func_1501A220(s32 arg0, s32 arg1) {
 // }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_476D0/func_1501A39C.s")
-// NON-MATCHING: something along these lines
-// extern Gfx* D_800BE9C8;
-// extern s32 D_8002C930;
-// Gfx *func_1501A39C(void) {
-//     s32 i;
-//     Gfx *tmp = D_800BE9C8;
-//     for (i = 0; i < 3; i++) {
-//         gSPSegment(tmp++, 0x00, 0x00000000);
-//         gSPSegment(tmp++, 0x00, 0x00000000);
-//         gSPDisplayList(tmp++, D_8002C930);
-//         gDPSetDepthImage(tmp++, D_800BE9C4);
-//         gSPViewport(tmp++, D_800BE628 + i + 0x40);
-//     }
-//     return tmp;
+// PERMUTER CANDIDATE: reconstruction below scores 30 — byte-identical EXCEPT two adjacent,
+// independent increments (`addiu v1,v1,4` D_800BE9C8-walk vs `addiu v0,v0,8` g) are emitted in
+// the opposite order. A for-loop `i<2` schedules them correctly but derives the loop terminal as
+// `D_800BE9D8+0x8` (wrong reloc; target references symbol D_800BE9E0). Only a do-while with an
+// explicit `!= &D_800BE9E0` bound yields the D_800BE9E0 reloc with no guard, but that form
+// schedules the D_800BE9C8 induction increment last. The two constraints conflict from C source.
+// permuter NO ZERO, best 30
+// extern Gfx *D_800BE9C8[];
+// extern Gfx D_8002C930[];
+// void func_1501A39C(void) {
+//     Gfx *g;
+//     s32 i = 0;
+//     do {
+//         g = D_800BE9C8[i];
+//         gSPSegment(g++, 0, 0);
+//         gSPSegment(g++, 0, 0);
+//         gSPDisplayList(g++, D_8002C930);
+//         gDPSetDepthImage(g++, D_800BE9C4);
+//         gSPViewport(g++, (Vp *)((u8 *)D_800BE628 + i * 0x10 + 0x40));
+//         i++;
+//         D_800BE9D8[i - 1] = (s32)g;
+//     } while (&D_800BE9E0 != &D_800BE9D8[i]);
 // }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_476D0/func_1501A490.s")
+// PERMUTER CANDIDATE: reconstruction below is semantically correct (build OK, most instrs match,
+// a1/a2/a3 homing reproduced) but scores 1734 — IDO keeps the Gfx pointer in a temp + stack spill
+// across the func_1501AF44 call, whereas the target dedicates saved register s0 to it (gdl crosses
+// the call on only the else-path, so IDO picks spill over a callee-saved reg; not forceable from C).
+// void func_1501AF44(f32 *arg0, f32 *arg1, f32 *arg2, f32 *arg3);
+// s32 func_1501A490(s32 arg0, s16 idx, s32 a2, s32 a3, s32 arg4, s32 arg5) {
+//     Gfx *gdl = (Gfx *)arg0;
+//     struct259 *s;
+//     f32 ulx, lrx, uly, lry;
+//     gDPPipeSync(gdl++);
+//     if (idx == 0xFF) {
+//         gDPSetScissor(gdl++, arg5, 2, 0, D_800BE620 - 2, D_800BE624);
+//     } else {
+//         s = &((struct259 *)D_800BE628)[idx];
+//         ulx = *(f32 *)((u8 *)s + 0x2C);
+//         lrx = *(f32 *)((u8 *)s + 0x30);
+//         uly = *(f32 *)((u8 *)s + 0x24);
+//         if (arg4 != 0) {
+//             if ((f32)arg4 < *(f32 *)((u8 *)s + 0x28)) { lry = (f32)arg4; }
+//             else { lry = *(f32 *)((u8 *)s + 0x28); }
+//         } else { lry = *(f32 *)((u8 *)s + 0x28); }
+//         func_1501AF44(&ulx, &uly, &lrx, &lry);
+//         gDPSetScissor(gdl++, arg5, ulx, uly, lrx, lry);
+//     }
+//     return (s32)gdl;
+// }
 
 Gfx *func_1501A680(Gfx *arg0) {
     gDPSetColorImage(arg0++, G_IM_FMT_RGBA, G_IM_SIZ_16b, D_800BE620, D_8002AAE8[D_800BE9C0]);
@@ -264,9 +298,48 @@ void func_1501AF44(f32 *arg0, f32 *arg1, f32 *arg2, f32 *arg3) {
     }
 }
 
+// PERMUTER CANDIDATE: reconstruction below is semantically correct (build OK) and scores 275 with
+// matching stack slots — the ONLY diff is a 2-instruction scheduler reorder: the target hoists the
+// shared D_800968F4 load to the top of the function; IDO here loads it at the first multiply.
+// (Hoisting it via a named local fixes the order but adds a -g3 debug slot that shifts every other
+// slot by 4, netting 200 — worse. Not resolvable from C source; scheduler decision.)
+// permuter NO ZERO, best 275 (re-run 600s, no improvement; -g3 debug-slot blocks C hoist)
 #pragma GLOBAL_ASM("asm/nonmatchings/game_476D0/func_1501B0A0.s")
+// extern f32 D_800968F4, D_800968F8, D_800968FC;
+// extern void func_1510B128(s32, f32, f32, f32, f32);
+// void func_1501B0A0(s32 arg0, s32 arg1) {
+//     f32 ang1 = *(f32 *)((u8 *)&((struct259 *)D_800BE628)[arg0] + 0x6C) * D_800968F4;
+//     f32 ang2 = *(f32 *)((u8 *)&((struct259 *)D_800BE628)[arg0] + 0x70) * D_800968F4;
+//     f32 tan1 = sinf(ang1) / cosf(ang1);
+//     f32 tan2 = sinf(ang2) / cosf(ang2);
+//     f32 v14 = (f32)(&D_800BE638)[arg1] / (tan1 + tan1);
+//     f32 v38 = (f32)(&D_800BE650)[arg1] / (tan2 + tan2);
+//     f32 r1 = func_150484A0(*(f32 *)((u8 *)&((struct259 *)D_800BE628)[arg0] + 0xC),  v14) * D_800968F8 - *(f32 *)((u8 *)&((struct259 *)D_800BE628)[arg1] + 0x6C);
+//     f32 r2 = func_150484A0(*(f32 *)((u8 *)&((struct259 *)D_800BE628)[arg0] + 0x10), v38) * D_800968FC - *(f32 *)((u8 *)&((struct259 *)D_800BE628)[arg1] + 0x70);
+//     func_1510B128(arg0, r1, r2, 1.0f, 0.0f);
+// }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_476D0/func_1501B22C.s")
+// PERMUTER CANDIDATE: reconstruction below is semantically exact (build OK) but scores 954 —
+// pure register-allocation near-miss. Block2's zero-constant lands in f12 not f14 and cos reloads
+// to a different slot (0x20 vs target 0x34, which the target reuses from block1), cascading into
+// store reordering; also a t6/t7 swap on the base-pointer add. Codegen is identical regardless of
+// C form (merged/separate locals, inline/assigned negations).
+// void func_1501B22C(s32 arg0) {
+//     struct259 *temp = &((struct259 *)D_800BE628)[arg0];
+//     f32 half74 = temp->unk74 * 0.5f;
+//     f32 half78 = temp->unk78 * 0.5f;
+//     f32 ang, cv, sv;
+//     ang = -half74 * D_80096900;
+//     cv = cosf(ang);  sv = sinf(ang);
+//     temp->unk9C = sv;  temp->unk90 = sv;
+//     cv = -cv;  temp->unk94 = cv;  temp->unk88 = -cv;
+//     temp->unk98 = 0.0f;  temp->unk8C = 0.0f;
+//     ang = half78 * D_80096904;
+//     cv = cosf(ang);  sv = sinf(ang);
+//     temp->unkA0 = 0.0f;  temp->unkA8 = -sv;  temp->unkB4 = -sv;
+//     temp->unkAC = 0.0f;  temp->unkA4 = -cv;  temp->unkB0 = cv;
+// }
 // JUSTREG: I think?
 // void func_1501B22C(s32 arg0) {
 //     f32 tmp0;

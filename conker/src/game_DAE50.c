@@ -91,6 +91,18 @@
 // }
 
 // well this is a bastard
+// NON-MATCHING near-miss, best score 915 (ALL 18 instrs correct) with -mips3 -O2 (see Makefile
+// override). Residual diff = IDO pre-materializes &D_800885B0 (addiu) for the load+store instead
+// of reloading %hi separately; that single choice cascades the register allocation. Permuter found
+// NO ZERO (8000+ iters, both flag bases). Best reconstruction:
+//   s32 func_150ADA20(void) {
+//       u64 t;
+//       t = ((D_800885B0 << 63) >> 31) | ((D_800885B0 << 31) >> 32);
+//       t ^= (D_800885B0 << 44) >> 32;
+//       t ^= (t >> 20) & 0xFFF;
+//       D_800885B0 = t;
+//       return t;
+//   }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_DAE50/func_150ADA20.s")
 // s32 func_150ADA20() {
 //     // u32 tmp1;

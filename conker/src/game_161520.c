@@ -921,6 +921,15 @@ void func_15138BC0(struct102 *arg0, u8 arg1, s32 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_161520/func_1513A48C.s")
 
+// PERMUTER CANDIDATE (best 310): whole prologue/call/homing byte-identical (file IS -O2 -g3,
+// not -g). Tail returns a0 and reads a0->0x1D4 into a dead `if`; only matches with two
+// `return a0` (keeps the read) -> IDO adds move v0,v1 + a merge branch vs target's direct v0.
+// extern void func_1513A5E0(void *arg0, u8 arg1, s32 arg2);
+// void *func_1513A594(void *a0, void *a1, s32 a2, u8 a3, s32 arg4) {
+//     func_1513A5E0(a1, a3, arg4);
+//     if (*(s32 *)((u8 *)a0 + 0x1D4) != 0) { return a0; }
+//     return a0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_161520/func_1513A594.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_161520/func_1513A5E0.s")

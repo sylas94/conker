@@ -21,50 +21,20 @@ extern f32 D_80099334;
 extern f32 D_80099338;
 extern f32 D_80099344;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504A620.s")
-// NON-MATCHING: work-in-progress...
+// PERMUTER CANDIDATE: structure byte-identical, global FP-reg rotation (zero lands in
+// $f14 instead of $f0 from instr 0, cascading all fp regs). best 1520.
 // f32 func_1504A620(f32 arg0) {
-//     f32 temp_f14;
-//     f32 temp_f2;
-//     f32 phi_f2;
-//     f32 phi_f0;
-//     s32 phi_v0;
-//     f32 tmp0;
-//
-//     if (arg0 < 0.0f) {
-//         return 0.0f;
-//     }
-//     if (arg0 == 0.0f) {
-//         return 0.0f;
-//     }
-//
-//     phi_f2 = 0.0f;
-//
-//     while (arg0 >= 2.0f ) {
-//         arg0 = arg0 * 0.5f;
-//         phi_f2 += D_800990B0;
-//     }
-//
-//     tmp0 = D_800990B4;
-//     while (arg0 < 1.0f) {
-//         arg0 = arg0 * 2.0f;
-//         phi_f2 -= tmp0;
-//     }
-//
-//     temp_f14 = (phi_f2 - 1.0f) / (phi_f2 + 1.0f);
-//     phi_f0 = 2.0f * temp_f14;
-//     phi_v0 = 1;
-//
-//     do {
-//         temp_f2 = phi_f2 + (phi_f0 / (f32) phi_v0);
-//         phi_f2 = temp_f2;
-//         phi_f0 = phi_f0 * (temp_f14 * temp_f14);
-//         phi_v0 = phi_v0 + 2;
-//     }
-//     while (temp_f2 != phi_f2);
-//
-//     return temp_f2;
+//     f32 sum, z, zsq, term, old; s32 n;
+//     if (arg0 < 0.0f) return 0.0f;
+//     if (arg0 == 0.0f) return 0.0f;
+//     sum = 0.0f;
+//     while (2.0f <= arg0) { arg0 = arg0 * 0.5f; sum += D_800990B0; }
+//     while (arg0 < 1.0f) { arg0 = arg0 + arg0; sum -= D_800990B4; }
+//     z = (arg0 - 1.0f) / (arg0 + 1.0f); zsq = z * z; term = z + z; n = 1;
+//     do { old = sum; sum += term / (f32) n; term *= zsq; n += 2; } while (sum != old);
+//     return sum;
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504A620.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504A730.s")
 // void func_1504A730(void) {
@@ -278,35 +248,27 @@ extern f32 D_80099344;
 //     D_800D35DC = (u8)0;
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504ADD0.s")
-// NON-MATCHING: whats up with sp48
+// PERMUTER CANDIDATE: structure byte-identical; saved-reg alloc tie-break (target
+// re-li's 0x77 & hoists &sp48; mine hoists 0x77) + -g3 buffer-slot layout. best 500.
+// permuter NO ZERO, best 350 (improved from 500/745 baseline)
 // void func_1504ADD0(void) {
-//     struct127 *tmp;
-//     s32 i;
-//     u8 *ptr;
-//     u8 *sp48;
-//
+//     struct127 *tmp; s32 i; u8 sp48[6];
 //     if (D_800C35EA != 1) {
 //         for (i = 0; i < 25; i++) {
 //             tmp = &D_800CC2D0[i];
-//             if (tmp->unk0 != 0) {
+//             if (tmp->interaction_state != 0) {
 //                 D_800C3E78 = i;
 //                 D_800D154C = tmp;
 //                 if (i < D_8008FD8C) {
-//                     if (i < 4) {
-//                         D_800CC284 = D_800BE728[i];
-//                     } else {
-//                         bzero(sp48, 6);
-//                         D_800CC284 = sp48;
-//                     }
+//                     if (i < 4) D_800CC284 = (*(s32 **) &D_800BE728)[i];
+//                     else { bzero(sp48, 6); D_800CC284 = (s32) sp48; }
 //                 }
-//                 if ((tmp->id == 0x28) || (tmp->id == 0x77)) {
-//                     func_150ED578(tmp);
-//                 }
+//                 if ((tmp->id == 0x28) || (tmp->id == 0x77)) func_150ED578(tmp);
 //             }
 //         }
 //     }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504ADD0.s")
 
 s32 func_1504AEF4(s32 arg0, s32 arg1) {
     if (arg0 == 0) {
@@ -316,7 +278,32 @@ s32 func_1504AEF4(s32 arg0, s32 arg1) {
 }
 
 // bleurgh
+// PERMUTER CANDIDATE: logic byte-identical (best 821, frame 0x30 matches); remaining is a
+// -g3 debug-slot layout + a0v/a2v register-allocation cascade. Reconstruction:
+// permuter NO ZERO, best 320 (improved from 821)
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504AF10.s")
+// void func_1504AF10(struct127 *arg0, s32 arg1, s32 arg2) {
+//     s32 sp28, a0v, v1, a2v;
+//     v1 = arg0->unk92;
+//     if (v1 == 0) return;
+//     if ((arg1 == 0) && ((v1 >> 15) != 0)) return;
+//     a0v = (v1 >> 12) & 7;
+//     a2v = v1 & 0x7FFF;
+//     if (a0v == 0) {
+//         a0v = func_1504AEF4(a2v, (s32) &sp28);
+//         if (a0v != 0) arg0->unk92 = (a0v << 12) | sp28;
+//     }
+//     sp28 = arg0->unk92 & 0xFFF;
+//     if (a0v != 3) return;
+//     if (arg2 != 0) { D_800DBEF4[sp28].unk4E = 0; arg0->unk92 = 0; return; }
+//     D_800DBEF4[sp28].unk4E = (((s32)arg0 - (s32)D_800CC2D0) / (s32)sizeof(struct127)) + 0x64;
+//     if (arg1 != 0) { D_800DBEF4[sp28].unk4E = 0; return; }
+//     *(u8 *)&D_800DBEF4[sp28].unk4F &= 0xFF9F;
+//     *(u8 *)&D_800DBEF4[sp28].unk4F |= 0x20;
+//     D_800DBEF4[sp28].unk10 = arg0->x_position;
+//     D_800DBEF4[sp28].unk12 = arg0->y_position + (f32) *(s16 *)&arg0->unk90;
+//     D_800DBEF4[sp28].unk14 = arg0->z_position;
+// }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504B0FC.s")
 extern s8 D_80099140[];
@@ -523,7 +510,34 @@ void func_1504C854(struct127 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504C8BC.s")
+s32 func_1504C8BC(struct127 *arg0) {
+    struct126 *v1 = arg0->unk31C;
+
+    if (v1 == 0) {
+        return 1;
+    }
+    if ((arg0->unk1D4 != 0) || (D_800BE9F0 == 0x33) || (arg0->interaction_state == 0x25)) {
+        ((u8 *)v1)[0x1A8] = 0;
+        return 1;
+    }
+    if ((arg0->unk127 & 1) == D_800CC2B8) {
+        if (((u8 *)v1)[0x1A8] != 0) {
+            *(s16 *)&D_800CC2BA = D_800BE9E4;
+            D_800BE9E4 += ((u8 *)arg0->unk31C)[0x1A8];
+            D_800BE9A4 = (f32) D_800BE9E4 * 0.5f;
+            if (D_800BE9A4 != 0.0f) {
+                D_800BE9A8 = 1.0f / D_800BE9A4;
+            } else {
+                D_800BE9A8 = 0.0f;
+            }
+            ((u8 *)arg0->unk31C)[0x1A8] = 0;
+            return 2;
+        }
+        return 1;
+    }
+    ((u8 *)v1)[0x1A8] = ((u8 *)v1)[0x1A8] + D_800BE9E4;
+    return 0;
+}
 
 void func_1504C9E4(struct127 *arg0, s8 arg1, u8 arg2) {
     u8 phi_a2;
@@ -622,7 +636,45 @@ f32 func_1505210C(struct127 *arg0, register f32 arg1, register f32 arg2, f32 *ar
     *arg3 = arg2;
     return arg1;
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15052260.s")
+extern f32 D_8009933C;
+extern f32 D_80099340;
+void func_1505A770(struct127 *);
+
+void func_15052260(struct127 *arg0) {
+    struct126 *v0 = arg0->unk31C;
+    f32 factor;
+
+    if ((v0->unk6B == 1) || (v0->unk6B == 3)) {
+        factor = D_8009933C;
+    } else {
+        factor = 1.0f;
+    }
+    arg0->unk1CC = arg0->y_position;
+
+    if (v0->unk6B < 4) {
+        arg0->x_position += ((f32) *(s16 *)((u8 *)v0 + 0x6C) - arg0->x_position) * factor;
+        arg0->y_position += ((f32) (*(s16 *)((u8 *)v0 + 0x6E) - 0x50) - arg0->y_position) * factor;
+        arg0->z_position += ((f32) *(s16 *)((u8 *)v0 + 0x70) - arg0->z_position) * factor;
+        func_1505E650(arg0, 0x14, 1.0f, 6.0f, 0.0f, 0.0f, 0);
+        arg0->y_velocity = -10.0f;
+    } else {
+        if ((s32) arg0->unk28 == 0) {
+            v0->unk6B = 0;
+        } else {
+            func_1505E650(arg0, 0x38, 1.0f, 6.0f, 0.0f, 0.0f, 0);
+        }
+        func_1505A770(arg0);
+    }
+
+    arg0->gravity = D_80099340;
+    if (arg0->y_position < arg0->unk118) {
+        arg0->gravity = 0.0f;
+        arg0->y_velocity = 0.0f;
+        arg0->unk31C->unk6B = 0;
+        arg0->unk83 = 0;
+        arg0->in_water = 1;
+    }
+}
 
 void func_15052408(struct127 *arg0) {
     arg0->unkB2 = 0;
@@ -722,7 +774,44 @@ void func_15052590(struct127 *arg0) {
         }
     }
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15052760.s")
+extern f32 D_80099348;
+extern f32 D_8009934C;
+void func_15052760(struct127 *arg0, s16 arg1) {
+    s32 v0;
+    s32 id;
+    s8 temp;
+    f32 f0;
+
+    arg1 = (arg1 & 0xFFFF) - arg0->unk76;
+    v0 = (arg1 * 100) / D_800CC264;
+    id = arg0->id;
+
+    if (id != 0x29) {
+        if (id == 8) {
+            return;
+        }
+    }
+    if (arg0->unk22C & 8) {
+        return;
+    }
+    f0 = D_80099348;
+    arg1 = 7;
+    if (id == 0xA) {
+        arg1 = 0x28;
+    }
+    if (arg0->unk226 == 0xFF) {
+        temp = v0 >> 8;
+        if ((arg0->unk87 ^ temp) & 0x80) {
+            v0 = 0;
+        }
+        f0 = D_8009934C;
+        arg1 = 4;
+        arg0->unk87 = temp;
+    }
+    if (arg0->unk1E5 != 0) {
+        arg0->unkC4 += ((f32)(v0 / (arg0->unk1E5 * arg1)) - arg0->unkC4) * f0;
+    }
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_150528C8.s")
 
 void func_15052EF0(struct127 *arg0) {
@@ -920,6 +1009,28 @@ block_1505327C:
 // }
 
 s32 func_15053430(void);
+// PERMUTER CANDIDATE: body byte-identical (best 213); only the tail differs — target emits a
+// separate epilogue reached via `b` plus a dead `move v0,zero` (trailing return 0) that IDO
+// drops from the hand-written source. Reconstruction (needs param passthrough on caller):
+// permuter NO ZERO (baseline rebuilt as 1892, perm best 400; s0-vs-a3 arg home + spill order)
+// s32 func_15053430(struct127 *arg0) {
+//     u8 flags; s32 t1; s32 unk10E;
+//     if (arg0->id == 0xFF) { func_15060F28(arg0, 1); return 1; }
+//     unk10E = arg0->unk10E;
+//     flags = D_800D1C90[arg0->id]->data.i.unk0;
+//     if ((unk10E != 0) && (unk10E < 0xF0)) { func_1505D2B8(arg0, 9); return 0; }
+//     t1 = 0;
+//     if ((unk10E < 0xF0) && (flags & 0x20))
+//         func_151669A0((s32)arg0->x_position, (s32)(arg0->y_position + 50.0f), (s32)arg0->z_position, 0.5f, 0xFF, 0);
+//     if (flags & 4) t1 = func_1507D754(arg0);
+//     if (flags & 2) { arg0->interaction_state = 0x2A; return 1; }
+//     if (flags & 0x80) { func_15055B0C(arg0, 0x4B0); return 1; }
+//     if (flags & 1) { func_15053694(arg0); return 1; }
+//     if (flags & 0x40) { (*(s16 **)&D_800D2110)[arg0->unk13F] = 0x4E2; func_15060F28(arg0, 1); return 1; }
+//     if (t1 == 1) { func_150536D0(arg0); return 1; }
+//     if (t1 == 0) func_15060F28(arg0, 1);
+//     return 1;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15053430.s")
 
 s32 func_150535F4(struct127 *arg0) {
@@ -1051,57 +1162,32 @@ void func_15054A5C(struct127 *arg0, struct127 *arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15054A94.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15054F74.s")
+// PERMUTER CANDIDATE: id==12 and id==0x1B/0x7E branches match; id==0x4B branch is a
+// register-allocation + float-scheduling near-miss (best 1310). Reconstruction (logic correct):
 // void func_15054F74(struct127 *arg0) {
-//     s16 phi_v1;
-//
-//     f32 sp50;
-//     f32 sp4C;
-//     f32 sp48;
-//
-//     f32 temp_f2;
-//     f32 temp_f0;
-//
+//     s16 phi_v1; f32 sp50, sp4C, sp48, temp_f2, temp_f0;
 //     if (arg0->id == 12) {
 //         if ((D_800C3E78 + 1) != D_800CC2D0[arg0->unk124].unk65) {
-//             if (arg0->unk232 == 18) {
-//                 func_15052F9C(arg0, 50.f, 0, 4, 0, 12, 0, 8, 0, 0);
-//             } else if ((D_800CC268 & 1) != 0) {
-//                 if ((arg0->unk25C & 0x400) != 0) {
-//                     arg0->unk124 = 0;
-//                     func_1505327C(arg0, 39.0f, 3.0f, 18, 0);
-//                 }
-//             }
+//             if (arg0->unk232 == 18) func_15052F9C(arg0, 50.f, 0, 4, 0, 12, 0, 8, 0, 0);
+//             else if ((D_800CC268 & 1) != 0)
+//                 if ((arg0->unk25C & 0x400) != 0) { arg0->unk124 = 0; func_1505327C(arg0, 39.0f, 3.0f, 18, 0); }
 //         }
-//     } else {
-//         if (arg0->id == 0x4B) {
-//             func_1505A184(arg0->unk7A ^ 0x8000, 500.0f, 0, &sp50, &sp48, &sp4C);
-//             temp_f0 = arg0->unk14;
-//             temp_f2 = arg0->unk1C;
-//             arg0->unk2EC = (((s32) ((f32) (s16) (s32) temp_f0 + sp50) << 0x10) | ((s32) ((f32) (s16) (s32) temp_f2 + sp48) & 0xFFFF));
-//             if (arg0->unk84.uh  != 0xF) {
-//                 phi_v1 = func_1505A630(D_800CC2D0->unk14 - temp_f0, temp_f2 - D_800CC2D0->unk1C, 0);
-//             } else {
-//                 phi_v1 = (s16) (arg0->unk7A - 0x800);
-//             }
-//             arg0->unk7A += (s16) (phi_v1 - arg0->unk7A) / 3;
-//             arg0->unk14C = 2.0f;
-//             arg0->unk150 = 2.0f;
-//             arg0->unk40 = 90.0f;
-//         } else if (((arg0->id == 0x1B) || ((arg0->id == 0x7E))) && (arg0->unk2E4 != 0)) {
-//             if (D_800BE616 != 0) {
-//                 func_1508B20C(arg0->unk14, arg0->unk18, 500.0f, 900.0f);
-//             }
-//             if ((arg0->unk2E4 > D_800BE9E4) && (arg0->unk2E4 >= 0x78) && (arg0->unk2E4 < (D_800BE9E4 + 0x78))) {
-//                 func_10010154(0x3A1, arg0, 0x7D00, 0x1F4, 0x3E8);
-//                 arg0->unk2E4 -= D_800BE9E4;
-//             } else {
-//                 arg0->unk232 = 6U;
-//                 arg0->unk218 = 0;
-//             }
-//         }
+//     } else if (arg0->id == 0x4B) {
+//         func_1505A184(arg0->unk7A ^ 0x8000, 500.0f, 0, &sp50, &sp48, &sp4C);
+//         temp_f0 = arg0->x_position; temp_f2 = arg0->z_position;
+//         arg0->unk2EC = (((s32)((f32)(s16)(s32)temp_f0 + sp50) << 0x10) | ((s32)((f32)(s16)(s32)temp_f2 + sp48) & 0xFFFF));
+//         if (arg0->unk84.uh != 0xF) phi_v1 = func_1505A630(D_800CC2D0->x_position - temp_f0, temp_f2 - D_800CC2D0->z_position, 0);
+//         else phi_v1 = (s16)(arg0->unk7A - 0x800);
+//         arg0->unk7A += (s16)(phi_v1 - arg0->unk7A) / 3;
+//         arg0->xz_scale = 2.0f; arg0->y_scale = 2.0f; arg0->unk40 = 90.0f;
+//     } else if (((arg0->id == 0x1B) || (arg0->id == 0x7E)) && (arg0->unk2E4 != 0)) {
+//         if (D_800BE616 != 0) func_1508B20C(arg0->x_position, arg0->y_position, 500.0f, 900.0f);
+//         if ((arg0->unk2E4 > D_800BE9E4) && (arg0->unk2E4 >= 0x78) && (arg0->unk2E4 < (D_800BE9E4 + 0x78))) {
+//             func_10010154(0x3A1, arg0, 0x7D00, 0x1F4, 0x3E8); arg0->unk2E4 -= D_800BE9E4;
+//         } else { arg0->unk232 = 6U; arg0->unk218 = 0; }
 //     }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15054F74.s")
 
 void func_15055260(s32 arg0, s32 arg1, s32 arg2) {
     func_150335C8(arg0, arg1, 0x4D, arg2, 0, 0);

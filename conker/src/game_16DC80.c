@@ -109,7 +109,27 @@ void func_15141250(void *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16DC80/func_151412BC.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16DC80/func_1514143C.s")
+struct conk1514143C_vec {
+    f32 x;
+    f32 y;
+    f32 z;
+};
+
+struct conk1514143C_sub {
+    u8 pad0[0x44];
+    struct conk1514143C_vec *unk44;
+};
+
+// permuter MATCHED (was best 120): s32 return type (vs void) makes IDO hoist the
+// `addiu a0+0x110` correctly. Byte-perfect; keep the s32 return.
+s32 func_1514143C(void *arg0) {
+    struct conk1514143C_sub *s = (struct conk1514143C_sub *)((u8 *)arg0 + 0x110);
+    if (s->unk44 != NULL) {
+        s->unk44->x = *(f32 *)((u8 *)arg0 + 0x34);
+        s->unk44->y = *(f32 *)((u8 *)arg0 + 0x38);
+        s->unk44->z = *(f32 *)((u8 *)arg0 + 0x3C);
+    }
+}
 
 extern f32 D_800BE9A4;
 

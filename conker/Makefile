@@ -133,10 +133,18 @@ $(BUILD_DIR)/$(SRC_DIR)/init_22460.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/libultra/io/ai.c.o: OPT_FLAGS := -O1
 $(BUILD_DIR)/$(SRC_DIR)/libultra/io/aigetstat.c.o: OPT_FLAGS := -O1
 $(BUILD_DIR)/$(SRC_DIR)/libultra/io/aisetfreq.c.o: OPT_FLAGS := -O1
+$(BUILD_DIR)/$(SRC_DIR)/libultra/io/pfsisplug2.c.o: OPT_FLAGS := -O1
+$(BUILD_DIR)/$(SRC_DIR)/libultra/io/pfschecker2.c.o: OPT_FLAGS := -O1
 
 $(BUILD_DIR)/$(SRC_DIR)/libultra/os/getthreadpri.c.o: OPT_FLAGS := -O1
 
 $(BUILD_DIR)/$(SRC_DIR)/init_3920.c.o: OPT_FLAGS := -O2
+# NOTE: game_DAE50 RNG (func_150ADA20/ADA68) needs -mips3 for native u64 dsll32/dsrl, BUT a
+# -mips3 object CANNOT be linked into this 32-bit ROM ("linking 32-bit with 64-bit code" ld
+# error). So the RNG is not C-matchable here without converting the whole ROM to -mips3. Stays
+# pragma. See memory/conker-handwritten-math-cluster.md.
+# NOTE: game_21CAC0 (func_151EF610) golden is -O1, but it's an unmatched register near-miss;
+# no override needed while pragma. See src/game_21CAC0.c comment.
 
 # $(BUILD_DIR)/$(SRC_DIR)/init_B1B0.o: OPT_FLAGS := -O2
 

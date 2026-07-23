@@ -4,6 +4,15 @@
 #include "variables.h"
 
 
+// FILE-FLAGS-SUSPECT: needs -mips3 (target uses `sd zero`; -mips2 emits li+sw pairs).
+// Reconstruction verified correct under -mips3:
+// void func_150A7B80(Mtx *arg0) {
+//     s32 *w = (s32 *)arg0;
+//     s16 *h = (s16 *)arg0;
+//     w[0]=0;w[1]=0;w[2]=0;w[3]=0;w[4]=0;w[5]=0;w[6]=0;w[7]=0;
+//     w[8]=0;w[9]=0;w[10]=0;w[11]=0;w[12]=0;w[13]=0;w[14]=0;w[15]=0;
+//     h[0]=1; h[5]=1; h[10]=1; h[15]=1;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_D5030/func_150A7B80.s")
 
 // struct WORD {

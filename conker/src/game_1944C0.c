@@ -87,17 +87,15 @@ extern struct Some15171F04 *D_8008CA4C[];
 void func_15169070(s32, s32, s32, u8);
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15167010.s")
-// NON-MATCHING: not hugely far away
+// PERMUTER CANDIDATE (best 405): target uses OSR limit `addiu s2,s0,0x1484` (base-relative)
+// + phantom saved reg s1; can't trigger the `<`-preserving strength-reduction form from C.
+// Closest form:
 // void func_15167010(void) {
 //     void (*func)(void);
-//     s32 i;
-//
-//     for (i = 0; i < 24; i++)
-//     {
-//         func = D_8008B4A8[i].unk18;
-//         if (func != NULL) {
-//             func();
-//         }
+//     struct115 *p;
+//     for (p = D_8008B4A8; p < D_8008B4A8 + 101; p++) {
+//         func = (void (*)(void))p->unk18;
+//         if (func != NULL) { func(); }
 //     }
 // }
 
@@ -115,6 +113,35 @@ void func_1516706C(void) {
         funcp++;
     } while (funcp != end);
 }
+extern u8 D_800DCE50[];
+
+// PERMUTER CANDIDATE / JUSTREG (best 25): structure + strength-reduction byte-perfect.
+// Only diff: the innermost do-while's loop-rotated call target `func = p->unk0` lands in
+// v0 (named local) but the target uses temp t9 (software-pipelined reload); the trailing
+// `D_800DD190--` then uses t0 vs t9 as a cascade. func must load BEFORE the store to fill
+// the jalr delay slot (needs the named local), which pins it to v0. Inline call (t9) breaks
+// the delay-slot fill (270). Not steerable from C. Best reconstruction:
+// void func_151670C0(void) {
+//     s32 s6; s32 s5; struct115 *p; struct102 *node; void (*func)(struct102 *);
+//     for (s6 = 0; s6 != 2; s6++) {
+//         p = D_8008B4A8;
+//         for (s5 = 0; s5 != 0x65; s5++, p++) {
+//             if (p->unk0 != NULL) {
+//                 node = ((struct102 *(*)[104])D_800DCE50)[s6][s5];
+//                 D_800DD190++;
+//                 if (node != NULL) {
+//                     do {
+//                         func = p->unk0;
+//                         ((struct102 **)D_800DD198)[D_800DD190] = (struct102 *)node->unk8;
+//                         func(node);
+//                         node = ((struct102 **)D_800DD198)[D_800DD190];
+//                     } while (node != NULL);
+//                 }
+//                 D_800DD190--;
+//             }
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_151670C0.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_151671E8.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15167310.s")
@@ -178,6 +205,26 @@ void func_15167B44(struct102 *arg0) {
         func_1516972C(arg0);
     }
 }
+// PERMUTER CANDIDATE / near-miss (best ~1090): full reconstruction below; stack frame (0x70)
+// and locals sp50@0x50, sp5C@0x5C match. Blocker: the `mode` value (3/9) is MEMORY-resident at
+// 0x48 in the target (spilled, double beq+bne, sw/lw 0x48(sp)); a clean `s32 mode` stays in a
+// register (single branch). Forcing memory via the func_15168C4C idiom `*(s32*)((u8*)&mode - 4)`
+// gets memory-residence but lands the anchor at 0x6C (slot 0x68, CSE'd base) not 0x4C/0x48 absolute;
+// register renames cascade from the misaligned mode block. Needs the permuter (or exact anchor
+// placement). ObjC58: unk10=s32** (arg1 of E24 + arg6=(*unk10)[unk14>>8]); unk14 s16; unk18/1A/1C/
+// 1E/20 s16; unk22 s8; unk23 u8. sp5C is {s16 x,y,z,unk6,unk8; u8 unkA; u8 unkD} copied from those.
+// Gfx *func_15167C58(Gfx *arg0, ObjC58 *arg1, s32 arg2) {
+//     s32 mode; StructC58a sp5C; StructC58b sp50; Gfx *gfx; s32 **p = arg1->unk10;
+//     sp50.unk0 = 1;
+//     gfx = func_15142E24(arg0, (s32)p, arg1->unk14 << 8, 2, 0x100, 0x100,
+//                         (*p)[arg1->unk14 >> 8], 5, (s32)&sp5C, (u8 *)&sp50, 3);
+//     sp5C.unk0 = arg1->unk18; sp5C.unk2 = arg1->unk1A; sp5C.unk4 = arg1->unk1C;
+//     sp5C.unk6 = arg1->unk1E; sp5C.unk8 = arg1->unk20; sp5C.unkA = arg1->unk23; sp5C.unkD = 0;
+//     if (0xFF != arg1->unk22) { *(s32*)((u8*)&mode - 4) = 3; } else { *(s32*)((u8*)&mode - 4) = 9; }
+//     gfx = func_15142FBC(gfx, 0x2C00,
+//         (D_800A4AC8[*(s32*)((u8*)&mode-4)].unk4 | D_800A4AC8[*(s32*)((u8*)&mode-4)].unk0) | 4, (u8*)&sp50);
+//     return (Gfx *)func_15095760(gfx, &sp5C);
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15167C58.s")
 s32 func_15167D84(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
     GameObjectHeader *temp;
@@ -193,6 +240,36 @@ s32 func_15167D84(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15167E0C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15168118.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_1516865C.s")
+// PERMUTER CANDIDATE (best 3095): leaf func; logic decoded fully (strided 8x0x10 init loop +
+// two conditional value-swaps keyed on obj->0x98 flags 0x80/0x100 + field mirroring). Target
+// homes a1/a2/a3 to caller arg slots (0xc/0x10/0x14) in a leaf while keeping them register-
+// resident, an IDO arg-home idiom not reproducible from C; register allocation also diverges.
+// Best reconstruction:
+// void func_1516865C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
+//     u8 *obj = (u8 *)arg0; s32 v0_val, v1_val, t1_val, t2_val, flags, i; s16 tmp; u8 *q; u8 t0b;
+//     arg1 &= 0xFF; arg2 &= 0xFF; arg3 &= 0xFF;
+//     v0_val = 0x2000; t1_val = 0x2000;
+//     v1_val = ((s32)((D_8008CA4C[obj[0xA0]]->unk8 + 0x100) << 21)) >> 16;
+//     t2_val = ((s32)((D_8008CA4C[obj[0xA0]]->unk6 + 0x100) << 21)) >> 16;
+//     t0b = (u8)arg4; q = obj; i = 0;
+//     do { i++; q += 0x40;
+//         *(s16*)(q-0x2A)=0; q[-0x24]=arg1; q[-0x23]=arg2; q[-0x22]=arg3; q[-0x21]=t0b;
+//         *(s16*)(q-0x1A)=0; q[-0x14]=arg1; q[-0x13]=arg2; q[-0x12]=arg3; q[-0x11]=t0b;
+//         *(s16*)(q-0x0A)=0; q[-0x04]=arg1; q[-0x03]=arg2; q[-0x02]=arg3; q[-0x01]=t0b;
+//         *(s16*)(q-0x3A)=0; q[-0x34]=arg1; q[-0x33]=arg2; q[-0x32]=arg3; q[-0x31]=t0b;
+//     } while (i != 2);
+//     flags = *(u16*)(obj+0x98);
+//     if (flags & 0x80)  { v0_val = ((s32)((D_8008CA4C[obj[0xA0]]->unk8 + 0x100) << 21)) >> 16; v1_val = 0x2000; }
+//     if (flags & 0x100) { t1_val = ((s32)((D_8008CA4C[obj[0xA0]]->unk6 + 0x100) << 21)) >> 16; t2_val = 0x2000; }
+//     *(s16*)(obj+0x68)=t1_val; tmp=*(s16*)(obj+0x68);
+//     *(s16*)(obj+0x7A)=v0_val; *(s16*)(obj+0x78)=t2_val;
+//     *(s16*)(obj+0x28)=tmp; *(s16*)(obj+0x58)=tmp; *(s16*)(obj+0x18)=tmp;
+//     tmp=*(s16*)(obj+0x7A); *(s16*)(obj+0x5A)=v1_val; *(s16*)(obj+0x88)=0;
+//     *(s16*)(obj+0x3A)=tmp; *(s16*)(obj+0x6A)=tmp; *(s16*)(obj+0x2A)=tmp;
+//     tmp=*(s16*)(obj+0x78); *(s16*)(obj+0x9C)=0; *(s16*)(obj+0x9E)=0;
+//     *(s16*)(obj+0x38)=tmp; *(s16*)(obj+0x48)=tmp; *(s16*)(obj+0x8)=tmp;
+//     tmp=*(s16*)(obj+0x5A); *(s16*)(obj+0x1A)=tmp; *(s16*)(obj+0x4A)=tmp; *(s16*)(obj+0xA)=tmp;
+// }
 s32 func_15168800(s32 arg0, s32 arg1, s32 arg2) {
     s32 temp;
 
@@ -323,7 +400,30 @@ void func_15168B10(s32 arg0, s32 arg1) {
     func_15168A4C(arg0, arg1);
 }
 
+// PERMUTER CANDIDATE / JUSTREG (best 1057): structure fully matches (both 0x14 stores kept via
+// RMW forwarding). Remainder is a v0<->t6 register rotation on `lo`/`masked` + constant-hoist
+// scheduling (li 0x1E vs lui order) that no C form pinned. Best reconstruction:
+// permuter NO ZERO, best 305 (improved from 1057)
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15168B44.s")
+// void func_15168B44(struct102 *arg0) {
+//     s32 lo = *(s32 *)((u8 *)arg0 + 0x14) & 0xFFFF;
+//     s32 hi;
+//     s32 max;
+//     if (lo != 0) {
+//         *(s32 *)((u8 *)arg0 + 0x14) &= 0xFFFF0000;
+//         *(s16 *)((u8 *)arg0 + 0x38) = 0x1E;
+//         *(s32 *)((u8 *)arg0 + 0x14) |= (u16)(lo - 1);
+//     } else {
+//         max = *(u8 *)((u8 *)arg0 + 0x3F);
+//         hi = (*(s32 *)((u8 *)arg0 + 0x14) >> 16) & 0xFFFF;
+//         if (hi < max) {
+//             *(u8 *)((u8 *)arg0 + 0x3F) = max - hi;
+//             *(s16 *)((u8 *)arg0 + 0x38) = 0x1E;
+//         } else {
+//             *(s16 *)((u8 *)arg0 + 0x38) = 0;
+//         }
+//     }
+// }
 void func_15168BAC(struct102 *arg0) {
     u8 temp_v0;
 
@@ -392,8 +492,28 @@ void func_15168E34(s32 *arg0, s32 arg1) {
         *arg0 = val + arg1;
     }
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15168E54.s")
 typedef struct { s8 unk0; s8 unk1; s8 unk2; u8 unk3; u32 unk4; } Struct15168F08;
+
+// PERMUTER CANDIDATE / JUSTREG (best 717): mirrors matched sibling func_15168F08 but calls
+// func_15168E34; the call forces saved-reg promotion and a delay-slot reschedule (target puts
+// a0=&p->unk4 in the first beq slot + distributes i++ into the bnel slots) that drives a whole-
+// function saved-register rotation (base s1 vs s4). Not steerable from C. Best reconstruction:
+// permuter NO ZERO, best 360 (improved from 717)
+#pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15168E54.s")
+// void func_15168E54(Struct15168F08 *arg0, s32 arg1) {
+//     s32 i; Struct15168F08 *p; s8 tag;
+//     i = 0; p = arg0;
+//     if (arg0->unk0 == -0x21) { return; }
+//     p = &arg0[i]; tag = p->unk0;
+//     do {
+//         i++;
+//         if ((p->unk0 == 1) || ((p->unk0 == -0x24) && (p->unk3 == 0xE))) {
+//             func_15168E34((s32 *)&p->unk4, arg1);
+//         }
+//         p = &arg0[i];
+//         do { tag = p->unk0; } while (0);
+//     } while (p->unk0 != -0x21);
+// }
 
 void func_15168F08(Struct15168F08 *arg0, s32 arg1) {
     s32 i;

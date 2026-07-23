@@ -46,102 +46,138 @@ typedef struct {
 } Struct150C3D5CLocals;
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C1F60.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C2290.s")
-// TODO: figure out this struct!
-// void func_150C2290(s32 arg0) {
-//     s16 sp9A;
-//     s16 sp98;
-//     s8 sp95;
-//     s8 sp94;
-//     ?32 sp90;
-//     ?32 sp8C;
-//     ?32 sp88;
-//     ?32 sp84;
-//     ?32 sp80;
-//     ?32 sp7C;
-//     ?32 sp78;
-//     ?32 sp74;
-//     ?32 sp70;
-//     s8 sp6E;
-//     s8 sp6D;
-//     s8 sp6C;
-//     ?32 sp68;
-//     ?32 sp64;
-//     ?32 sp60;
-//     ?32 sp5C;
-//     ?32 sp58;
-//     ?32 sp54;
-//     s8 sp52;
-//     s8 sp51;
-//     s8 sp50;
-//     s16 sp4E;
-//     s16 sp4C;
-//     s16 sp4A;
-//     s16 sp48;
-//     s16 sp46;
-//     s16 sp44;
-//     s16 sp42;
-//     s16 sp40;
-//     s16 sp3E;
-//     s16 sp3C;
-//     f32 sp38;
-//     f32 sp34;
-//     f32 sp30;
-//     f32 sp2C;
-//     f32 sp28;
-//     f32 sp24;
-//     f32 sp20;
-//     f32 sp1C;
-//     f32 sp18;
-//
-//     sp18 = *(void *)0x800A0258;
-//     sp1C = 40.0f;
-//     sp3E = 3;
-//     sp40 = -0x29;
-//     sp44 = -0x16;
-//     sp42 = 0x15;
-//     sp46 = 0x16;
-//     sp48 = 7;
-//     sp4E = 0x15;
-//     sp50 = 0xB;
-//     sp20 = *(void *)0x800A025C;
-//     sp3C = 2;
-//     sp4C = 0x30;
-//     sp52 = 0x28;
-//     sp54 = 1;
-//     sp58 = 4;
-//     sp6C = 0xFF;
-//     sp6D = 0xFF;
-//     sp70 = 3;
-//     sp4A = 0;
-//     sp51 = 1;
-//     sp5C = 0;
-//     sp60 = 0;
-//     sp64 = 0;
-//     sp68 = 0;
-//     sp6E = 0;
-//     sp74 = 0xFF;
-//     sp78 = 0;
-//     sp7C = 0x220005;
-//     sp80 = 0x1D0600;
-//     sp84 = (?32) (u8)1;
-//     sp88 = 0x3B;
-//     sp8C = 0x80;
-//     sp90 = 0x20;
-//     sp94 = 0;
-//     sp95 = 7;
-//     sp98 = 0xC;
-//     sp9A = 0x15;
-//     sp34 = 100.0f;
-//     sp38 = 57.5f;
-//     sp24 = *(void *)0x800A0260;
-//     sp28 = 39.0f;
-//     sp2C = *(void *)0x800A0264;
-//     sp30 = 1.0f;
-//     func_15151A38(&sp18, arg0 & 0xFF, 1);
-// }
+extern f32 D_800A0258;
+extern f32 D_800A025C;
+extern f32 D_800A0260;
+extern f32 D_800A0264;
+void func_15151A38(void *arg0, u8 arg1, s32 arg2);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C2424.s")
+typedef struct {
+    /* 0x00 */ f32 unk0;
+    /* 0x04 */ f32 unk4;
+    /* 0x08 */ f32 unk8;
+    /* 0x0C */ f32 unkC;
+    /* 0x10 */ f32 unk10;
+    /* 0x14 */ f32 unk14;
+    /* 0x18 */ f32 unk18;
+    /* 0x1C */ f32 unk1C;
+    /* 0x20 */ f32 unk20;
+    /* 0x24 */ s16 unk24;
+    /* 0x26 */ s16 unk26;
+    /* 0x28 */ s16 unk28;
+    /* 0x2A */ s16 unk2A;
+    /* 0x2C */ s16 unk2C;
+    /* 0x2E */ s16 unk2E;
+    /* 0x30 */ s16 unk30;
+    /* 0x32 */ s16 unk32;
+    /* 0x34 */ s16 unk34;
+    /* 0x36 */ s16 unk36;
+    /* 0x38 */ u8 unk38;
+    /* 0x39 */ u8 unk39;
+    /* 0x3A */ u8 unk3A;
+    /* 0x3B */ u8 pad3B;
+    /* 0x3C */ s32 unk3C;
+    /* 0x40 */ s32 unk40;
+    /* 0x44 */ s32 unk44;
+    /* 0x48 */ s32 unk48;
+    /* 0x4C */ s32 unk4C;
+    /* 0x50 */ s32 unk50;
+    /* 0x54 */ u8 unk54;
+    /* 0x55 */ u8 unk55;
+    /* 0x56 */ u8 unk56;
+    /* 0x57 */ u8 pad57;
+    /* 0x58 */ s32 unk58;
+    /* 0x5C */ s32 unk5C;
+    /* 0x60 */ s32 unk60;
+    /* 0x64 */ s32 unk64;
+    /* 0x68 */ s32 unk68;
+    /* 0x6C */ s32 unk6C;
+    /* 0x70 */ s32 unk70;
+    /* 0x74 */ s32 unk74;
+    /* 0x78 */ s32 unk78;
+    /* 0x7C */ u8 unk7C;
+    /* 0x7D */ u8 unk7D;
+    /* 0x7E */ u8 pad7E[2];
+    /* 0x80 */ s16 unk80;
+    /* 0x82 */ s16 unk82;
+    /* 0x84 */ s32 unk84;
+} Struct150C2290Arg;
+
+#pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C2290.s")
+/* Best 590. Only diff: target homes a0 + does `andi a1,a0,0xff` early;
+   IDO keeps arg0 in a3 and masks late (register-alloc heuristic).
+   PERMUTER CANDIDATE. permuter NO ZERO: `void func_150C2290(u8 arg0)` (u8, not s32)
+   drops the score to 60 — remaining diff is a single-instruction const-hoist of the
+   1.0f (unk18) load that IDO schedules one slot later; not C-controllable. Reconstruction:
+void func_150C2290(u8 arg0) {
+    Struct150C2290Arg sp18;
+
+    sp18.unk0 = D_800A0258;
+    sp18.unk4 = 40.0f;
+    sp18.unk8 = D_800A025C;
+    sp18.unk1C = 100.0f;
+    sp18.unk20 = 57.5f;
+    sp18.unkC = D_800A0260;
+    sp18.unk10 = 39.0f;
+    sp18.unk24 = 2;
+    sp18.unk26 = 3;
+    sp18.unk28 = -0x29;
+    sp18.unk2C = -0x16;
+    sp18.unk2A = 0x15;
+    sp18.unk2E = 0x16;
+    sp18.unk30 = 7;
+    sp18.unk32 = 0;
+    sp18.unk34 = 0x30;
+    sp18.unk36 = 0x15;
+    sp18.unk38 = 0xB;
+    sp18.unk39 = 1;
+    sp18.unk3A = 0x28;
+    sp18.unk3C = 1;
+    sp18.unk40 = 4;
+    sp18.unk44 = 0;
+    sp18.unk48 = 0;
+    sp18.unk4C = 0;
+    sp18.unk50 = 0;
+    sp18.unk54 = 0xFF;
+    sp18.unk55 = 0xFF;
+    sp18.unk56 = 0;
+    sp18.unk58 = 3;
+    sp18.unk5C = 0xFF;
+    sp18.unk60 = 0;
+    sp18.unk64 = 0x220005;
+    sp18.unk68 = 0x1D0600;
+    sp18.unk6C = 1;
+    sp18.unk70 = 0x3B;
+    sp18.unk74 = 0x80;
+    sp18.unk78 = 0x20;
+    sp18.unk7C = 0;
+    sp18.unk7D = 7;
+    sp18.unk80 = 0xC;
+    sp18.unk82 = 0x15;
+    sp18.unk14 = D_800A0264;
+    sp18.unk18 = 1.0f;
+    func_15151A38(&sp18, (u8)arg0, 1);
+}
+*/
+
+extern f32 D_800A0268;
+extern f32 D_800A026C;
+void func_1514C470(f32 arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5,
+                   f32 arg6, u8 arg7, s32 arg8, f32 arg9, s32 arg10, u8 arg11);
+
+// Best: 130. Only diff: a scheduler tie in call 1 (target loads D_800A0268
+// before -490.0f; IDO reverses). Documented uncontrollable lwc1-vs-mtc1 tie.
+// PERMUTER MATCHED (was best 130 -> 0): pointer-deref of D_800A0268 + hoisted 0 local.
+void func_150C2424(u8 arg0) {
+    s32 new_var;
+    f32 *new_var2;
+    new_var2 = &D_800A0268;
+    new_var = 0;
+    func_1514C470(*new_var2, (s32)(-490.0f), -328.0f, *new_var2, -490.0f, 328.0f,
+                  (func_150ADA68() * 8.0f) + 8.0f, 1, new_var, 0.0f, 0, arg0);
+    func_1514C470(D_800A026C, -560.0f, -580.0f, 8117.0f, -560.0f, -580.0f,
+                  (func_150ADA68() * 3.0f) + 4.0f, 3, 0, 0.0f, 0, arg0);
+}
 s32 func_150C251C(void *arg0) {
     void *temp_v0 = *(void **)((s32)arg0 + 0x98);
     s32 temp_v1 = *(s16 *)((s32)arg0 + 0x1C) << 3;
@@ -157,7 +193,65 @@ s32 func_150C251C(void *arg0) {
     }
     return 1;
 }
+extern f32 D_800A0270;
+
 #pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C2558.s")
+/* Best 1307. FP block matches; blocker is IDO constant-CSE/reg-alloc for the
+   value-1 fields (unk24/unk39/unk6C share one register allocated late) plus
+   the integer field ordering. PERMUTER CANDIDATE. Reconstruction:
+s32 func_150C2558(s32 arg0, s32 arg1, f32 arg2, f32 arg3, f32 arg4, s32 arg5,
+                  s32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10, s32 arg11,
+                  s32 arg12, s32 arg13, u8 arg14) {
+    Struct150C2290Arg sp18;
+
+    sp18.unk0 = arg2;
+    sp18.unk4 = arg3;
+    sp18.unk8 = (arg4 + 15.0f) - func_150ADA68() * 30.0f;
+    sp18.unk28 = (s32)(sp18.unk8 * D_800A0270) - 0x40;
+    sp18.unk1C = 200.0f;
+    sp18.unk20 = 150.0f;
+    sp18.unkC = 22.0f;
+    sp18.unk10 = 44.0f;
+    sp18.unk14 = 0.0f;
+    sp18.unk18 = 0.0f;
+    sp18.unk24 = 1;
+    sp18.unk26 = 0;
+    sp18.unk2A = 9;
+    sp18.unk2C = 0;
+    sp18.unk2E = 0;
+    sp18.unk30 = 3;
+    sp18.unk32 = 3;
+    sp18.unk34 = 0x28;
+    sp18.unk36 = 0x15;
+    sp18.unk38 = 0xB;
+    sp18.unk39 = 1;
+    sp18.unk3A = 0x28;
+    sp18.unk3C = 1;
+    sp18.unk40 = 4;
+    sp18.unk44 = 0;
+    sp18.unk48 = 0;
+    sp18.unk4C = 0;
+    sp18.unk50 = 0;
+    sp18.unk54 = 0xFF;
+    sp18.unk55 = 0xFF;
+    sp18.unk56 = 0;
+    sp18.unk58 = 3;
+    sp18.unk5C = 0xFF;
+    sp18.unk60 = 0;
+    sp18.unk64 = 0x220005;
+    sp18.unk68 = 0x1D0600;
+    sp18.unk6C = 1;
+    sp18.unk70 = 0x3B;
+    sp18.unk74 = 0x80;
+    sp18.unk78 = 0x20;
+    sp18.unk7C = 0;
+    sp18.unk7D = 7;
+    sp18.unk80 = 0xC;
+    sp18.unk82 = 0x15;
+    func_15151A38(&sp18, arg14, 1);
+    return 1;
+}
+*/
 extern f32 D_800A0274;
 extern f32 D_800A0278;
 extern f32 D_800A027C;
@@ -288,38 +382,28 @@ s32 func_150C2FCC(f32 *arg0) {
     }
     return 1;
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C308C.s")
-// ? func_150C308C(void *arg0) {
-//     u8 sp1F;
-//     f32 temp_f0;
-//     f32 temp_f2;
-//     u8 temp_a1;
-//     void *temp_v0;
-//     u8 phi_a1;
-//
-//     phi_a1 = (u8)0U;
-//     if ((s32) arg0->unk1C >= 6) {
-//         sp1F = 0;
-//         temp_v0 = func_15144B34(D_80082FA4, (u8)0U);
-//         temp_f0 = temp_v0->unk0;
-//         temp_f2 = temp_v0->unk8;
-//         temp_a1 = sp1F;
-//         if (((temp_f0 * temp_f0) + (temp_f2 * temp_f2)) < D_800A0310) {
-// block_4:
-//             phi_a1 = (u8)1U;
-//         } else {
-//             sp1F = temp_a1;
-//             phi_a1 = temp_a1;
-//             if (D_800A0314 < func_15144C8C(func_150484A0(temp_v0->unk0, temp_v0->unk8, temp_a1), arg0->unk160)) {
-//                 goto block_4;
-//             }
-//         }
-//     }
-//     if (phi_a1 != 0) {
-//         arg0->unk1C = (u16)5;
-//     }
-//     return 1;
-// }
+extern struct17 *func_15144B34(s32);
+
+s32 func_150C308C(void *arg0) {
+    u8 ret;
+    struct17 *temp_v0;
+    f32 sum;
+
+    ret = 0;
+    if (*(s16 *)((s32)arg0 + 0x1C) >= 6) {
+        temp_v0 = func_15144B34(D_80082FA4);
+        sum = (temp_v0->unk0 * temp_v0->unk0) + (temp_v0->unk8 * temp_v0->unk8);
+        if (sum < D_800A0310) {
+            ret = 1;
+        } else if (D_800A0314 < func_15144C8C(func_150484A0(temp_v0->unk0, temp_v0->unk8), *(f32 *)((s32)arg0 + 0x160))) {
+            ret = 1;
+        }
+    }
+    if (ret != 0) {
+        *(s16 *)((s32)arg0 + 0x1C) = 5;
+    }
+    return 1;
+}
 
 Gfx *func_150C3160(Gfx *arg0, void *arg1) {
     s32 temp_v0;

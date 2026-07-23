@@ -3,6 +3,7 @@
 #include "variables.h"
 
 
+struct248 *func_1509B950(struct248 *);
 struct249 *func_1509B704(s16 arg0);
 s32 func_1509B5AC(s32 arg0, s32 arg1);
 void func_1509B810();
@@ -93,7 +94,7 @@ typedef struct Node1509 {
     struct Node1509 *prev;
 } Node1509;
 
-extern void func_10004074(void);
+extern void func_10004074();
 
 void func_1509B764(Node1509 *arg0) {
     if (D_800D2F48.length == 1) {

@@ -242,56 +242,31 @@ void func_15075884(void) {
 //     D_800D154C->unk44 = 2.0f * (temp_f0 / D_800D1891);
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_15075938.s")
-// NON-MATCHING: 2nd half ok, 1st is a mystery
+// PERMUTER CANDIDATE best 940: MYSTERY SOLVED - the "1st half" temp_v0 is a LOAD
+// (*(u8**)&D_800D2108)[unk13F] (D_800D2108 holds a pointer, same idiom as func_15075650), NOT the
+// sum `unk13F + D_800D2108` the old comment guessed. Logic is now byte-exact. Residual: target uses
+// branch-likely `bgezl` (else-block's unk13F load in delay) vs my `bgez`+nop, and hoists the
+// `lui a1,%hi(D_800D1891)` to the top so temp_v0 lands in v0 both paths (mine puts it in a1 in the
+// >=0 path -> extra `move v0,a1`). Scheduling near-miss.
 // void func_15075938(void) {
-//     u8 tmp;
-//     u8 changed;
-//     s32 temp_a0;
-//     s32 phi_v1;
-//     u8 temp_v0;
-//
+//     u8 changed; s32 temp_a0; s32 phi_v1; u8 temp_v0;
 //     changed = 0;
-//
 //     temp_a0 = D_800D154C->unk21E - D_800D154C->unk221;
 //     if (temp_a0 < 0) {
-//         temp_v0 = D_800D154C->unk13F + D_800D2108;
+//         temp_v0 = (*(u8 **)&D_800D2108)[D_800D154C->unk13F];
 //         temp_a0 = (temp_a0 + temp_v0) - 1;
 //     } else {
-//         temp_v0 = D_800D154C->unk13F + D_800D2108;
-//         if ((temp_v0 - 1) <= temp_a0) {
-//             temp_a0 = (temp_a0 - temp_v0) + 1;
-//         }
+//         temp_v0 = (*(u8 **)&D_800D2108)[D_800D154C->unk13F];
+//         if ((temp_v0 - 1) <= temp_a0) { temp_a0 = (temp_a0 - temp_v0) + 1; }
 //     }
-//
-//     if (D_800D1891 == 0xFF) {
-//         phi_v1 = temp_v0 - 2;
-//     } else {
-//         phi_v1 = D_800D1891;
-//     }
-//
-//     if (D_800D1892 == 0) {
-//         if (phi_v1 == temp_a0) {
-//             changed = 1;
-//         }
-//     } else if (D_800D1892 == 1) {
-//         if (phi_v1 != temp_a0) {
-//             changed = 1;
-//         }
-//     } else if (D_800D1892 == 2) {
-//         if (phi_v1 < temp_a0) {
-//             changed = 1;
-//         }
-//     } else {
-//         if (phi_v1 > temp_a0) {
-//             changed = 1;
-//         }
-//     }
-//
-//     if (changed) {
-//         func_15075400(D_800D1890);
-//     }
+//     if (D_800D1891 == 0xFF) { phi_v1 = temp_v0 - 2; } else { phi_v1 = D_800D1891; }
+//     if (D_800D1892 == 0)      { if (phi_v1 == temp_a0) changed = 1; }
+//     else if (D_800D1892 == 1) { if (phi_v1 != temp_a0) changed = 1; }
+//     else if (D_800D1892 == 2) { if (phi_v1 <  temp_a0) changed = 1; }
+//     else                      { if (phi_v1 >  temp_a0) changed = 1; }
+//     if (changed) { func_15075400(D_800D1890); }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_15075938.s")
 
 void func_15075A50(void) {
     u8 temp_v0 = D_800D154C->unk21E;
@@ -616,17 +591,19 @@ call_func_1504715C:
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_150767F4.s")
-// NON-MATCHING: JUSTREG
+// PERMUTER CANDIDATE best 1005: the old JUSTREG reconstruction had wrong signs; the target is
+// ((tmp0 - (D_800CC34A[...]>>8)) + D_800D1891). Splitting out tmp1 dropped 2005->1005. Residual is a
+// register rotation (mine runs ~1 temp behind target) coupled to a `beqzl` (branch-likely, `lw ra`
+// in delay, D_800D1890 lui hoisted) vs my plain `beqz` (lui in delay). Register+branch near-miss.
 // void func_150767F4(void) {
-//     struct127 *tmp = &D_800CC2D0[D_800D154C->unk222]; // * 0x32C) ;
-//
+//     struct127 *tmp = &D_800CC2D0[D_800D154C->unk222];
 //     s32 tmp0 = func_1505A630(tmp->x_position - D_800D154C->x_position, D_800D154C->z_position - tmp->z_position, 0) >> 8;
-//
-//     if ((tmp0 + ((D_800CC34A[D_800D154C->unk222 * 0x196] >> 8) - D_800D1891) & 0xFF) < (D_800D1891 * 2)) {
+//     s32 tmp1 = D_800CC34A[D_800D154C->unk222 * 0x196] >> 8;
+//     if ((((tmp0 - tmp1) + D_800D1891) & 0xFF) < (D_800D1891 * 2)) {
 //         func_15075400(D_800D1890);
 //     }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_150767F4.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_150768DC.s")
 // NON-MATCHING: almost JUSTREG
@@ -723,20 +700,21 @@ void func_15076D04(void) {
     D_800D154C->xz_velocity = D_800D1890;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_15076D3C.s")
-// ???
+// PERMUTER CANDIDATE best 415: ops byte-exact (tmp2->v1, temp_a3->a3 aligned, call passes the
+// float fields as ints in a1/a2). Residual: IDO schedules the `scale = D_8009A144` load LATE (near
+// the first mul) while the target hoists `lwc1 f0,%lo(D_8009A144)` to the top; that + a small
+// register cascade is the only diff. A `volatile`/in-place-(s16) nudge regressed to 455.
 // void func_15076D3C(void) {
-//     s32 temp_a3;
-//     s32 tmp2;
-//
-//     temp_a3 = D_800D1892 | (D_800D1893 << 8);
-//     tmp2 = D_800D1890 | (D_800D1891 << 8);
-//     D_800D154C->xz_scale = (s16)tmp2 * D_8009A144;
-//     D_800D154C->y_scale = (s16)temp_a3 * D_8009A144;
+//     f32 scale = D_8009A144;
+//     s32 tmp2 = D_800D1890 | (D_800D1891 << 8);
+//     s32 temp_a3 = D_800D1892 | (D_800D1893 << 8);
+//     D_800D154C->xz_scale = (s16)tmp2 * scale;
+//     D_800D154C->y_scale = (s16)temp_a3 * scale;
 //     D_800D154C->unk154 = D_800D154C->xz_scale;
 //     D_800D154C->unk158 = D_800D154C->y_scale;
-//     func_15062BDC(&D_800D154C, D_800D154C->xz_scale, D_800D154C->y_scale);
+//     func_15062BDC(D_800D154C, D_800D154C->xz_scale, D_800D154C->y_scale);
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_15076D3C.s")
 
 void func_15076DF4(void) {
     D_800D154C->interaction_state = D_800D1890;
@@ -887,7 +865,18 @@ void func_15077364(void) {
     D_800D154C->unk248 = (u8) D_800D1892;
 }
 
-// ??
+// PERMUTER CANDIDATE (best 1170): ops match; register renames (target uses a1 for
+// &D_800D154C, IDO gives a0) + scheduling of the D_800D1891/D_800D1892 byte loads.
+// void func_15077404(void) {
+//     if (D_800D1893 != 0) {
+//         s32 v0 = (s16)(((D_800D154C->unk246 & 0x1F) << 8) + D_800D154C->unk249 + (s16)((D_800D1891 << 8) + D_800D1892) * D_800BE9E4);
+//         if (v0 < 0) { v0 = 0; }
+//         D_800D154C->unk246 = (v0 >> 8) | 0x80;
+//         D_800D154C->unk249 = v0;
+//     } else {
+//         D_800D154C->unk246 = D_800D1890;
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_15077404.s")
 
 void func_150774B4(void) {

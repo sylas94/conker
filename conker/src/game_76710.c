@@ -12,6 +12,9 @@ void func_15049260(Va36 arg0) {
     func_150AAD98(arg0);
 }
 
+// CODEGEN BLOCKER: instructions otherwise match with D_80099080 (not literal 0.001f),
+// but IDO -O2 strength-reduces `arg / 2.0f` -> `arg * 0.5f` (mul), while the target keeps
+// `div.s` by 2.0f. No C form of "divide by 2.0f" avoids the reduction at -O2.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_76710/func_150492CC.s")
 // void func_150492CC(f32 arg0, f32 arg1, f32 arg2) {
 //     D_800CC220 = arg0;

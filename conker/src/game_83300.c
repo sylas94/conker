@@ -13,6 +13,13 @@ u8  func_1505B9C4(void *arg0, struct127 *arg1, s32 arg2, s32 arg3, u8 arg4, s32 
 s32 func_1505C1E4(void *arg0, struct127 *arg1, void *arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
 extern struct255 *D_800CC4A4;
 void func_1505F188(struct127 *arg0);
+extern f32 D_8009962C;
+extern f32 D_80099630;
+extern f32 D_800994C0;
+extern f32 D_800994C4;
+extern f32 D_800994C8;
+extern f32 D_800994CC;
+extern f32 D_800994D0;
 
 typedef struct {
     char pad_0[0x4];
@@ -334,6 +341,24 @@ s32 func_1505693C(struct127 *arg0, s32 arg1) {
     return 0;
 }
 
+// PERMUTER CANDIDATE best 3463 (structural match; IDO swaps v0<->v1 for result vs row-pointer and
+// keeps the row element pointer live across w rather than recomputing -> arg0 spills to s0/frame).
+// typedef struct { u8 b[0xA]; } Row56A00;
+// u8 func_15056A00(struct127 *arg0, u8 arg1, u8 arg2) {
+//     u8 v0; u16 w;
+//     v0 = 0;
+//     if (((Row56A00 *) D_80099A3C)[arg2].b[7] < arg1) v0 = 5;
+//     else if (((Row56A00 *) D_80099A3C)[arg2].b[2] < arg1) v0 = 2;
+//     w = arg0->unk76;
+//     if (((arg0->unk78 - w) & 0x8000) != 0) v0 += 3; else v0 += 4;
+//     if (((Row56A00 *) D_80099A3C)[arg2].b[v0] == 0xFF) return v0;
+//     arg0->unk218 = (struct216 *) ((s32) arg0->unk218 - 5);
+//     arg0->unk21C = 0x4E20; arg0->unk223 = 0xD; arg0->unk44 = 0.0f;
+//     arg0->unkF4 &= ~0xE; arg0->unkF4 |= 4;
+//     arg0->unk78 = w; arg0->unk7A = w; arg0->unk138 = 0;
+//     arg0->unk244 = ((Row56A00 *) D_80099A3C)[arg2].b[v0];
+//     return v0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15056A00.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15056B08.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505841C.s")
@@ -465,8 +490,8 @@ void func_15058EA4(struct127 *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15058F24.s")
-// NON-MATCHING: besides missing mov.s, its just a few regallocs
+// NON-MATCHING: best 400 (PERMUTER CANDIDATE: one extra `sw a2,0x18(sp)` spill of unused arg2 +
+// missing `mov.s f12,f20` arg1-copy + a handful of at/t7/v0 and f10/f4 regalloc renames.)
 // void func_15058F24(struct127 *arg0, f32 arg1, f32 arg2) {
 //     f32 temp_f12;
 //     f32 temp_f14;
@@ -522,6 +547,7 @@ void func_15058EA4(struct127 *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 
 //         }
 //     }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15058F24.s")
 
 void func_15059140(struct127 *arg0) {
     f32 sp2C;
@@ -885,6 +911,50 @@ void func_1505A250(f32 arg0, f32 arg1, f32 arg2, f32 *arg3, f32 *arg4) {
 }
 
 
+// PERMUTER CANDIDATE best 3576 (control flow BYTE-PERFECT; entire diff is a systematic FP-register
+// rename: target promotes aa->callee-saved $f20 (+ frame to save it) & bb->$f14 via mtc1 up front,
+// but IDO keeps this leaf's aa/bb in temps $f2/$f0 with an arg-home spill. Copy-param-to-local and
+// scale-hoist tricks did not force the f20 promotion. Reconstruction below is logically exact.)
+// f32 func_1505A3A8(f32 arg0, void *arg1, f32 arg2, f32 arg3, u8 arg4) {
+//     struct127 *obj = (struct127 *)arg1;
+//     f32 aa = arg2 * D_800D1550[0];
+//     f32 bb = arg3 * D_800D1550[0];
+//     f32 vel;
+//     if (D_800CC27C != 0) {
+//         if (obj->unk28 < 5.0f) {
+//             if (obj->interaction_state != 0x1E) aa = 0.0f;
+//         }
+//     }
+//     if (obj->interaction_state == 1) {
+//         if (obj->in_water != 0) { aa = 2.0f; bb = bb * D_800994C0; }
+//         if (obj->unkA8 != 0) bb = bb * 0.25f;
+//         if (obj->unk81 != 0) {
+//             if (obj->unk81 & 0x40) {
+//                 if (obj->unk81 & 0x20) bb = 0.0f; else bb = D_800994C4;
+//             } else {
+//                 bb = bb * D_800994C8;
+//                 if (arg4 >= 0x2E) aa = aa * 0.5f;
+//                 if (arg4 >= 0x5B) arg0 = arg0 * 0.5f;
+//             }
+//         }
+//         if (obj->unkAE != 0) bb = bb * D_800994CC;
+//     }
+//     if (arg0 < 0.0f) {
+//         vel = obj->xz_velocity;
+//         if (0.0f < vel) bb = bb + aa; else bb = aa;
+//     } else {
+//         vel = obj->xz_velocity;
+//         if (vel < 0.0f) aa = aa + bb;
+//     }
+//     if (arg0 < vel) {
+//         obj->xz_velocity = vel - bb;
+//         if (obj->xz_velocity < arg0) obj->xz_velocity = arg0;
+//     } else {
+//         if ((arg0 - 1.0f) < vel) aa = aa * D_800994D0;
+//         obj->xz_velocity = vel + aa;
+//         if (arg0 < obj->xz_velocity) obj->xz_velocity = arg0;
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505A3A8.s")
 
 f32 func_1505A5CC(struct49 *arg0) {
@@ -1296,9 +1366,42 @@ struct127 *func_1505EEB0(s32 state, s32 *arg1) {
 //     return tmp;
 // }
 
+// PERMUTER/HARD CANDIDATE best 745 (natural loop) — needs split symbols D_800CC40F (elem0 unk13F)
+// and D_800CC5FC (loop base = elem1) which only a hand-peel emits, but hand-peel (best 1205) breaks
+// IDO's counter-merge/folded-read peel structure. EFD0 (unk127/D_800CC3F7) & F0AC (id/D_800CC2D4) identical shape.
+// struct127 *func_1505EEF4(s32 arg0) {
+//     struct127 *ptr; s32 i;
+//     for (ptr = D_800CC2D0, i = 0; i < 25; i++, ptr++) {
+//         if ((ptr->interaction_state != 0) && (ptr->unk13F == arg0)) return ptr;
+//     }
+//     return NULL;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505EEF4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505EFD0.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505F0AC.s")
+// PERMUTER CANDIDATE best 835 (body byte-identical; blocker is the D_8009962C load position
+// vs the struct-clear loop, coupled to an f0<->f2 swap for 1.0f vs D_8009962C. decl-init keeps
+// correct f0/f2 regs but hoists the load above the loop + reorders the li/D_80099630 block.)
+// void func_1505F188(struct127 *arg0) {
+//     s32 *p; f32 v = D_8009962C;
+//     for (p = (s32 *)arg0; p < (s32 *)((u8 *)arg0 + 0x32C); p++) *p = 0;
+//     ((u8 *)arg0)[0x2FD] = 2;
+//     *(s16 *)&arg0->unk38 = -0x2710;
+//     arg0->xz_scale = 1.0f; arg0->y_scale = 1.0f;
+//     arg0->unk118 = v; arg0->unk180 = v;
+//     ((u8 *)arg0)[0x1DC] = 0xFF; arg0->unk127 = 0xFF; arg0->unk84.uh = 0xFFFF; arg0->unk13F = 0xFF;
+//     *(u8 **)((u8 *)arg0 + 0x2C4) = &arg0->id;
+//     ((u8 *)arg0)[0x2C8] = 1; arg0->unk2C9 = 1; arg0->id = 0xFF; arg0->unk2CB = 0x32;
+//     arg0->unk48 = 1.0f; arg0->gravity = D_80099630;
+//     arg0->unk6E = ((u32) func_150ADA20() % 0x32) + 0x32;
+//     func_150615DC(arg0);
+//     ((u8 *)arg0)[0x1DD] = 0xFF; ((u8 *)arg0)[0x1DE] = 0xFF; ((u8 *)arg0)[0x1DF] = 0xFF;
+//     *(s16 *)((u8 *)arg0 + 0x18C) = 0; *(s16 *)((u8 *)arg0 + 0x18E) = 0;
+//     *(s16 *)((u8 *)arg0 + 0x190) = 0; *(s16 *)((u8 *)arg0 + 0x192) = 0;
+//     *(s16 *)((u8 *)arg0 + 0x194) = 0; *(s16 *)((u8 *)arg0 + 0x196) = 0xA;
+//     *(s16 *)((u8 *)arg0 + 0x198) = 0xA; *(s16 *)((u8 *)arg0 + 0x19A) = 0;
+//     *(s16 *)((u8 *)arg0 + 0x19C) = 0;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505F188.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505F298.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1506045C.s")
@@ -1355,6 +1458,36 @@ void func_150615DC(struct127 *arg0) {
     arg0->unkB = arg0->unkC = arg0->unkD = arg0->unkE.ub[0] = 0xFF;
 }
 
+// PERMUTER CANDIDATE best 105 (structure BYTE-IDENTICAL; two keys already applied: `s32 b=arg4`
+// pins arg4->v0 [1705->130], and reusing dead `arg2` as the store value pins sv->a2 [130->105]).
+// Remaining diff is ONE coupled register swap in the 8/9 handler + L690: (1<<b) lands in a1 & the
+// unkE reload in v1, but the target uses v1 & a1 respectively; PLUS one IDO scheduler-slot fill (the
+// <8-tail `lui %hi(D_800DBFF4)` is hoisted into the lbu-0xA load-delay slot). Both are IDO free-list/
+// scheduler internals -- resisted operand-order, statement-split, explicit-mask-local, and every
+// arg1-reuse-for-unkE variant (each regressed to 500-1440 by conflicting with (1<<b)'s a1). Exact:
+// void func_1506160C(struct127 *arg0, u8 arg1, u8 arg2, u8 arg3, u8 arg4) {
+//     if (arg1 >= 8) {
+//         s32 b = arg4;
+//         if (arg1 != 0xA) {
+//             if (arg1 == 8) { arg0->unkE.ub[1] |= (1 << b); arg2 = 0; }
+//             else { arg0->unkE.ub[1] &= ~(1 << b); arg2 = 0xFF; }
+//             if (arg0->unkE.ub[1] & ((1 << b) << 4)) ((u8 *)arg0)[0xB + b] = arg2;
+//             arg0->unkE.ub[1] &= ~((1 << b) << 4);
+//         } else { arg0->unkE.ub[1] |= ((1 << b) << 4); arg2 = 0; }
+//         if ((((u8 *)arg0)[0x2FD] != 0) || (D_800DBFF4[b] != 0)) ((u8 *)arg0)[0xB + b] = arg2;
+//         return;
+//     }
+//     if (arg1 < arg0->unkA) return;
+//     if (arg1 == 4)      { arg0->unkA = arg1; arg0->unk7 = 0; arg0->unk8 = 0xFF; arg0->unk9 = 0x20; }
+//     else if (arg1 == 5) { arg0->unkA = arg1; arg0->unk8 = 0; arg0->unk9 = 0x20; }
+//     else if (arg1 == 6) { arg0->unkA = arg1; arg0->unk8 = 0; arg0->unk9 = 8; }
+//     else if (arg1 == 2) { arg0->unkA = arg1; arg0->unk8 = arg2; arg0->unk9 = arg3; }
+//     else if (arg1 == 1) { arg0->unkA = 0; arg0->unk7 = arg2; arg0->unk8 = arg2; }
+//     if (*(s32 *)D_800DBFF4 != 0) arg0->unk7 = arg0->unk8;
+// }
+// permuter NO ZERO (best 105, structure byte-identical; residual = coupled 2-reg swap
+// [a1/v1 for (1<<b) vs unkE reload] + 1 scheduler slot). Header fix (arg1/arg4->u8) took it
+// from 11818->105. Reconstruction preserved in the comment block above.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1506160C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150617BC.s")
 // ???
@@ -1371,6 +1504,18 @@ s32 func_1506196C(u8 *arg0, s32 arg1) {
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150619A8.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15061B4C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150623F4.s")
+// PERMUTER CANDIDATE best 1662 (JUSTREG: instructions match, saved-register numbering off;
+// target allocates arg0->s1,arg1->s2,base->s3 but IDO gives base->s1)
+// void func_150626EC(struct127 *arg0, s32 arg1) {
+//     struct127 *ptr;
+//     for (ptr = D_800CC2D0; ptr != (struct127 *) &D_800D121C; ptr++) {
+//         if ((ptr->interaction_state != 0) &&
+//             (((arg0 - D_800CC2D0) + 1) == ptr->unk65) &&
+//             (ptr->unk127 == 0xFF)) {
+//             func_15060F28(ptr, arg1);
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150626EC.s")
 
 void func_150627D4(struct127 *arg0) {
@@ -1430,6 +1575,30 @@ void func_15062BDC(struct127 *arg0, f32 arg1, f32 arg2) {
     }
 }
 
+// PERMUTER CANDIDATE best 180 (EVERY instruction matches; remaining diff is a coherent 5-register
+// cycle a0->a1->a3->v1->t0 rooted in the base pointer landing in a0 vs the target's a1 — an IDO
+// free-list coin-flip. Hand-fixes: *(s32*)&arg1 homes arg1 at prologue; explicit `base` local; the
+// nested default-then-adjust wrap shape; flag=arg5. Progression 3331->900->395->360->180.)
+// typedef struct { s32 unk0; s32 unk4; } Entry62D10;
+// extern Entry62D10 **D_800C4488[];
+// void func_15062D10(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
+//     Entry62D10 *base, *entry; s32 packed, modX, modY, newX, newY, tmp, flag;
+//     if ((&D_800D19A0)[arg0] == 0) return;
+//     flag = arg5;
+//     base = D_800C4488[arg0][arg4];
+//     entry = &base[*(s32 *)&arg1];
+//     packed = entry->unk4;
+//     modX = ((packed >> 12) & 0xFFF) + 2;
+//     modY = (packed & 0xFFF) + 2;
+//     packed = entry->unk0;
+//     if (flag != 0) newX = arg2 & 0xFFF;
+//     else { tmp = ((packed >> 12) & 0xFFF) + arg2; newX = tmp;
+//            if (modX < tmp) newX = tmp - modX; else if (tmp < 0) newX = tmp + modX; }
+//     if (flag != 0) newY = arg3 & 0xFFF;
+//     else { tmp = (packed & 0xFFF) + arg3; newY = tmp;
+//            if (modY < tmp) newY = tmp - modY; else if (tmp < 0) newY = tmp + modY; }
+//     entry->unk0 = (packed & 0xFF000000) | (newY & 0xFFF) | ((newX & 0xFFF) << 12);
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15062D10.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15062E24.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15062FC0.s")
@@ -1459,4 +1628,24 @@ void func_15063168(struct127 *arg0) {
     }
 }
 
+// PERMUTER CANDIDATE best 1960 (structural match: all field save/restore + 2 calls correct;
+// target 8-aligns idx/cam spill slots leaving frame gaps at 0x28/0x4c and schedules a1=0 late).
+// void func_15082A44(struct129 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
+// void func_15063254(struct127 *arg0, s32 arg1, s32 arg2, f32 arg3) {
+//     struct129 *obj; s32 idx; struct108 *cam;
+//     f32 x, y, z, b8, u40, uC4; s32 rot;
+//     idx = arg0->unk13F;
+//     obj = arg0->unk144;
+//     obj->unk4 = arg1; obj->unk3 = arg2; obj->unk20 = arg3; obj->unk24 = arg3; obj->unk2 = 0;
+//     cam = arg0->camera;
+//     z = arg0->z_position; x = arg0->x_position; y = arg0->y_position;
+//     b8 = arg0->unkB8; u40 = arg0->unk40; uC4 = arg0->unkC4; rot = arg0->unk76;
+//     func_15060F28(arg0, 0);
+//     func_15082A44(obj, idx, 0, 0, (arg0 - D_800CC2D0) + 1);
+//     arg0->x_position = x; arg0->y_position = y; arg0->camera = cam; arg0->z_position = z;
+//     arg0->unkB8 = b8; arg0->unk40 = u40; arg0->unk76 = rot; arg0->unk7A = rot;
+//     arg0->old_x_position = x; arg0->old_y_position = y;
+//     arg0->unk1CC = arg0->y_position; arg0->old_z_position = arg0->z_position;
+//     arg0->unkC4 = uC4; cam->unk3D4 = (struct127 *) arg0->unk31C;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15063254.s")

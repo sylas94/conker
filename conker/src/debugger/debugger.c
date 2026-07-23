@@ -3,6 +3,8 @@
 #include "functions.h"
 #include "variables.h"
 
+s32 func_1600160C();
+
 typedef struct {
     s32 unk0;
 } func_160006CC_sp3C;

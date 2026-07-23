@@ -505,19 +505,11 @@ void func_1513E134(void) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_169510/func_1513E13C.s")
+// PERMUTER CANDIDATE best 3348 — reconstruction below is semantically close (first 12 instrs match)
+// but FP store scheduling + a +4 stack-slot shift on sp48/sp1C/sp30 differ.
 // void func_1513E13C(struct210 *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, u8 arg6) {
-//     f32 sp48;
-//     f32 sp30;
-//     f32 sp1C;
-//
-//     f32 temp_f0;
-//     f32 temp_f12;
-//     f32 temp_f14;
-//     f32 temp_f16;
-//     f32 temp_f18;
-//     f32 temp_f2;
-//     s32 temp_f10;
-//
+//     f32 sp48; f32 sp30; f32 sp1C;
+//     f32 temp_f0, temp_f12, temp_f14, temp_f16, temp_f18, temp_f2; s32 temp_f10;
 //     sp48 = func_151423D8((arg6 - 0x40));
 //     temp_f0 = func_151423D8(arg6);
 //     temp_f12 = arg5 * sp48;
@@ -671,6 +663,27 @@ void func_1513F4B0(struct210 *arg0, s16 arg1) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_169510/func_1513F4E4.s")
+// PERMUTER NO ZERO (best 730). word0 (first ~52 instrs) BYTE-PERFECT; word1's ops are
+// byte-identical to target but IDO's delay-slot scheduling gives a different temp-register
+// rotation from the first pair on (all `r`/reorder marks, no wrong ops). Reconstruction:
+// typedef struct { u8 unk0..unkF; } CombineEntry;  // 16-byte combiner mux table entry
+// extern CombineEntry D_800A4BA8[]; extern s16 D_800DD1BE; extern s16 func_15143044(u8, s32);
+// Gfx *func_1513F4E4(Gfx *gfx, u8 arg1, u8 *arg2) {
+//     s16 temp_v0 = func_15143044(arg1, 0);
+//     if (temp_v0 != D_800DD1BE) {
+//         CombineEntry *e; Gfx *g2;
+//         if (arg2[0] == 1) { gDPPipeSync(gfx++); arg2[0] = 0; }
+//         e = &D_800A4BA8[arg1];
+//         g2 = gfx++;
+//         g2->words.w0 = (((e->unkA & 0x1F) | ((e->unk8 & 0xF) << 5) | ((e->unk0 & 0xF) << 20)
+//              | ((e->unk2 & 0x1F) << 15) | ((e->unk4 & 7) << 12) | ((e->unk6 & 7) << 9)) & 0xFFFFFF) | 0xFC000000;
+//         g2->words.w1 = (e->unkF & 7) | ((e->unk9 & 0xF) << 24) | ((e->unkC & 7) << 21) | ((e->unkE & 7) << 18)
+//              | ((e->unkB & 7) << 6) | ((e->unkD & 7) << 3) | (e->unk1 << 28) | ((e->unk3 & 7) << 15)
+//              | ((e->unk5 & 7) << 12) | ((e->unk7 & 7) << 9);
+//         D_800DD1BE = temp_v0;
+//     }
+//     return gfx;
+// }
 
 void func_1513F680(struct171 *arg0, u8 arg1, u8 arg2, u8 arg3, u8 arg4) {
     arg0->unk70 = arg1;
