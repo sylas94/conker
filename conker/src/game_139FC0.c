@@ -117,7 +117,11 @@ void func_1510D7AC(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_139FC0/func_1510D864.s")
+extern u8 D_800D9ED0;
+
+void func_1510D864(void) {
+    D_800D9ED0 = 0;
+}
 
 extern u8 D_800D9ED0;
 struct Entry1510D874

@@ -235,7 +235,8 @@ void func_151AA09C(u8 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D6E80/func_151AA170.s")
+void func_151AA170(s32 arg0) {
+}
 
 struct s_151AA210_arg {
     char pad0[0x18];
@@ -718,7 +719,8 @@ void func_151AB854(u8 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D6E80/func_151AB920.s")
+void func_151AB920(s32 arg0, s32 arg1) {
+}
 
 void func_151AB930(struct127 *arg0) {
     struct260 *temp_v0;

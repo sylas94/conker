@@ -39,7 +39,8 @@ typedef struct {
 } struct_150DE458;
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_10B7D0/func_150DE320.s")
+void func_150DE320(s32 arg0) {
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_10B7D0/func_150DE32C.s")
 

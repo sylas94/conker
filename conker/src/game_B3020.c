@@ -666,7 +666,9 @@ void func_1508B1D4(s32 arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508BF14.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508C194.s")
+s32 func_1508C194(s32 arg0) {
+    return 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508C1A4.s")
 

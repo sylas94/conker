@@ -84,7 +84,8 @@ struct Obj151152A8 {
     s32 field_0x7C;
 };
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_151150B0.s")
+void func_151150B0(s32 arg0) {
+}
 
 void func_151150BC(struct Obj151150BC *arg0) {
     arg0->unk68 = (f32)((arg0->unk3C >> 16) * D_800BE9E4) * 0.00390625f;
@@ -122,7 +123,8 @@ void func_151151FC(struct Obj151151FC *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511529C.s")
+void func_1511529C(s32 arg0) {
+}
 
 void func_151152A8(struct Obj151152A8 *arg0) {
     s32 target;
@@ -310,7 +312,8 @@ s32 func_15116888(s32 arg0, s32 arg1, s32 arg2, struct Obj15116888 *arg3) {
     return (s32)r;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_15116924.s")
+void func_15116924(s32 arg0) {
+}
 
 void func_15116930(u8 *arg0, u8 *arg1) {
     s32 temp;

@@ -95,7 +95,9 @@ extern u8 D_800E0BD1;
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151DD9E4.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151DDB94.s")
+s32 func_151DDB94(s32 arg0) {
+    return ~arg0;
+}
 
 void func_151DDBA0(void) {
     D_800D2E40 = 0;
@@ -393,7 +395,11 @@ void func_151E4314(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E4BD8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E4DC4.s")
+extern u8 D_800E0B94;
+
+void func_151E4DC4(void) {
+    D_800E0B94 = 0xA;
+}
 
 extern s16 D_800E0B9A;
 

@@ -252,7 +252,8 @@ void func_1502E474(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502E4C4.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502E9FC.s")
+void func_1502E9FC(s32 arg0, s32 arg1) {
+}
 
 void func_1502EA0C(ActorInteractionFields *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
     arg0->field_0xA4 = 4;

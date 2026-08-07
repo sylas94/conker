@@ -19,7 +19,11 @@ extern RomRange15015920 D_80082F80[];
 extern void func_10004074(void *);
 extern void func_15015A38(u8 *, s32, s32);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_42DC0/func_15015910.s")
+extern u8 D_800CBD4C;
+
+void func_15015910(void) {
+    D_800CBD4C = 0;
+}
 
 void func_15015920(s16 arg0) {
     u8 *data;

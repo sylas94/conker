@@ -66,7 +66,9 @@ void func_1510F800() {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510F820.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510F8CC.s")
+s32 func_1510F8CC(s32 arg0) {
+    return arg0 & 0x1F;
+}
 
 s32 func_1510F8D8(s32 arg0, s32 arg1, s32 arg2, s32 *arg3) {
     s32 count;

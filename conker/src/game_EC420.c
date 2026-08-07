@@ -84,7 +84,8 @@ extern f32 D_800A018C;
 extern f32 D_800A0190;
 extern void func_15150400(Struct150C04C0 *, Struct150C04C0Color *, u8, s32);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_EC420/func_150BEF70.s")
+void func_150BEF70(s32 arg0) {
+}
 
 extern void func_1516D99C();
 

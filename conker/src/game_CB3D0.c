@@ -24,7 +24,8 @@ void func_1509DF20(s32 arg0, struct CB3D0_arg1 *arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_CB3D0/func_1509DFB4.s")
+void func_1509DFB4(s32 arg0, s32 arg1) {
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_CB3D0/func_1509DFC4.s")
 

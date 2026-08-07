@@ -4,7 +4,8 @@
 
 void func_150A7960(f32 *, f32, f32, f32, f32 *, f32 *, f32 *);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_105760/func_150D82B0.s")
+void func_150D82B0(s32 arg0) {
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_105760/func_150D82BC.s")
 
@@ -72,7 +73,9 @@ s32 func_150D88E0(void *arg0, struct127 *arg1, u8 arg2) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_105760/func_150D8A20.s")
+s32 func_150D8A20(s32 arg0, s32 arg1) {
+    return 0x8;
+}
 
 extern f32 D_800A0B30;
 extern f32 D_800A0B34;

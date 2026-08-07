@@ -39,7 +39,11 @@ void func_15034EB4(struct Obj15034EB4 *obj, s32 idx, s32 idx2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15034F20.s")
+extern u8 D_800C3F00;
+
+void func_15034F20(void) {
+    D_800C3F00 = 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15034F30.s")
 

@@ -218,13 +218,21 @@ void func_151963B4(void *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15197148.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_151979F8.s")
+extern f32 D_800A8AA4;
+
+f32 func_151979F8(s32 arg0) {
+    return D_800A8AA4;
+}
 
 f32 func_15197A0C(s32 arg0) {
     return (f32)func_151422C0(0xA, (s32) D_800A8A40, 1, 0x1F4, (s32) D_800A8A48, 0x8CC) * D_800A8AA8;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15197A68.s")
+extern f32 D_800A8AAC;
+
+f32 func_15197A68(s32 arg0) {
+    return D_800A8AAC;
+}
 
 struct ConkerStruct15197A7C {
     s32 unk0;
@@ -399,7 +407,8 @@ void func_15198D40(Struct15198C90 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15198D7C.s")
+void func_15198D7C(s32 arg0) {
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15198D88.s")
 

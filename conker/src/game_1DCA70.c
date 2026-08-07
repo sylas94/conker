@@ -71,7 +71,9 @@ s32 func_151AF5C0(f32 *arg0, ActorFields *arg1, s32 arg2, u8 arg3) {
     return func_15046C80(sp2C, 0, arg0[1] - 500.0f, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1DCA70/func_151AF6C0.s")
+s32 func_151AF6C0(s32 arg0, s32 arg1) {
+    return 0xC;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1DCA70/func_151AF6D4.s")
 
