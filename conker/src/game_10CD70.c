@@ -78,7 +78,102 @@ s32 func_150DF8C0(s32 a0) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_10CD70/func_150DF920.s")
+typedef struct {
+    DisplayListWord0 field_0x0;
+    s32 field_0x4;
+} DisplayListCmd;
+
+extern u8 D_800D9950[];
+extern void func_150A2864(s32, s32);
+extern void func_150A3444(s32, s16, s16, s16);
+extern void func_151749A0(s32, s32);
+
+void func_150DF920(s32 arg0) {
+    struct127 *obj;
+    s32 i;
+    s32 j;
+    s32 id;
+    s32 slot;
+    f32 x;
+    f32 y;
+    f32 z;
+    s32 active;
+    DisplayListCmd *dl;
+    s32 c;
+    s32 uls;
+    s32 ult;
+
+    if (arg0 != 0) {
+        return;
+    }
+
+    func_151749A0(5, 4);
+
+    id = 6;
+    slot = 3;
+    for (i = 0; i < 2; i++) {
+        obj = func_15083E90((u8)id);
+        id = 7;
+        if (obj != NULL) {
+            func_150A2864(slot, 0);
+            x = obj->x_position;
+            y = obj->y_position + 200.0f;
+            z = obj->z_position;
+            func_150A3444(slot, (s16)x, (s16)y, (s16)z);
+        } else {
+            func_150A2864(slot, 1);
+        }
+        slot = 4;
+    }
+
+    dl = (DisplayListCmd *)D_800B0E00[0];
+
+    for (i = 0; i < 3; i++) {
+        active = func_150DF8C0(i);
+        if (active) {
+            if (D_800D9950[i] < 0x60) {
+                D_800D9950[i] += D_800BE9E4;
+                if (D_800D9950[i] > 0x60) {
+                    D_800D9950[i] = 0x60;
+                }
+            }
+        } else {
+            D_800D9950[i] = 0;
+        }
+
+        j = -1;
+        do {
+            j++;
+            while ((((DisplayListCmd *)((j << 3) + (u8 *)dl))->field_0x0.field_0x0_s8 != -3) &&
+                   (((DisplayListCmd *)((j << 3) + (u8 *)dl))->field_0x0.field_0x0_s8 != -0x21)) {
+                j++;
+            }
+            if (((DisplayListCmd *)((j << 3) + (u8 *)dl))->field_0x0.field_0x0_s8 == -0x21) {
+                j = -1;
+                break;
+            }
+        } while (((DisplayListCmd *)((u8 *)dl + (j * 8)))->field_0x4 != ((i << 24) + 0x02000000));
+
+        if (j != -1) {
+            while ((c = ((DisplayListCmd *)((j << 3) + (u8 *)dl))->field_0x0.field_0x0_s8) != -0xE) {
+                j++;
+            }
+
+            if (j != -1) {
+                if (active) {
+                    uls = ((u32)((DisplayListCmd *)((u8 *)dl + (j * 8)))->field_0x0.field_0x0_s32 >> 12) & 0xFFF;
+                    ult = ((DisplayListCmd *)((u8 *)dl + (j * 8)))->field_0x0.field_0x0_s32 & 0xFFF;
+                    ult += (D_800D9950[i] / 16) * D_800BE9E4;
+                } else {
+                    ult = 2;
+                    uls = 2;
+                }
+                ((DisplayListCmd *)((u8 *)dl + (j * 8)))->field_0x0.field_0x0_s32 =
+                    0xF2000000 | ((uls & 0xFFF) << 12) | (ult & 0xFFF);
+            }
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_10CD70/func_150DFBD0.s")
 

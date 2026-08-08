@@ -34,6 +34,56 @@ u8 func_15085420(struct127 *arg0) {
     return arg0->unk31C->pad11B[0];
 }
 
+// NEAR-MISS best 1420 (frame, stack slots, control flow and instruction COUNT all exact;
+// residual is register allocation only). Reconstruction needs these file-local decls:
+//   extern s32  func_15084D70(s32, s32, s32, s16*, f32*, u8*, u8*, s32*, s32*, s32, s32*);
+//   extern f32  func_1506AD30(struct127 *, f32, s32);
+//   extern void func_1507C3E0(struct127 *, s16 *, s16 *, s16 *);
+//   extern void func_1505D6F0(struct127 *, s32);
+//   extern void func_15005818(struct108 *, struct168 *, f32 *);
+//   extern void func_15169040(s32, u8);
+//   void func_15085430(struct127 *arg0, s32 arg1, s32 arg2) {
+//     s16 sp78[3]; f32 sp6C[3]; u8 sp6B; u8 sp6A; s32 sp64; s32 sp60;
+//     struct127 *oldObject; s32 oldIndex; struct { s32 unk0; u8 unk4; } sp50; s32 angle;
+//     func_15084D70(arg0->unk127, arg1, D_800D18A8, sp78, sp6C, &sp6B, &sp6A, &sp60, &sp64, arg2, 0);
+//     oldObject = D_800D154C; oldIndex = D_800C3E78;
+//     D_800D154C = arg0; D_800C3E78 = arg0 - D_800CC2D0;
+//     func_1506AD30(arg0, 800.0f, 1);
+//     D_800D154C = oldObject; D_800C3E78 = oldIndex;
+//     arg0->x_position = sp78[0]; arg0->y_position = sp78[1];
+//     arg0->old_x_position = arg0->x_position; arg0->old_y_position = arg0->y_position;
+//     arg0->z_position = sp78[2]; arg0->old_z_position = arg0->z_position;
+//     angle = sp6A << 8;
+//     arg0->unk7A = angle; arg0->unk78 = angle; arg0->unk76 = angle;
+//     arg0->unk40 = (s16)(angle + 0x4000) * 0.0054931640625f;
+//     arg0->unkB8 = (sp6B * 360) >> 8;
+//     while (arg0->unkB8 > 180.0f) arg0->unkB8 -= 360.0f;
+//     arg0->unk28 = 0.0f; arg0->unk180 = arg0->y_position;
+//     if (arg0->unk31C != NULL) func_1507C3E0(arg0, (s16*)&arg0->unk31C->unk114,
+//                                   (s16*)&arg0->unk31C->unk116, (s16*)&arg0->unk31C->unk118);
+//     arg0->unk1CC = arg0->y_position; arg0->unk2F8 &= ~0x10; arg0->unk22C |= 0x200;
+//     arg0->unk164 = arg0->unk168 = arg0->unk16C = arg0->unk170 = 0.0f;  // 4 separate stmts
+//     if (arg0->unk127 != 0xFF) {
+//       *((u8*)arg0->unk31C + 0x23) = sp64;
+//       if (D_800BE616 && D_800D18A8) func_1505D6F0(arg0, arg0 - D_800CC2D0);
+//       if (arg0->unk31C->unk78 == 0 && arg0->unk31C->unk19B != 4 && arg0->unk31C->unk19B != 7)
+//         arg0->unk83 = 0;
+//     } else arg0->unk83 = 0;
+//     if (arg0->camera != NULL) func_15005818(arg0->camera, (struct168*)arg0, sp6C);
+//     sp50.unk0 = (s32)arg0; sp50.unk4 = arg0->unique_id; func_15169040((s32)&sp50, 4);
+//   }
+// KEY FINDINGS (for a permuter run):
+//  * EXACTLY 10 named locals fit the 0x80 frame. `arg0 - D_800CC2D0` must be written TWICE
+//    (IDO CSEs it into one div + one spill temp at 0x48); making it an 11th named local
+//    grows the frame to 0x88 and shifts every slot.
+//  * Position block order must be x, y, old_x, old_y, z, old_z (grouped x,y,z first costs
+//    140 pts; interleaved x,old_x,y,old_y,... costs an extra scheduling nop).
+//  * if/else polarity: test `!= 0xFF` with the one-line `unk83 = 0` in the ELSE arm.
+//  * RESIDUAL (unsteerable from C): target holds `angle` in v0 where IDO gives a named local
+//    t1, shifting every later t-register by one; and old_x/old_y/old_z reload into f4/f6/f8
+//    where IDO picks f4/f2/f6. That FP choice also forces the 4-instruction rotation at
+//    0x840-0x85c (target must defer `mtc1 at,$f18` until f18 is free; ours picks f16 and
+//    hoists both constant pairs). Everything else is byte-identical.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B21B0/func_15085430.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B21B0/func_15085710.s")

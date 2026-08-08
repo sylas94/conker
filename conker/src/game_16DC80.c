@@ -1,17 +1,12 @@
 #include <ultra64.h>
 
-#define func_1513D524 func_1513D524_void_proto
 #define func_15169260 func_15169260_s32
 #include "functions.h"
-#undef func_1513D524
 #undef func_15169260
 #include "variables.h"
 
-extern void *func_1513D524(s32, u8, u8, u8, u8, u8, s32, u8, s32);
 extern s32 D_800DC9F0;
 
-typedef void (*Callback_151416E8)(void *, s32, u8);
-extern Callback_151416E8 D_8008A02C[];
 void func_150A7960(f32 *arg0, f32 arg1, s32 arg2, f32 arg3, f32 *arg4, f32 *arg5, f32 *arg6);
 
 struct conk14182C_pos {
@@ -45,29 +40,7 @@ struct conkMotionControl {
 };
 
 
-void *func_151407D0(void *arg0, s32 arg1, void *arg2, u8 arg3, u8 arg4, u8 arg5, u8 arg6, s8 arg7, u8 arg8, s32 arg9) {
-    void *ret;
-    void *dst;
-
-    *(u8 *)((s32)arg2 + 1) = 3;
-    *(s32 *)((s32)arg2 + 0x40) |= 0x40400000;
-    ret = func_1513D524((s32)arg2, arg3, arg4, arg5, 1, arg6, arg1, arg8, arg9);
-    if (ret != NULL) {
-        dst = (void *)((s32)ret + 0x110);
-        memcpy(dst, arg0, arg1);
-        *(s8 *)((s32)dst + 0x59) = arg7;
-        *(s32 *)((s32)dst + 0x44) = 0;
-store_done_151407D0:
-        ;
-    } else {
-        return NULL;
-    }
-    if (ret == NULL) {
-    } else {
-        D_800DC9F0 += 1;
-    }
-    return ret;
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/game_16DC80/func_151407D0.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16DC80/func_151408A4.s")
 
@@ -187,13 +160,16 @@ s32 func_15141564(struct conk141478 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16DC80/func_151415D4.s")
 
+typedef void (*Callback_151416E8)(void *, s32, u8);
+extern Callback_151416E8 D_8008A02C[];
+
 void func_151416E8(void *arg0, s32 arg1, s32 arg2) {
-    Callback_151416E8 *callbacks;
+    u8 *kind;
     u8 *v1;
 
-    callbacks = D_8008A02C;
-    if (((Callback_151416E8 volatile *)callbacks)[*(volatile u8 *)((u8 *)arg0 + 0x168)] != 0) {
-        callbacks[*(volatile u8 *)((u8 *)arg0 + 0x168)](arg0, arg1, (u8)arg2);
+    kind = (u8 *)arg0 + 0x168;
+    if (D_8008A02C[*kind] != NULL) {
+        D_8008A02C[*kind](arg0, arg1, (u8)arg2);
     }
 
     v1 = (u8 *)arg0 + 0x110;

@@ -278,8 +278,17 @@ s32 func_1504AEF4(s32 arg0, s32 arg1) {
 }
 
 // bleurgh
-// PERMUTER CANDIDATE: logic byte-identical (best 821, frame 0x30 matches); remaining is a
-// -g3 debug-slot layout + a0v/a2v register-allocation cascade. Reconstruction:
+// PERMUTER CANDIDATE: logic byte-identical (best 505, frame 0x30 + slot offsets + call
+// sequence all match); residual is ONE un-coalesced `move a0,t8` (kind = temp) plus the
+// register rotation it drags along. Best-known C (score 505):
+//     s32 handle, slot, kind, id;   /* declared in that order: 0x2c/0x28/0x24/0x20 */
+//     handle = arg0->unk92;
+//     if (handle == 0) return;
+//     if ((arg1 == 0) && ((handle >> 15) != 0)) return;
+//     id = handle & 0x7FFF;
+//     handle >>= 12;              /* blocks IDO sinking `id` to the call site */
+//     kind = handle & 7;
+//     ... (body below)
 // permuter NO ZERO, best 320 (improved from 821)
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504AF10.s")
 // void func_1504AF10(struct127 *arg0, s32 arg1, s32 arg2) {
@@ -932,48 +941,7 @@ struct127 *func_15052F58(s32 arg0, s32 arg1) {
 // }
 
 
-void func_1505327C(struct127 *arg0, f32 arg1, f32 arg2, s32 arg3, s32 arg4) {
-    vertex sp3C;
-    struct127 *temp_s0;
-    struct126 *temp_v0;
-    struct255 *temp_v0_2;
-    struct113 *temp_a1;
-    register s32 temp_t8;
-
-    temp_s0 = &D_800CC2D0[arg0->unk124];
-    if ((temp_s0->disable_run == 0) && (temp_s0->stunned == 0)) {
-        temp_v0 = temp_s0->unk31C;
-        if (temp_v0 != 0) {
-            if (temp_v0->unk6B != 0) {
-                return;
-            }
-        }
-            temp_s0->immune = 0xFF;
-            temp_s0->y_velocity = arg1;
-            temp_s0->gravity = arg2;
-            temp_s0->unk83 = 0xFF;
-            temp_s0->disable_run = 0xFF;
-            temp_s0->unk76 = arg0->unk7A;
-            arg0->unk232 = arg3;
-            arg0->unk218 = 0;
-            func_1505E650(temp_s0, 0x32, 1.2999999523162842f, 4.0f, 0.0f, 0.0f, 0);
-            D_800CC2D0[arg0->unk124].unk31C->unk30 = 0x46;
-            *(f32 *)&D_800CC2D0[arg0->unk124].unk31C->unk28 = arg0->x_position;
-            *(f32 *)&D_800CC2D0[arg0->unk124].unk31C->unk2C = arg0->z_position;
-            temp_v0_2 = arg0->unk1D4;
-            if (temp_v0_2 != 0) {
-                temp_t8 = arg4 << 6;
-                if (arg4 != -1) {
-block_1505327C:
-                temp_a1 = (struct113 *) ((u8 *) temp_v0_2 + temp_t8);
-                func_15043FF0((vertex *) ((u8 *) &sp3C - 8), temp_a1);
-                *(f32 *)&D_800CC2D0[arg0->unk124].unk31C->unk28 = ((vertex *) ((u8 *) &sp3C - 8))->x;
-                *(f32 *)&D_800CC2D0[arg0->unk124].unk31C->unk2C = ((vertex *) ((u8 *) &sp3C - 8))->z;
-                }
-            }
-            D_800CC2D0[arg0->unk124].unk31C->unk27 = 1;
-    }
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1505327C.s")
 // NON-MATCHING: plenty still to do here
 // void func_1505327C(struct127 *arg0, f32 arg1, f32 arg2, s32 arg3, s32 arg4) {
 //     // s32 sp44;
@@ -1162,29 +1130,38 @@ void func_15054A5C(struct127 *arg0, struct127 *arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15054A94.s")
 
-// PERMUTER CANDIDATE: id==12 and id==0x1B/0x7E branches match; id==0x4B branch is a
-// register-allocation + float-scheduling near-miss (best 1310). Reconstruction (logic correct):
+// PERMUTER CANDIDATE (best 715). Every instruction is reproduced and the stack frame
+// (0x58) + local slot offsets (sp50/sp4C/sp48) match; the residual is a coupled
+// register-allocation web inside the id==0x4B arm: the target keeps D_800CC2D0's base in
+// v0 (hoisted above the beq) with arg0->unk84.uh in t7 and phi_v1/arg0->unk7A in v1/a0,
+// while IDO gives us the mirror colouring. Reading unk84 into a named local fixes its
+// (otherwise far too late) schedule but then claims v0, which pushes the D_800CC2D0
+// lui/addiu below the branch. Reconstruction below (logic verified against the asm):
 // void func_15054F74(struct127 *arg0) {
-//     s16 phi_v1; f32 sp50, sp4C, sp48, temp_f2, temp_f0;
+//     s16 phi_v1; u16 temp_t7; f32 sp50, sp4C, sp48, temp_f2, temp_f0;
 //     if (arg0->id == 12) {
 //         if ((D_800C3E78 + 1) != D_800CC2D0[arg0->unk124].unk65) {
-//             if (arg0->unk232 == 18) func_15052F9C(arg0, 50.f, 0, 4, 0, 12, 0, 8, 0, 0);
+//             if (arg0->unk232 == 18) func_15052F9C(arg0, 50.0f, 0, 4, 0, 12, 0, 8, 0, 0);
 //             else if ((D_800CC268 & 1) != 0)
 //                 if ((arg0->unk25C & 0x400) != 0) { arg0->unk124 = 0; func_1505327C(arg0, 39.0f, 3.0f, 18, 0); }
 //         }
 //     } else if (arg0->id == 0x4B) {
-//         func_1505A184(arg0->unk7A ^ 0x8000, 500.0f, 0, &sp50, &sp48, &sp4C);
-//         temp_f0 = arg0->x_position; temp_f2 = arg0->z_position;
-//         arg0->unk2EC = (((s32)((f32)(s16)(s32)temp_f0 + sp50) << 0x10) | ((s32)((f32)(s16)(s32)temp_f2 + sp48) & 0xFFFF));
-//         if (arg0->unk84.uh != 0xF) phi_v1 = func_1505A630(D_800CC2D0->x_position - temp_f0, temp_f2 - D_800CC2D0->z_position, 0);
-//         else phi_v1 = (s16)(arg0->unk7A - 0x800);
+//         func_1505A184(arg0->unk7A ^ 0x8000, 500.0f, 0.0f, &sp50, &sp48, &sp4C);
+//         temp_f0 = arg0->x_position; temp_f2 = arg0->z_position; temp_t7 = arg0->unk84.uh;
+//         arg0->unk2EC = ((s32)((f32)(s16)(s32)temp_f0 + sp50) << 0x10) | ((s32)((f32)(s16)(s32)temp_f2 + sp48) & 0xFFFF);
+//         if (temp_t7 != 0xF) phi_v1 = func_1505A630(D_800CC2D0->x_position - temp_f0, temp_f2 - D_800CC2D0->z_position, 0);
+//         else phi_v1 = arg0->unk7A - 0x800;
 //         arg0->unk7A += (s16)(phi_v1 - arg0->unk7A) / 3;
 //         arg0->xz_scale = 2.0f; arg0->y_scale = 2.0f; arg0->unk40 = 90.0f;
-//     } else if (((arg0->id == 0x1B) || (arg0->id == 0x7E)) && (arg0->unk2E4 != 0)) {
-//         if (D_800BE616 != 0) func_1508B20C(arg0->x_position, arg0->y_position, 500.0f, 900.0f);
-//         if ((arg0->unk2E4 > D_800BE9E4) && (arg0->unk2E4 >= 0x78) && (arg0->unk2E4 < (D_800BE9E4 + 0x78))) {
-//             func_10010154(0x3A1, arg0, 0x7D00, 0x1F4, 0x3E8); arg0->unk2E4 -= D_800BE9E4;
-//         } else { arg0->unk232 = 6U; arg0->unk218 = 0; }
+//     } else if ((arg0->id == 0x1B) || (arg0->id == 0x7E)) {
+//         if (arg0->unk2E4 != 0) {
+//             if (D_800BE616 != 0) func_1508B20C(arg0->x_position, arg0->y_position, arg0->z_position, 900.0f);
+//             if (arg0->unk2E4 > D_800BE9E4) {
+//                 if ((arg0->unk2E4 >= 0x78) && (arg0->unk2E4 < (D_800BE9E4 + 0x78)))
+//                     func_10010154(0x3A1, arg0, 0x7D00, 0x1F4, 0x3E8);
+//                 arg0->unk2E4 -= D_800BE9E4;
+//             } else { arg0->unk232 = 6; arg0->unk218 = 0; }
+//         }
 //     }
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_15054F74.s")
@@ -1420,7 +1397,6 @@ void func_15055C88(struct127 *arg0) {
     }
     arg0->unk31C->unk36 = 100;
     func_1506160C(arg0, 2, 0, 6, 0);
-    if (0) {};
     arg0->disable_run = 200;
     arg0->unk83 = 200;
     arg0->unk1CC = D_80099418;

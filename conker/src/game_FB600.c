@@ -59,7 +59,77 @@ void *func_150CE150(void *arg0, s16 arg1, u8 arg2, s32 arg3)
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_FB600/func_150CE200.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_FB600/func_150CE450.s")
+typedef struct {
+    /* 0x000 */ void *unk0;
+    /* 0x004 */ u8 unk4;
+    /* 0x008 */ f32 unk8;
+    /* 0x00C */ f32 unkC;
+    /* 0x010 */ s32 step;
+    /* 0x014 */ u8 flags;
+    /* 0x018 */ s32 x0;
+    /* 0x01C */ s32 y0;
+    /* 0x020 */ s32 x1;
+    /* 0x024 */ s32 y1;
+    /* 0x028 */ f32 unk28;
+    /* 0x02C */ f32 unk2C;
+    /* 0x030 */ s16 xmap[640];
+    /* 0x530 */ s16 ymap[480];
+} Zoom150CE450;
+
+void func_150CE450(void *arg0, u16 *fb) {
+    Zoom150CE450 *p = (Zoom150CE450 *)((u8 *)arg0 + 0x18);
+    s16 *xm;
+    s16 *ym;
+    u32 acc;
+    u32 i;
+    s32 lo;
+    s32 src;
+    s32 y;
+    s32 x;
+
+    if ((p->flags & 1) == 0) {
+        return;
+    }
+
+    xm = p->xmap;
+    ym = p->ymap;
+
+    acc = 0;
+    lo = p->x0;
+    src = lo;
+    for (i = lo; i <= p->x1; i++) {
+        xm[i] = src;
+        acc += p->step;
+        if (acc >= 0x10000) {
+            src = i;
+            acc -= 0x10000;
+        }
+    }
+
+    acc = 0;
+    lo = p->y0;
+    src = lo;
+    for (i = lo; i <= p->y1; i++) {
+        ym[i] = src;
+        acc += p->step;
+        if (acc >= 0x10000) {
+            src = i;
+            acc -= 0x10000;
+        }
+    }
+
+    for (y = p->y1; y >= p->y0; y--) {
+        if ((y != p->y1) && (ym[y + 1] == ym[y])) {
+            memcpy((u8 *)fb + (((y * D_800BE620) + p->x0) * 2),
+                   (u8 *)fb + ((((y + 1) * D_800BE620) + p->x0) * 2),
+                   ((p->x1 - p->x0) * 2) + 2);
+        } else {
+            for (x = p->x1; x >= p->x0; x--) {
+                fb[(y * D_800BE620) + x] = fb[(ym[y] * D_800BE620) + xm[x]];
+            }
+        }
+    }
+}
 
 typedef struct {
     s32 unk0;

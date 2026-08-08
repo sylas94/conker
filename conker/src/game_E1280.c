@@ -192,7 +192,141 @@ void func_150B5060(void *arg0) {
     *(u8 *)((u8 *)temp_v0 + 0x1C) = *(u8 *)((u8 *)temp_v0 + 0x1C) | 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_E1280/func_150B5088.s")
+typedef struct {
+    f32 unk0;
+    f32 unk4;
+    f32 unk8;
+    f32 unkC;
+    f32 unk10;
+    f32 unk14;
+    f32 unk18;
+    s16 unk1C;
+    s16 unk1E;
+    s16 unk20;
+    s16 unk22;
+} SplatParams;
+
+typedef struct {
+    struct17 unk0;
+    u8 padC[0x18];
+    u8 unk24;
+    u8 pad25;
+    s16 unk26;
+    u8 pad28[0x10];
+    u8 unk38;
+    u8 pad39[0x1B];
+    f32 unk54;
+} SplatOwner;
+
+typedef struct {
+    u8 pad0;
+    u8 unk1;
+    u8 pad2[0xA];
+    u8 unkC;
+    u8 padD[3];
+    struct17 unk10;
+    u8 pad1C[0x7C];
+    SplatOwner *unk98;
+} SplatActor;
+
+typedef struct {
+    struct17 unk0;
+    s16 unkC;
+    s16 unkE;
+    s32 unk10;
+    u8 unk14;
+    u8 unk15;
+    u8 pad16[2];
+} SplatSpawn;
+
+typedef struct {
+    f32 unk0;
+    f32 unk4;
+    f32 unk8;
+    f32 unkC;
+    f32 unk10;
+    f32 unk14;
+    u8 unk18;
+    u8 unk19;
+    u8 unk1A;
+    u8 unk1B;
+    u8 pad1C[4];
+} SplatPart;
+
+typedef struct {
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+    s32 unkC;
+    s32 unk10;
+    s32 unk14;
+    s32 unk18;
+    u8 unk1C;
+    u8 unk1D;
+    u8 pad1E[2];
+} SplatStyle;
+
+extern SplatParams D_8009FBF0[];
+extern s32 func_15147DA0(SplatSpawn *, SplatPart *, s32, s32, s32, s32, s32, s32, s32, s32, s32, SplatStyle *, s32, s32, s32);
+
+void func_150B5088(SplatActor *arg0) {
+    SplatStyle sp100;
+    SplatOwner *owner;
+    SplatParams *par;
+    SplatSpawn spE0;
+    SplatPart spC0;
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 speed;
+    f32 cosA;
+    f32 sinA;
+    f32 cosB;
+    f32 sinB;
+    u8 angA;
+    u8 angB;
+
+    owner = arg0->unk98;
+    par = &D_8009FBF0[owner->unk38];
+
+    sp100.unk0 = 0;
+    sp100.unk4 = 1;
+    sp100.unk8 = 0x160600;
+    sp100.unkC = 3;
+    sp100.unk10 = 0x10;
+    sp100.unk14 = 0x80;
+    sp100.unk18 = 0x20;
+    sp100.unk1C = 0;
+    sp100.unk1D = 9;
+    spE0.unkE = 1;
+    spC0.unk19 = 6;
+    spC0.unk1A = owner->unk24;
+    spC0.unk18 = 8;
+    spC0.unk1B = owner->unk26;
+    spE0.unk0 = arg0->unk10;
+
+    do {
+        speed = func_150ADA68() * par->unk8 + par->unk4;
+        angA = func_150ADA20() & 0xFF;
+        angB = func_150ADA20() & 0xFF;
+        cosA = func_151423D8(angA - 0x40);
+        sinA = func_151423D8(angA);
+        cosB = func_151423D8(angB - 0x40);
+        sinB = func_151423D8(angB);
+        x = owner->unk0.unk0 + par->unk0 * sinB * cosA;
+        y = owner->unk0.unk4 - par->unk0 * cosB;
+        z = owner->unk0.unk8 + par->unk0 * sinB * sinA;
+        spE0.unk15 = ((u32)func_150ADA20() % (par->unk22 + 1)) + par->unk20;
+        spE0.unkC = ((u32)func_150ADA20() % (par->unk1E + 1)) + par->unk1C;
+        spC0.unk0 = func_150ADA68() * par->unk10 + par->unkC;
+        spC0.unk10 = func_150ADA68() * par->unk18 + par->unk14;
+        spC0.unk4 = speed * x;
+        spC0.unk8 = speed * y;
+        spC0.unkC = speed * z;
+        func_15147DA0(&spE0, &spC0, 0, 1, 7, 0, 0, 0, 0, 0, 0, &sp100, 0, arg0->unkC, arg0->unk1);
+        owner->unk54 -= 1.0f;
+    } while (owner->unk54 > 1.0f);
+}
 
 void func_150B538C(void *arg0, s32 arg1, u8 arg2) {
     if (arg2 == 5) {

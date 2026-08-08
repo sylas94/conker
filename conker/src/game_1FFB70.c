@@ -14,82 +14,86 @@ extern u8 D_A48[];
     _g->words.w1 = (u32)(b);        \
 }
 
-struct Obj151D26C0 {
+/* Full-screen scrolling haze/overlay effect object (spawned + stopped by script
+ * commands).  func_151D275C is its per-frame update and func_151D2830 its draw
+ * callback; both are installed in the object-type callback table at 0x8008C0D8. */
+struct ScreenOverlayFx {
     u8  pad0[0xE];
-    s16 unkE;
-    s16 unk10;
-    s16 unk12;
-    s16 unk14;
-    s8  unk16;
+    s16 timer;         /* 0..0x12D; timer += dt * timerStep, drives alpha */
+    s16 viewportIndex; /* only drawn while the renderer's viewport index matches */
+    s16 scrollS;       /* texture S offset, +1/frame, wraps at 0x100 (= 64 texels) */
+    s16 alpha;         /* env-colour alpha, 0..0x80; 0 = nothing to draw */
+    s8  timerStep;     /* +1 while playing, -2 to rewind/abort the effect */
 };
 
-struct Obj151D26C0 *func_151D26C0(s16 arg0) {
-    struct Obj151D26C0 *ret;
+struct ScreenOverlayFx *func_151D26C0(s16 viewportIndex) {
+    struct ScreenOverlayFx *fx;
 
-    ret = func_15167A68(0x3C, 1, 0x18, 0, 0xFF, 1);
-    ret->unk14 = 0;
-    ret->unk12 = 0;
-    ret->unkE = 0;
-    ret->unk16 = 1;
-    ret->unk10 = arg0;
-    return ret;
+    fx = func_15167A68(0x3C, 1, 0x18, 0, 0xFF, 1);
+    fx->alpha = 0;
+    fx->scrollS = 0;
+    fx->timer = 0;
+    fx->timerStep = 1;
+    fx->viewportIndex = viewportIndex;
+    return fx;
 }
 
-struct SomeNode {
+/* The same objects seen through the object manager's list links. */
+struct ScreenOverlayNode {
     char pad0[0x8];
-    struct SomeNode *unk8;
+    struct ScreenOverlayNode *next;
     char padC[0x4];
-    s16 unk10;
+    s16 viewportIndex;
     char pad12[0x4];
-    s8 unk16;
+    s8 timerStep;
 };
 
-extern struct SomeNode *D_800DD0E0;
+extern struct ScreenOverlayNode *D_800DD0E0;
 
-void func_151D2718(s16 arg0) {
-    struct SomeNode *node;
+void func_151D2718(s16 viewportIndex) {
+    struct ScreenOverlayNode *node;
 
-    for (node = D_800DD0E0; node != NULL; node = node->unk8) {
-        if (arg0 == node->unk10) {
-            node->unk16 = -2;
+    for (node = D_800DD0E0; node != NULL; node = node->next) {
+        if (viewportIndex == node->viewportIndex) {
+            node->timerStep = -2;
         }
     }
 }
 
-void func_151D275C(struct Obj151D26C0 *arg0) {
-    s32 temp_v0;
-    s32 temp_t5;
+void func_151D275C(struct ScreenOverlayFx *fx) {
+    s32 step;
+    s32 maxAlpha;
 
-    temp_t5 = 0x80;
-    arg0->unkE += (u32)D_800BE9E4 * (temp_v0 = arg0->unk16);
+    maxAlpha = 0x80;
+    fx->timer += (u32)D_800BE9E4 * (step = fx->timerStep);
 
-    if ((temp_v0 > 0) && (arg0->unkE >= 0xED)) {
-        arg0->unk14 = (0x128 - arg0->unkE) << 2;
-        if (arg0->unk14 < 0) {
-            arg0->unk14 = 0;
+    if ((step > 0) && (fx->timer >= 0xED)) {
+        fx->alpha = (0x128 - fx->timer) << 2;
+        if (fx->alpha < 0) {
+            fx->alpha = 0;
         }
     } else {
-        arg0->unk14 = (*(volatile s16 *)&arg0->unkE) * 2;
+        fx->alpha = (*(s16 *)&fx->timer) * 2;
     }
 
-    if (arg0->unk14 >= 0x80) {
-        arg0->unk14 = temp_t5;
+    if (fx->alpha >= 0x80) {
+        fx->alpha = maxAlpha;
     }
 
-    arg0->unk12++;
-    if (arg0->unk12 >= 0x100) {
-        arg0->unk12 -= 0x100;
+    fx->scrollS++;
+    if (fx->scrollS >= 0x100) {
+        fx->scrollS -= 0x100;
     }
 
-    if ((arg0->unkE >= 0x12D) || (arg0->unkE < 0)) {
-        func_1516972C((struct102 *)arg0);
+    if ((fx->timer >= 0x12D) || (fx->timer < 0)) {
+        func_1516972C((struct102 *)fx);
     }
 }
 
-Gfx *func_151D2830(Gfx *gfx, struct Obj151D26C0 *arg1, s16 arg2) {
-    s32 temp_v0;
+Gfx *func_151D2830(Gfx *gfx, struct ScreenOverlayFx *fx, s16 viewportIndex) {
+    s32 texAddr;
 
-    if ((arg2 != arg1->unk10) || (arg1->unk14 == 0)) {
+    if ((viewportIndex != fx->viewportIndex) || (fx->alpha == 0)) {
         return gfx;
     }
 
@@ -98,20 +102,21 @@ Gfx *func_151D2830(Gfx *gfx, struct Obj151D26C0 *arg1, s16 arg2) {
     WGFX151D2830(gfx++, 0xFC12D225, 0xFFA7FFFF);
     WGFX151D2830(gfx++, 0xEF002C3F, 0x00504244);
 
-    temp_v0 = func_1510D0EC((s32)D_A48, 0, 3, 0);
+    texAddr = func_1510D0EC((s32)D_A48, 0, 3, 0);
 
-    WGFX151D2830(gfx++, 0xFD700000, temp_v0);
+    WGFX151D2830(gfx++, 0xFD700000, texAddr);
     WGFX151D2830(gfx++, 0xF5700000, 0x07018060);
     WGFX151D2830(gfx++, 0xE6000000, 0);
     WGFX151D2830(gfx++, 0xF3000000, 0x077FF000);
     WGFX151D2830(gfx++, 0xE7000000, 0);
     WGFX151D2830(gfx++, 0xF5681000, 0x00018060);
     WGFX151D2830(gfx++, 0xF2000000, 0x000FC0FC);
-    WGFX151D2830(gfx++, 0xFB000000, (arg1->unk14 & 0xFF) | 0x00FF0000);
-    gSPTextureRectangle(gfx++, 0, 0, 0x500, 0x3C0, 0, arg1->unk12 << 3, 0x400, 0x400, 0x400);
+    /* 0xFB = G_SETENVCOLOR: alpha rides in the low byte of the packed RGBA. */
+    WGFX151D2830(gfx++, 0xFB000000, (fx->alpha & 0xFF) | 0x00FF0000);
+    gSPTextureRectangle(gfx++, 0, 0, 0x500, 0x3C0, 0, fx->scrollS << 3, 0x400, 0x400, 0x400);
     WGFX151D2830(gfx++, 0xE7000000, 0);
-    WGFX151D2830(gfx++, 0xFB000000, ((arg1->unk14 >> 1) & 0xFF) | 0xFF000000);
-    gSPTextureRectangle(gfx++, 0, 0, 0x500, 0x3C0, 0, arg1->unk12 << 3, 0, 0x200, 0x200);
+    WGFX151D2830(gfx++, 0xFB000000, ((fx->alpha >> 1) & 0xFF) | 0xFF000000);
+    gSPTextureRectangle(gfx++, 0, 0, 0x500, 0x3C0, 0, fx->scrollS << 3, 0, 0x200, 0x200);
 
     return gfx;
 }

@@ -12,7 +12,72 @@ extern u8 D_800D9F68[];
     _g->words.w1 = (u32)(b);        \
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_139FC0/func_1510CB10.s")
+extern u16 D_800D9E70[4][3];
+extern u8 D_800D9E88[4][3];
+extern u8 D_800D9E98[4][3];
+extern u8 D_800D9EA8[4][3];
+extern u8 D_800D9EB4[3];
+extern u8 D_800D9EB8[4][3];
+
+extern f32 func_150489B0(u8);
+
+void func_1510CB10(s32 arg0) {
+    f32 wave;
+    s32 step;
+    s32 target;
+    s32 diff;
+    s32 flash;
+    s32 cur;
+    s32 amount;
+    s32 i;
+
+    if (D_800DBFF0[arg0].unk5F0 & 1) {
+        flash = D_800D9EB8[arg0][0];
+        step = D_800BE9E4 * 2;
+
+        for (i = 0; i < 3; i++) {
+            cur = D_800D9EA8[arg0][i];
+            if (flash) {
+                target = D_800D9EB8[arg0][i];
+            } else {
+                target = D_800D9EB4[i];
+            }
+
+            diff = target - cur;
+            if (diff != 0) {
+                amount = (diff < 0) ? -diff : diff;
+                if (amount < step) {
+                    cur = target;
+                } else if (diff < 0) {
+                    cur -= step;
+                } else {
+                    cur += step;
+                }
+                D_800D9EA8[arg0][i] = cur;
+            }
+
+            wave = (u32)D_800D9E98[arg0][i] * func_150489B0(D_800D9E70[arg0][i] >> 4);
+            amount = (s32)wave + cur - 0x7F;
+            if (amount >= 0) {
+                D_800D9B68[arg0][i] += amount;
+            } else {
+                D_800D9B78[arg0][i] -= amount;
+            }
+
+            if (D_800D9B68[arg0][i] >= 0x80) {
+                D_800D9B68[arg0][i] = 0x7F;
+            }
+            if (D_800D9B78[arg0][i] >= 0x80) {
+                D_800D9B78[arg0][i] = 0x7F;
+            }
+
+            D_800D9E70[arg0][i] += D_800D9E88[arg0][i];
+            D_800D9E70[arg0][i] &= 0xFFF;
+        }
+
+        D_800D9EB8[arg0][0] = 0;
+    }
+}
 
 Gfx *func_1510CDB8(Gfx *arg0, s32 arg1, s32 arg2, s32 arg3) {
     gDPSetPrimColor(arg0++, 0xF2, 0, D_800D9B68[arg3][0], D_800D9B68[arg3][1], D_800D9B68[arg3][2], arg1);
@@ -117,7 +182,11 @@ void func_1510D7AC(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_139FC0/func_1510D864.s")
+extern u8 D_800D9ED0;
+
+void func_1510D864(void) {
+    D_800D9ED0 = 0;
+}
 
 extern u8 D_800D9ED0;
 struct Entry1510D874

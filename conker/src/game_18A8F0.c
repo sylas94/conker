@@ -355,7 +355,7 @@ struct Stack1515F850 {
 };
 
 void func_1515F850(s32 arg0, s32 arg1) {
-    volatile s32 pad;
+    s32 pad;
     struct Stack1515F850 stack;
     f32 temp_f0;
     f32 temp_f14;

@@ -58,15 +58,12 @@ void func_100010F8(s32 arg0) {
 //     osCreateViManager(OS_PRIORITY_VIMGR);
 //
 //     // permuter...
-//     if (!phi_s0) {};
 //
 //     func_10004514(offset, &D_80082B20, 16, 1);
-//     if (0) {};
 //     sp44 = D_80082B20 + offset;         // D_80082B20 + first
 //     sp28 = (s32)func_1019EA88 - sp44;   // second TLB offset - temp_v0 // func_1600000 ?
 //     sp40 = allocate_memory(sp28, 1, 2, 0);
 //     func_10004514(sp44, sp40, sp28, 1);
-//     if (0) {};
 //     func_10006240(sp40, &D_80082B20, D_8003809C);
 //     func_10004074(sp40);
 //     // D_80033330 is the current compressed item

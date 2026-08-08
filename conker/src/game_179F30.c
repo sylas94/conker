@@ -350,7 +350,8 @@ void func_1514D564(struct127 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514D64C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514D96C.s")
+void func_1514D96C(s32 arg0) {
+}
 
 s32 func_15158BD0(s32, s32, s32);
 s32 func_1514EC1C(s32, s32, s16);
@@ -446,7 +447,8 @@ void func_1514DB18(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DB58.s")
+void func_1514DB58(s32 arg0) {
+}
 
 extern s32 D_800BE9F0;
 void func_151B2060(void);
@@ -477,9 +479,23 @@ void func_1514DC5C(void *arg0) {
     func_151D0F60(arg0, 0, 0xFF, 1);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DC84.s")
+typedef struct {
+    u8 pad0[0x94];
+    /* 0x94 */ s32 unk94;
+} S1514DC84;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DC98.s")
+void func_1514DC84(S1514DC84 *arg0) {
+    arg0->unk94 |= 0x2;
+}
+
+typedef struct {
+    u8 pad0[0x94];
+    /* 0x94 */ s32 unk94;
+} S1514DC98;
+
+void func_1514DC98(S1514DC98 *arg0) {
+    arg0->unk94 |= 0x710;
+}
 
 void func_1514DCAC(arg0)
 struct127 *arg0;
@@ -533,11 +549,14 @@ void func_1514DE0C(void) {
     func_1514DCAC();
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DE2C.s")
+void func_1514DE2C(s32 arg0) {
+}
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DE38.s")
+void func_1514DE38(s32 arg0) {
+}
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DE44.s")
+void func_1514DE44(s32 arg0) {
+}
 
 void func_1514DE50(void) {
     if (((u8 *)D_800D2E4C)[0x11] & 8) {
@@ -545,7 +564,8 @@ void func_1514DE50(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DE88.s")
+void func_1514DE88(s32 arg0) {
+}
 
 void func_15160CDC(s32, s32, void *, void *, f32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 s32 func_15160A58(s32, s32, void *, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
@@ -799,7 +819,8 @@ void func_1514E7C8(s32 arg0) {
     func_1514EC1C(v0, arg0, 0xF);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514E824.s")
+void func_1514E824(s32 arg0) {
+}
 
 void func_1514E830(struct102 *arg0) {
     func_1516972C(arg0);

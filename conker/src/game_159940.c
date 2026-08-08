@@ -102,7 +102,17 @@ void func_1512D238(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_159940/func_1512D2E4.s")
+typedef struct {
+    u8 pad0[0x84D];
+    /* 0x84D */ u8 unk84D;
+    u8 pad84E[0x2];
+    /* 0x850 */ s32 unk850;
+} S1512D2E4;
+
+void func_1512D2E4(S1512D2E4 *arg0, s32 arg1) {
+    arg0->unk850 = arg1;
+    arg0->unk84D = 0x1;
+}
 
 void func_1512D2F8(Game159940Object *arg0) {
     u8 temp;

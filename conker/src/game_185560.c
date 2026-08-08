@@ -368,7 +368,123 @@ void func_15158D00(struct102 *arg0) {
     func_15169824(arg0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_15158D2C.s")
+typedef struct {
+    u8 pad0[0x18];
+    f32 unk18;
+    u8 pad1C[0xFC];
+    f32 unk118;
+    u8 pad11C[0x1B];
+    u8 unk137;
+    u8 pad138[0x4C];
+    s32 unk184;
+} Struct15159084;
+
+typedef struct {
+    u8 pad0[0x118];
+    f32 unk118;
+    u8 pad11C[0x64];
+    f32 unk180;
+} Struct15159120;
+
+typedef struct {
+    u8 pad0[0x18];
+    f32 unk18;
+    u8 pad1C[0xFC];
+    f32 unk118;
+} Struct15159184;
+
+s32 func_15159084(Struct15159084 *, u8);
+s32 func_15159120(Struct15159120 *, u8);
+s32 func_15159184(Struct15159184 *, u8);
+s32 func_15159230(Struct15158BD0_src *, f32 *, u8);
+s32 func_151592B8(Struct15158BD0_src *, u8);
+
+typedef struct {
+    u8 pad0[0x18];
+    Struct15158BD0_src *unk18;
+    u8 pad1C;
+    u8 unk1D;
+    u8 pad1E[0x20 - 0x1E];
+    f32 unk20;
+    f32 unk24;
+    f32 unk28;
+    u8 unk2C;
+    u8 unk2D;
+    u8 unk2E;
+    u8 unk2F;
+    u8 unk30;
+    u8 unk31;
+} Struct15158D2C;
+
+typedef struct {
+    s32 from;
+    s32 to;
+} Struct15158D2C_Rule;
+
+/* Packs the five state fields into one bitfield, three bits per field. */
+#define STATE_BITS(a, b, c, d, e)                                              \
+    ((1 << (a)) | (1 << ((b) + 3)) | (1 << ((c) + 6)) | (1 << ((d) + 9)) |     \
+     (1 << ((e) + 13)))
+
+extern void (*D_8008AFD0[])(Struct15158D2C *);
+extern s8 *D_8008B02C[];
+extern Struct15158D2C_Rule D_800A6200[];
+
+void func_15158D2C(Struct15158D2C *arg0) {
+    s32 oldBits;
+    s8 action;
+    u8 old2C;
+    u8 old2D;
+    u8 old2E;
+    u8 old2F;
+    u8 old30;
+    s32 newBits;
+    s32 i;
+
+    old2C = arg0->unk2C;
+    old2D = arg0->unk2D;
+    old2E = arg0->unk2E;
+    old2F = arg0->unk2F;
+    old30 = arg0->unk30;
+
+    arg0->unk2C = func_15159084((Struct15159084 *)arg0->unk18, arg0->unk1D);
+    if (arg0->unk2C == 0) {
+        arg0->unk2D = func_15159120((Struct15159120 *)arg0->unk18, arg0->unk1D);
+    } else {
+        arg0->unk2D = 2;
+    }
+
+    if (arg0->unk2C == 0) {
+        if (arg0->unk2D == 0) {
+            arg0->unk2E = 1;
+        } else {
+            arg0->unk2E = func_15159184((Struct15159184 *)arg0->unk18, arg0->unk1D);
+        }
+    } else {
+        arg0->unk2E = 0;
+    }
+
+    arg0->unk2F = func_15159230(arg0->unk18, &arg0->unk20, arg0->unk2F);
+    arg0->unk20 = arg0->unk18->unk14;
+    arg0->unk24 = arg0->unk18->unk18;
+    arg0->unk28 = arg0->unk18->unk1C;
+    arg0->unk30 = func_151592B8(arg0->unk18, arg0->unk1D);
+
+    if (arg0->unk31 & 1) {
+        newBits = STATE_BITS(arg0->unk2C, arg0->unk2D, arg0->unk2E, arg0->unk2F, arg0->unk30);
+        for (i = 0; i < 28; i++) {
+            action = D_8008B02C[arg0->unk1D][i];
+            if (action != -1) {
+                oldBits = STATE_BITS(old2C, old2D, old2E, old2F, old30);
+                if ((D_800A6200[i].from | oldBits) == D_800A6200[i].from) {
+                    if ((D_800A6200[i].to | newBits) == D_800A6200[i].to) {
+                        D_8008AFD0[action](arg0);
+                    }
+                }
+            }
+        }
+    }
+}
 
 void func_1519F400(void *);
 
@@ -418,17 +534,6 @@ void func_15158FA4(void *arg0, s32 arg1, u8 arg2) {
 
 extern f32 D_800A63A0;
 
-typedef struct {
-    u8 pad0[0x18];
-    f32 unk18;
-    u8 pad1C[0xFC];
-    f32 unk118;
-    u8 pad11C[0x1B];
-    u8 unk137;
-    u8 pad138[0x4C];
-    s32 unk184;
-} Struct15159084;
-
 s32 func_15159084(Struct15159084 *arg0, u8 arg1) {
     s32 ret;
     s32 flags;
@@ -448,13 +553,6 @@ s32 func_15159084(Struct15159084 *arg0, u8 arg1) {
     return ret;
 }
 
-typedef struct {
-    u8 pad0[0x118];
-    f32 unk118;
-    u8 pad11C[0x64];
-    f32 unk180;
-} Struct15159120;
-
 s32 func_15159120(Struct15159120 *arg0, u8 arg1) {
     s32 ret;
 
@@ -467,13 +565,6 @@ s32 func_15159120(Struct15159120 *arg0, u8 arg1) {
     }
     return ret;
 }
-
-typedef struct {
-    u8 pad0[0x18];
-    f32 unk18;
-    u8 pad1C[0xFC];
-    f32 unk118;
-} Struct15159184;
 
 s32 func_15159184(Struct15159184 *arg0, u8 arg1) {
     s32 ret;

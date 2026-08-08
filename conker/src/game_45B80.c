@@ -105,13 +105,6 @@ void func_1501905C(void) {
     func_10012020();
 }
 
-// PERMUTER CANDIDATE (best 6920): logic verified correct (build OK; every `jal` call matches).
-// Two IDO heuristics not reproducible from C by hand: (1) the two counter-loops - target hoists
-// &D_80082FA0 into saved reg s0 and reads `lw 0(s0)` (frame 0x28), mine recomputes %hi/%lo each
-// read (frame 0x20, no s0); explicit `s32 *p=&D_80082FA0` gets folded back by IDO. (2) the
-// D_80043B40..D_80044B20 array-increment loop: IDO UNROLLS mine (accesses 0x2c/0x34(v0)) but the
-// target is single-element (`bne v0,v1`). Full reconstruction preserved below for the permuter:
-/*
 void func_1510D864(void);
 void func_1509BA04(s32);
 void func_1509BBA0(s32);
@@ -153,12 +146,16 @@ void func_1516706C(void);
 void func_151671E8(void);
 extern u8 D_800DCD27;
 
-typedef struct { s32 u0, u4, u8, uC, u10, u14, u18, u1C; } S15019130;
+// D_80043B40 is the 508-entry TLB slot table (see the handwritten miss handler at 0x10006138,
+// which uses the same {page, age} layout); this pass ages every slot by one frame.
+typedef struct {
+    s32 page;
+    s32 age;
+} TlbSlot;
 
 s32 func_15019130(void) {
     s32 i;
     u8 j;
-    S15019130 *p;
 
     func_1510D864();
     func_1509BA04(0);
@@ -183,7 +180,7 @@ s32 func_15019130(void) {
     func_150242F8(0, 0);
     func_15020EC4(0);
     func_1501E2F8(0);
-    if (D_800D23A9 != 0) {
+    if (*(s8 *)&D_800D23A9 != 0) {
         func_15087CC0();
     }
     func_15122AE0();
@@ -229,16 +226,11 @@ s32 func_15019130(void) {
     func_1517F7B4();
     func_15036148();
     func_1515D6C8();
-    for (p = (S15019130 *)&D_80043B40; p != (S15019130 *)&D_80044B20; p++) {
-        p->uC++;
-        p->u14++;
-        p->u1C++;
-        p->u4++;
+    for (i = 0; i < 508; i++) {
+        ((TlbSlot *)&D_80043B40)[i].age++;
     }
     return 1;
 }
-*/
-#pragma GLOBAL_ASM("asm/nonmatchings/game_45B80/func_15019130.s")
 
 void func_15019414(void) {
     if (D_800BEAC0 == 0) {

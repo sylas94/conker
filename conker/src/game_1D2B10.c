@@ -107,7 +107,6 @@ Func151A6BD8Obj *func_151A6BD8(s32 arg0)
 
     }
     while (j < 2);
-    next_i:
     i++;
 
   }

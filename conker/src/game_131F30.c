@@ -2,17 +2,6 @@
 #include "functions.h"
 #include "variables.h"
 
-extern s32 D_800DCE50[][0x68];
-
-typedef struct Func15105C24Obj {
-    u8 pad0[8];
-    struct Func15105C24Obj *next;
-    u8 padC[7];
-    u8 type;
-    u8 pad14[0x14];
-    s32 owner;
-} Func15105C24Obj;
-
 #pragma GLOBAL_ASM("asm/nonmatchings/game_131F30/func_15104A80.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_131F30/func_15104C44.s")
@@ -158,40 +147,7 @@ void func_15105BC8(struct204 *arg0) {
     }
 }
 
-Func15105C24Obj *func_15105C24(s32 arg0)
-{
-  u8 i;
-  u8 j;
-  Func15105C24Obj *obj;
- i = 0; do {
-    j = 0;
-    do
-    {
-      obj = (Func15105C24Obj *) D_800DCE50[j][(&D_800A5770)[i]];
-      if (obj != 0)
-      {
-        do
-        {
-          if ((obj->type == 0x2E) && (arg0 == obj->owner))
-          {
-            return obj;
-          }
-          obj = obj->next;
-        }
-        while (obj != 0);
-      }
-      next_j:
-      j++;
-
-    }
-    while (j < 2);
-    next_i:
-    i++;
-
-  }
-  while (i < 2);
-  return 0;
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/game_131F30/func_15105C24.s")
 // void *func_15105C24(s32 arg0) {
 //     s32 temp_t4;
 //     s32 temp_t5;

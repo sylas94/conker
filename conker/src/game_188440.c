@@ -28,7 +28,8 @@ void func_1515B62C(struct102 *arg0, s16 *arg1, u8 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_188440/func_1515B994.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_188440/func_1515BA10.s")
+void func_1515BA10(s32 arg0) {
+}
 
 extern void func_1515AF90(s16);
 
@@ -36,7 +37,8 @@ void func_1515BA1C(s16 arg0) {
     func_1515AF90(arg0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_188440/func_1515BA48.s")
+void func_1515BA48(s32 arg0) {
+}
 
 extern void func_1515B674(s16);
 

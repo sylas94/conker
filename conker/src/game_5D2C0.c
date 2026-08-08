@@ -55,14 +55,19 @@ typedef struct Game5D2C0FlagState {
 typedef struct Game5D2C0ActorState {
     u8 pad_0[0x11A];
     u8 field_0x11A;
+    u8 pad_0x11B[0x81];
+    u16 field_0x19C;
 } Game5D2C0ActorState;
 
 typedef struct Game5D2C0PositionState {
-    u8 pad_0[0x14];
+    s32 field_0x00;
+    u8 pad_0x04[0x10];
     f32 field_0x14;
     f32 field_0x18;
     f32 field_0x1C;
-    u8 pad_0x20[0x8D];
+    u8 pad_0x20[0x64];
+    u16 field_0x84;
+    u8 pad_0x86[0x27];
     u8 field_0xAD;
     u8 pad_0xAE[0x6A];
     f32 field_0x118;
@@ -769,7 +774,76 @@ s32 func_15033AD8(Game5D2C0EffectState *arg0, Game5D2C0PositionState *arg1) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15033BDC.s")
+typedef struct Game5D2C0SoundInstance {
+    u16 field_0x00;
+    s16 field_0x02;
+    s16 field_0x04;
+    s16 field_0x06;
+    u8 pad_0x08[0x10];
+    Game5D2C0EffectState *field_0x18;
+    Game5D2C0PositionState *field_0x1C;
+    u8 pad_0x20[0x4];
+    u16 field_0x24;
+} Game5D2C0SoundInstance;
+
+void func_10010FFC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, void *arg5);
+
+s32 func_15033BDC(Game5D2C0SoundInstance *arg0, s32 arg1, s32 *arg2, s32 arg3, s32 arg4, s32 arg5, s16 *arg6) {
+    Game5D2C0EffectState *effect;
+    Game5D2C0PositionState *pos;
+    Game5D2C0ActorState *actor;
+
+    effect = arg0->field_0x18;
+    pos = arg0->field_0x1C;
+    if ((effect != 0) && (pos != 0) && (pos->field_0x00 != 0)) {
+        arg0->field_0x02 = pos->field_0x14;
+        arg0->field_0x04 = pos->field_0x18;
+        arg0->field_0x06 = pos->field_0x1C;
+
+        if (*arg2 != 0) {
+            if (effect->field_0x01 == 0x37) {
+                s32 currentId = effect->field_0x38;
+                s32 sfxId = -1;
+
+                if (pos->field_0x84 != (currentId & 0xFFFF)) {
+                    if (pos->field_0x84 == 0x15F) {
+                        sfxId = (func_150ADA20() & 3) + 0x444;
+                    }
+                }
+                if (sfxId != -1) {
+                    func_10010FFC(0, sfxId, 0x5DC0, 0, 0, pos);
+                }
+                effect->field_0x38 = pos->field_0x84;
+            } else {
+                actor = pos->field_0x31C;
+                if (actor != 0) {
+                    if (actor->field_0x19C < 0x78) {
+                        if (effect->field_0x38 == 0x513) {
+                            effect->field_0x38 = 0x3A1;
+                            effect->field_0x3C = func_1000FA64(0x3A1,
+                                (s16)(s32)pos->field_0x14,
+                                (s16)(s32)pos->field_0x18,
+                                (s16)(s32)pos->field_0x1C,
+                                0x7D00, 0x3E8, 0x1F4, (s32)func_15033BDC, effect, (s32)pos, 0, 0);
+                            return 1;
+                        }
+                    }
+                }
+            }
+            return 0;
+        }
+
+        if (effect->field_0x01 == 0x37) {
+            if (arg0->field_0x24 != 0) {
+                func_100111C8(arg0->field_0x24);
+                arg0->field_0x24 = 0;
+            }
+            *arg6 = 0;
+            return 0;
+        }
+    }
+    return 1;
+}
 
 s32 func_15033E00(s32 arg0, u8 *arg1) {
     if (arg1[5] == 3) {

@@ -246,45 +246,9 @@ extern void (*D_8008FC48[])(struct224 *, Func151D2C40Data *);
 extern void (*D_8008FC5C[])(struct224 *);
 void func_1514EDF0(struct224 *, s32);
 void func_1516972C(struct102 *arg0);
-void func_151D3130(struct224 *arg0)
-{
-  void (*temp_v0)(struct224 *);
-  struct224 *var_s0;
-  struct224 *temp_s1;
-  s8 temp_v0_2;
-  unsigned int new_var;
-  temp_v0 = D_8008FC5C[*((u8 *) (((u8 *) arg0) + 0x1D))];
-  if (temp_v0 != 0)
-  {
-    temp_v0(arg0);
-  }
-  var_s0 = (struct224 *) arg0->unk24;
-  if (var_s0 != 0)
-  {
-    do
-    {
-      temp_v0_2 = *((s8 *) (((u8 *) var_s0) + 0x2A));
-      new_var = 1;
-      temp_s1 = (struct224 *) var_s0->unk40;
-      if (temp_v0_2 != (-new_var))
-      {
-        D_8008FC48[temp_v0_2](var_s0, (Func151D2C40Data *) (&var_s0->unk34));
- { }
-      }
-      *((s32 *) var_s0->unk2C) = 0;
-      func_1516972C((struct102 *) var_s0);
-      var_s0 = temp_s1;
-      latch_151D3130:
-      ;
+void func_151D3130(struct224 *arg0);
 
-      ;
-      ;
-    }
-    while (temp_s1 != 0);
-  }
-  func_1514EDF0(arg0, arg0->unk10);
-}
-
+#pragma GLOBAL_ASM("asm/nonmatchings/game_1FFF60/func_151D3130.s")
 
 void func_151D31F4(struct102 *arg0) {
     func_151D3130(arg0);
@@ -296,38 +260,7 @@ void func_151D3220(struct102 *arg0) {
     func_15169824(arg0);
 }
 
-void func_151D324C(struct224 *arg0, struct223 *arg1, u8 arg2) {
-    void (*temp_v0)(struct224 *, struct223 *, u8);
-    s32 temp_v1;
-    s32 temp_v0_2;
-    u8 temp_a2;
-
-    temp_a2 = arg2;
-    if (temp_a2 == 0) {
-        func_151D33FC(arg0, arg1);
-        temp_a2 = arg2;
-    zero_label_151D324C:
-        ;
-    } else if (temp_a2 == 0x2D) {
-        temp_v0_2 = arg1->unk0;
-        if (arg0->unk10 == temp_v0_2) {
-            arg0->unk10 = arg1->unk4.w;
-            arg0->unk14 = arg1->unk9;
-        } else {
-            if (arg0->unk10 == arg1->unk4.w) {
-                arg0->unk10 = temp_v0_2;
-                arg0->unk14 = arg1->unk8;
-            }
-        trailing_label_151D324C:
-            ;
-        }
-    }
-
-    temp_v0 = D_8008FC64[*(u8 *)((u8 *)arg0 + 0x1D)];
-    if (temp_v0 != NULL) {
-        temp_v0(arg0, arg1, temp_a2);
-    }
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/game_1FFF60/func_151D324C.s")
 
 void func_151D3308(struct224 *arg0) {
     struct224 *temp_v0;

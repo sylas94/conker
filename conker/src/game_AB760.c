@@ -168,7 +168,8 @@ s32 func_1507E968(void *arg0) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AB760/func_1507E9E8.s")
+void func_1507E9E8(s32 arg0, s32 arg1) {
+}
 
 extern s32 func_150849A0(void *);
 extern s32 D_8009D910;

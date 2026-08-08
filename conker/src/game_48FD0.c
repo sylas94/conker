@@ -2,9 +2,20 @@
 #include "functions.h"
 #include "variables.h"
 
+/* This build's libultra exports osMotorStart/osMotorStop/_MakeMotorData as real
+   functions instead of the __osMotorAccess macro that os_motor.h defines. */
+#undef osMotorStart
+#undef osMotorStop
+extern s32 osMotorStart(OSPfs *pfs);
+extern s32 osMotorStop(OSPfs *pfs);
+extern s32 _MakeMotorData(OSMesgQueue *mq, OSPfs *pfs, s32 channel);
+
 extern u8 D_80084060[];
 extern OSTimer D_800BE6E0;
 extern f32 D_80096960;
+extern u8 D_800BEAC2;
+extern u8 D_800BEAC3;
+extern u8 D_800E0A00;
 
 s64 __ll_mul(u64 arg0, s32 arg1, s32 arg2);
 u64 __ull_div(u64 arg0, u64 arg1);
@@ -65,7 +76,74 @@ void func_1501C17C(u8 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_48FD0/func_1501C1B0.s")
+void func_1501C1B0(void) {
+    s32 i;
+    s32 on;
+
+    for (i = 0; i < 4; i++) {
+        if (D_800BE938 != 0) {
+            if (_MakeMotorData(&D_800BE900, (OSPfs *)&D_800BE760[i], i) == 0) {
+                if (D_800BE944[i] == 0) {
+                    D_800BE944[i] = 1;
+                    D_800BE93C[i] = 0;
+                    D_800BE940[i] = 0;
+                    D_800BE948[i] = 0;
+                    D_800BE950[i] = 0.0f;
+                    D_800BE960[i] = 1.0f;
+                    D_800BE970[i] = 1.0f;
+                    D_800BE980[i] = 2.0f;
+                    osMotorStop((OSPfs *)&D_800BE760[i]);
+                }
+            } else {
+                D_800BE944[i] = 0;
+            }
+        }
+        if (D_800BE944[i] != 0) {
+            if ((D_800BEAC3 != 0) || (D_800E0A00 != 0)) {
+                _MakeMotorData(&D_800BE900, (OSPfs *)&D_800BE760[i], i);
+                osMotorStop((OSPfs *)&D_800BE760[i]);
+                D_800BE948[i] = 0;
+                D_800BE93C[i] = 0;
+            }
+            if ((D_800BEAC1 == 0) && (D_800BEAC0 == 0) && (D_800BEAC2 == 0) && (D_800BEAC3 == 0) && (D_800E0A00 == 0)) {
+                switch (D_800BE93C[i]) {
+                case 0:
+                    if (D_800BE940[i] == 1) {
+                        _MakeMotorData(&D_800BE900, (OSPfs *)&D_800BE760[i], i);
+                        osMotorStop((OSPfs *)&D_800BE760[i]);
+                        D_800BE948[i] = 0;
+                    }
+                    break;
+                case 1:
+                    D_800BE950[i] += D_800BE9A4;
+                    while (D_800BE950[i] > D_800BE980[i]) {
+                        D_800BE950[i] -= D_800BE980[i];
+                    }
+                    if (D_800BE960[i] <= D_800BE950[i]) {
+                        on = 0;
+                    } else {
+                        on = 1;
+                    }
+                    if (on != 0) {
+                        if (D_800BE948[i] == 0) {
+                            osMotorStart((OSPfs *)&D_800BE760[i]);
+                        }
+                    } else {
+                        if (D_800BE948[i] == 1) {
+                            osMotorStop((OSPfs *)&D_800BE760[i]);
+                        }
+                    }
+                    D_800BE948[i] = on;
+                    break;
+                }
+            }
+            D_800BE940[i] = D_800BE93C[i];
+        }
+    }
+    D_800BE938 = 0;
+    D_800BEAC3 = 0;
+    D_800E0A00 = 0;
+}
 
 void func_1501C53C(void) {
     u8 i;

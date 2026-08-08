@@ -121,7 +121,93 @@ void func_1501D258(s32 arg0, s32 arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501D348.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501DAAC.s")
+typedef struct {
+    s16 unk0;
+    s16 unk2;
+    s8 unk4;
+    s8 unk5;
+    s16 unk6;
+} struct_game49D30_3;
+
+typedef struct {
+    u8 unk0;
+    u8 unk1;
+    u8 unk2;
+} struct_game49D30_4;
+
+extern u8 D_800C35A9;
+extern u16 D_800C3C8E;
+extern struct_game49D30_4 D_80084110[];
+extern void func_1517EE40(s32, s32, s32, s32, s32, s32);
+
+void func_1501DAAC(s32 arg0) {
+    s32 i;
+    s32 best;
+    struct_game49D30_3 *found;
+    s32 score;
+    u8 *ptr;
+
+    D_800C3C99 = 0;
+    D_800C35A9 = 0;
+    D_800C3C9C = 0;
+    D_800C35AA = 0;
+    D_800C3C8E = 0;
+
+    best = -1;
+    i = 0;
+    if (D_800C363A[arg0] > 0) {
+        do {
+            ptr = D_800C3688[arg0][i];
+            if (ptr != 0) {
+                found = 0;
+                func_15023BB0(ptr + 0x18, 5, i, (s16 **)&found, 1, 0x1E, 0, 0, 0, 0, arg0);
+                if (found != 0) {
+                    D_800C3C99 = 1;
+                }
+
+                found = 0;
+                func_15023BB0(ptr + 0x18, 5, i, (s16 **)&found, 1, 0xE, 0, 0, 0, 0, arg0);
+                if (found != 0) {
+                    D_800C3C9C = 1;
+                }
+
+                found = 0;
+                func_15023BB0(ptr + 0x18, 5, i, (s16 **)&found, 1, 0x68, 0, 0, 0, 0, arg0);
+                if (found != 0) {
+                    D_800C35AA = 1;
+                }
+
+                found = 0;
+                func_15023BB0(ptr + 0x18, 5, i, (s16 **)&found, 1, 0x44, 0, 0, 0, 0, arg0);
+                if (found != 0) {
+                    D_800C35A9 = 1;
+                }
+
+                found = 0;
+                score = func_15023BB0(ptr + 0x18, 5, i, (s16 **)&found, 1, 0x77, 0, 0, 0, 0, arg0);
+                if (found != 0) {
+                    D_800C3C8E = score;
+                }
+
+                found = 0;
+                score = func_15023BB0(ptr + 0x18, 5, i, (s16 **)&found, 1, 1, 1, 0, 0, 0, arg0);
+                if (found != 0) {
+                    if ((best == -1) || (score < best)) {
+                        best = score;
+                        if (found->unk6 == 1) {
+                            func_1517EE40(D_80084110[found->unk5].unk0, D_80084110[found->unk5].unk1, D_80084110[found->unk5].unk2, 0, 1, 0);
+                        } else {
+                            func_1517EE40(D_80084110[found->unk5].unk0, D_80084110[found->unk5].unk1, D_80084110[found->unk5].unk2, 0, 0, 0);
+                        }
+                    }
+                }
+            }
+            i++;
+        } while (i < D_800C363A[arg0]);
+    }
+
+    D_800C35B0[arg0] = D_800C3C8E;
+}
 
 void func_1501DE18(s32 arg0) {
     s32 i;
@@ -381,9 +467,17 @@ void func_150221E8(s16 arg0, s16 arg1, s16 arg2, f32 arg3) {
     D_800C3598[2] = arg2;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_15022234.s")
+extern u8 D_800C3510[];
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_15022248.s")
+void func_15022234(s32 arg0) {
+    D_800C3510[arg0] = 0;
+}
+
+extern u8 D_800C354A[];
+
+void func_15022248(s32 arg0) {
+    D_800C354A[arg0] = 0;
+}
 
 void func_1502225C(s32 arg0, s32 arg1) {
     s32 i;

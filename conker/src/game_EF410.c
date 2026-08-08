@@ -160,24 +160,34 @@ void func_150C2290(u8 arg0) {
 }
 */
 
-extern f32 D_800A0268;
-extern f32 D_800A026C;
 void func_1514C470(f32 arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5,
                    f32 arg6, u8 arg7, s32 arg8, f32 arg9, s32 arg10, u8 arg11);
 
-// Best: 130. Only diff: a scheduler tie in call 1 (target loads D_800A0268
-// before -490.0f; IDO reverses). Documented uncontrollable lwc1-vs-mtc1 tie.
-// PERMUTER MATCHED (was best 130 -> 0): pointer-deref of D_800A0268 + hoisted 0 local.
+#pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C2424.s")
+/* Blocked by the C-rodata linker gap, not by the C.  D_800A0268 / D_800A026C
+   are not real globals: they are IDO-generated .rodata float literals
+   (asm/data/244CD0.rodata.s -> 8500.0f and 8843.0f).  Written the way the
+   original author wrote them, this matches byte-for-byte (verified SCORE 0):
+
 void func_150C2424(u8 arg0) {
-    s32 new_var;
-    f32 *new_var2;
-    new_var2 = &D_800A0268;
-    new_var = 0;
-    func_1514C470(*new_var2, (s32)(-490.0f), -328.0f, *new_var2, -490.0f, 328.0f,
-                  (func_150ADA68() * 8.0f) + 8.0f, 1, new_var, 0.0f, 0, arg0);
-    func_1514C470(D_800A026C, -560.0f, -580.0f, 8117.0f, -560.0f, -580.0f,
+    func_1514C470(8500.0f, -490.0f, -328.0f, 8500.0f, -490.0f, 328.0f,
+                  (func_150ADA68() * 8.0f) + 8.0f, 1, 0, 0.0f, 0, arg0);
+    func_1514C470(8843.0f, -560.0f, -580.0f, 8117.0f, -560.0f, -580.0f,
                   (func_150ADA68() * 3.0f) + 4.0f, 3, 0, 0.0f, 0, arg0);
 }
+
+   ...but that makes IDO emit a .rodata section for this TU, and conker.ld has
+   no `build/src/game_EF410.c.o(.rodata);` entry (only .text at line 507), so
+   the section lands in /DISCARD/ and the %hi/%lo relocs resolve to 0 -- a
+   silently wrong ROM.  Unlock = add that one line to conker.ld beside
+   build/asm/data/244CD0.rodata.s.o(.rodata) and drop the two externs.
+
+   Referencing the literals as `extern f32 D_800A0268` instead (the usual
+   workaround) costs one scheduler tie and stalls at 130: IDO orders the
+   lui/mtc1 of -490.0f before the lui/lwc1 of the global, where the target has
+   them the other way round.  Tried and still 130: hoisting the rng call and/or
+   the loaded value into named locals, `extern const f32`, `extern f32 x[]` +
+   `x[0]`, int and double spellings of the coordinate literals. */
 s32 func_150C251C(void *arg0) {
     void *temp_v0 = *(void **)((s32)arg0 + 0x98);
     s32 temp_v1 = *(s16 *)((s32)arg0 + 0x1C) << 3;
@@ -424,6 +434,108 @@ Gfx *func_150C3160(Gfx *arg0, void *arg1) {
     return arg0;
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C3230.s")
+/* Best 250 of 209 instructions. Structure, frame (0x60), stack-slot layout,
+   branch shape and every instruction ADDRESS line up end-to-end; only 11 words
+   differ. Two of them are the reloc-spelling artifact (the extracted .s names the
+   interior symbol D_800CC028 == D_800CC2D0 - 0x2A8, i.e. &D_800CC2D0[i-1].unk84,
+   which natural C spells as base+offset -- same linked bytes). The rest are a
+   3-word delay-slot/register schedule split in the 0x1F9/0x1FB selector plus a
+   uniform +1 t-register rotation (t3/t4/t5 -> t4/t5/t6) in the tail health block
+   -- the allocator skips one mid-pool register and no source lever responds
+   (tried: if-chain, nested ternary, switch, if+ternary hybrid, default-then-
+   override, a named local for the lhu value, statement reordering, declaration
+   reordering, bare truthiness). PERMUTER CANDIDATE. Reconstruction:
+
+typedef struct {
+    struct127 *unk0;
+    f32 unk4[3];
+    s32 unk10;
+    s32 unk14;
+} Struct150C3230;
+
+void func_15059C84(struct127 *arg0);
+void func_1505A770(struct127 *arg0);
+void func_1507C324(struct127 *arg0, struct127 *arg1);
+void func_1506AC8C(struct127 *arg0, s32 arg1, void *arg2);
+
+void func_150C3230(struct127 *arg0) {
+    s32 index;
+    s32 type;
+    struct127 *target;
+    Struct150C3230 sp3C;
+
+    arg0->unkF8 |= 0x4000000;
+    if ((arg0->unk222 != 0) && (arg0->unk65 == 0)) {
+        arg0->old_x_position = D_800CC2D0[arg0->unk124 - 1].x_position;
+        arg0->old_y_position = D_800CC2D0[arg0->unk124 - 1].y_position;
+        arg0->old_z_position = D_800CC2D0[arg0->unk124 - 1].z_position;
+        arg0->unk222 = 0;
+    }
+
+    func_15059C84(arg0);
+    func_1505A770(arg0);
+    func_15058898(arg0, arg0->old_y_position);
+    func_1505B5F8(arg0, arg0->unk180);
+
+    if (arg0->unk28 == 0.0f) {
+        arg0->xz_velocity *= 0.5f;
+    }
+
+    index = arg0->unk65;
+    if (index != 0) {
+        arg0->unk222 = index;
+        type = (D_800CC2D0[index - 1].unk84.uh == 0x1F9)
+                   ? 2
+                   : ((D_800CC2D0[index - 1].unk84.uh == 0x1FB) ? 3 : 1);
+    } else {
+        type = 0;
+    }
+
+    func_1505E650(arg0, type, 0.0f, 0.0f, 0.0f, 0.0f, 0);
+
+    if (arg0->unk65 != 0) {
+        func_1507C324(arg0, &D_800CC2D0[arg0->unk65 - 1]);
+    }
+
+    if (arg0->unk2E4 != 0) {
+        if (arg0->unk65 != 0) {
+            target = &D_800CC2D0[arg0->unk65 - 1];
+            if (target->interaction_state == 5) {
+                arg0->unk65 = 0;
+                arg0->unk2E4 = 0;
+            }
+        } else {
+            target = NULL;
+        }
+
+        if ((D_800BE616 == 0) && (D_800C35EA == 0) && (arg0->unk65 == 0)) {
+            arg0->unk2E4 = 0;
+        }
+
+        if (D_800BE9E4 < arg0->unk2E4) {
+            arg0->unk2E4 -= D_800BE9E4;
+            if (D_800BE616 != 0) {
+                func_1508B20C(arg0->x_position, arg0->y_position, arg0->z_position, 900.0f);
+            }
+        } else {
+            sp3C.unk4[0] = arg0->x_position;
+            sp3C.unk4[1] = arg0->y_position;
+            sp3C.unk4[2] = arg0->z_position;
+            sp3C.unk0 = &D_800CC2D0[arg0->unk124 - 1];
+            sp3C.unk10 = arg0->unk65;
+            if (target != NULL) {
+                target->stunned = 0;
+                target->immune = 0;
+                if (target->health != 0) {
+                    target->health = 1;
+                }
+            }
+            func_1506AC8C(arg0, (D_800BE616 != 0) ? 0xB : 0xE, &sp3C);
+            func_15060F28(arg0, 1);
+        }
+    }
+}
+*/
 #pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C3574.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_EF410/func_150C3994.s")
 

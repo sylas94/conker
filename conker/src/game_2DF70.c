@@ -15,7 +15,36 @@ typedef struct func_15002560_node {
     s16 unkC;
 } func_15002560_node;
 
+typedef struct Point16 {
+    s16 x;
+    s16 y;
+    s16 z;
+} Point16;
+
+typedef struct Face16 {
+    Point16 *pts[3];
+} Face16;
+
+typedef struct Point32 {
+    f32 x;
+    f32 y;
+    f32 z;
+} Point32;
+
+typedef struct Face32 {
+    Point32 pts[3];
+} Face32;
+
+typedef struct YRange {
+    s16 min;
+    s16 max;
+} YRange;
+
+extern s32 D_800DBE44;
+
 void func_15002560(u16 *arg0, u16 *arg1);
+void func_15002008(s32 arg0, s32 arg1, s32 arg2, s32 arg3, u16 *arg4);
+s32 func_15049260(Face32 arg0);
 
 void func_15000AC0(void) {
     D_800D9E64 = (u8)0;
@@ -218,9 +247,122 @@ u16 *func_15001DE0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
     return temp_v0;
 }
 
-// 3 loops
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2DF70/func_15002008.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2DF70/func_15002248.s")
+void func_15002008(s32 arg0, s32 arg1, s32 arg2, s32 arg3, u16 *arg4) {
+    Face16 *face;
+    s32 count;
+    s32 idx;
+    s32 last;
+    s32 diff;
+    s32 i;
+    s32 j;
+    Face32 sp78;
+
+    last = -1;
+    count = arg4[0];
+
+    func_150492CC((f32)(arg1 - arg0), 32000.0f, (f32)(arg3 - arg2));
+
+    for (i = 1; i <= count; i++) {
+        idx = arg4[i];
+        face = &((Face16 *)D_800DBE3C)[idx];
+
+        for (j = 0; j < 3; j++) {
+            if ((u32)face->pts[j] > 0x80000000) {
+                sp78.pts[j].x = (f32)(face->pts[j]->x - (arg0 + arg1) / 2);
+                sp78.pts[j].y = (f32)face->pts[j]->y;
+                sp78.pts[j].z = (f32)(face->pts[j]->z - (arg2 + arg3) / 2);
+            } else {
+                sp78.pts[j].x = 0.0f;
+                sp78.pts[j].y = 0.0f;
+                sp78.pts[j].z = 0.0f;
+            }
+        }
+
+        if (func_15049260(sp78) == 0) {
+            diff = idx - last;
+            if (last == -1) {
+                func_15001B8C(idx | 0x8000);
+            } else if (diff < 0x80) {
+                func_15001B5C(diff);
+            } else {
+                func_15001B8C(idx | 0x8000);
+            }
+            last = idx;
+        }
+    }
+
+    func_15001B5C(0);
+}
+
+int func_15002248(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 *arg4, s32 *arg5, u16 *arg6, u16 **arg7) {
+    s32 i;
+    s32 j;
+    s32 count;
+    s32 total;
+    s32 idx;
+    u16 *out;
+    Face16 *face;
+    s32 temp;
+    s32 flag;
+    s32 res;
+    s32 pad;
+    s32 mask;
+    Face32 sp74;
+
+    pad = (1 << (D_80082FA0 + 1)) - 1;
+    mask = -(1 << (D_80082FA0 + 1));
+
+    func_150492CC((f32)(arg1 - arg0), 32000.0f, (f32)(arg3 - arg2));
+
+    total = arg6[0] + 1;
+    count = 0;
+    out = allocate_memory(total << 1, 1, 0, 0);
+    *arg7 = out;
+    *arg4 = 0;
+    *arg5 = 0;
+    flag = 0;
+
+    for (i = 1; i < total; i++) {
+        idx = arg6[i];
+        face = &((Face16 *)D_800DBE3C)[idx];
+
+        for (j = 0; j < 3; j++) {
+            if ((u32)face->pts[j] > 0x80000000) {
+                sp74.pts[j].x = (f32)(face->pts[j]->x - ((arg0 + arg1) >> 1));
+                sp74.pts[j].y = (f32)face->pts[j]->y;
+                sp74.pts[j].z = (f32)(face->pts[j]->z - ((arg2 + arg3) >> 1));
+            } else {
+                sp74.pts[j].x = 0.0f;
+                sp74.pts[j].y = 0.0f;
+                sp74.pts[j].z = 0.0f;
+            }
+        }
+
+        res = func_15049260(sp74);
+        if (res == 0) {
+            count++;
+            out[count] = idx;
+
+            if (flag) {
+                temp = (((YRange *)D_800DBE44)[idx].min - pad) & mask;
+                if (temp < *arg4) {
+                    *arg4 = temp;
+                }
+                temp = ((((YRange *)D_800DBE44)[idx].max + pad) & mask) + pad;
+                if (*arg5 < temp) {
+                    *arg5 = temp;
+                }
+            } else {
+                flag = 1;
+                *arg4 = (((YRange *)D_800DBE44)[idx].min - pad) & mask;
+                *arg5 = ((((YRange *)D_800DBE44)[idx].max + pad) & mask) + pad;
+            }
+        }
+    }
+
+    out[0] = count;
+    return count;
+}
 
 void func_15002560(u16 *arg0, u16 *arg1) {
     s32 temp_v0;

@@ -535,7 +535,67 @@ s32 func_15157918(struct15157010 *arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_183640/func_15157AA8.s")
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+} MotionVec;
+
+typedef struct {
+    MotionVec rot;
+    f32 scale;
+    MotionVec vel;
+    MotionVec rotVel;
+    f32 gravity;
+    f32 drag;
+    u8 flags;
+} MotionState;
+
+typedef struct {
+    u8 pad_0x0[0x54];
+    f32 posX;
+    f32 posY;
+    f32 posZ;
+    u8 pad_0x60[0xC0];
+    MotionState motion;
+} struct15157AA8;
+
+s32 func_15157AA8(struct15157AA8 *arg0) {
+    MotionState *p;
+    MotionVec oldVel;
+    f32 accelX;
+    f32 accelY;
+    f32 accelZ;
+    s32 i;
+
+    p = &arg0->motion;
+    if (arg0->motion.flags & 1) {
+        oldVel = p->vel;
+        if (p->flags & 8) {
+            for (i = D_800BE9E4; i != 0; i--) {
+                p->vel.x *= p->drag;
+                p->vel.z *= p->drag;
+            }
+        }
+        if (p->flags & 4) {
+            p->vel.y += p->gravity * D_800BE9A4;
+            accelY = p->gravity;
+        } else {
+            accelY = 0.0f;
+        }
+        accelX = (p->vel.x - oldVel.x) * D_800BE9A8;
+        accelZ = (p->vel.z - oldVel.z) * D_800BE9A8;
+        arg0->posX += (oldVel.x + 0.5f * accelX * D_800BE9A4) * D_800BE9A4;
+        arg0->posY += (oldVel.y + 0.5f * accelY * D_800BE9A4) * D_800BE9A4;
+        arg0->posZ += (oldVel.z + 0.5f * accelZ * D_800BE9A4) * D_800BE9A4;
+    }
+    if (p->flags & 2) {
+        p->rot.x += p->rotVel.x * D_800BE9A4;
+        p->rot.y += p->rotVel.y * D_800BE9A4;
+        p->rot.z += p->rotVel.z * D_800BE9A4;
+    }
+    return 1;
+}
 
 void func_15157D88(s32 arg0, s32 arg1, u8 arg2) {
     func_15169850(arg1, arg2, arg0 + 0x4C, arg0 + 0x50, arg0);

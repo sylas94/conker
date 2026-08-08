@@ -71,7 +71,11 @@ void func_151732E0(s32 arg0)
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1A0790/func_151733D8.s")
+Gfx *func_151733D8(Gfx *arg0, s32 arg1) {
+    while (1) {
+        return arg0;
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1A0790/func_151733E4.s")
 

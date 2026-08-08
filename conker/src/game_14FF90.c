@@ -77,6 +77,14 @@ void func_1512A360(u8 *arg0);
 void func_1512E4B0(struct108 *arg0);
 void func_1512DEA4(struct108 *arg0);
 void func_15143134(void *arg0, void *arg1, s32 arg2);
+void func_1508EF80(struct17 *arg0, struct17 *arg1, f32 arg2, struct17 *arg3);
+void func_151CC290(s32 arg0);
+void func_1515BA10(s32 arg0);
+void func_1515BA1C(s16 arg0);
+void func_1515BA48(s32 arg0);
+void func_1515BA54(s16 arg0);
+void func_1515BA80(s16 arg0);
+void func_1515BAAC(s16 arg0);
 
 
 #if 0
@@ -323,7 +331,63 @@ void func_15123508(struct108 *arg0) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_15123568.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151236D0.s")
+void func_151236D0(struct108 *arg0) {
+    s32 oldState;
+
+    oldState = arg0->unk5F0 & 1;
+    if (arg0->unk3D4 != NULL) {
+        if ((arg0->unk3D4->unk9C != 0) ||
+            ((*((u8 *)arg0->unk3D4 + 0x95) != 0) && (*((u8 *)arg0->unk3D0 + 0x137) == 0))) {
+            arg0->unk5F0 |= 0x40;
+        } else {
+            arg0->unk5F0 &= ~0x40;
+        }
+        if (arg0->unk3D0->unk28 == 0.0f) {
+            arg0->unk5F0 &= ~0x400;
+        }
+        if ((*(s16 *)((u8 *)arg0->unk3D4 + 0x8) != 0) && (*((u8 *)arg0->unk3D4 + 0x16) == 0)) {
+            arg0->unk5F0 |= 8;
+        } else {
+            arg0->unk5F0 &= ~8;
+        }
+        if (*((u8 *)arg0->unk3D4 + 0x4E) == 2) {
+            arg0->unk5F0 |= 0x80;
+        } else {
+            arg0->unk5F0 &= ~0x80;
+        }
+    }
+    if ((arg0->unk2FC <= *(f32 *)((u8 *)arg0 + 0x360)) && (arg0->unk2C != 0x100)) {
+        arg0->unk5F0 |= 1;
+    } else {
+        arg0->unk5F0 &= ~1;
+    }
+    if (arg0->unk23C != 0) {
+        if ((arg0->unk5F0 & 1) != 0) {
+            func_1515BA80(arg0->unk23D);
+        } else {
+            func_1515BA48(arg0->unk23D);
+            *(f32 *)((u8 *)arg0 + 0x7B0) = 0.0f;
+        }
+    } else if ((oldState == 0) && ((arg0->unk5F0 & 1) != 0)) {
+        if (((arg0->unk5F0 & 4) != 0) || ((arg0->unk2C & 0x40000) != 0)) {
+            func_1515BA80(arg0->unk23D);
+        } else {
+            func_1515BAAC(arg0->unk23D);
+        }
+    } else if ((oldState != 0) && ((arg0->unk5F0 & 1) == 0)) {
+        if (((arg0->unk5F0 & 4) != 0) || ((arg0->unk2C & 0x40000) != 0)) {
+            func_1515BA48(arg0->unk23D);
+            *(f32 *)((u8 *)arg0 + 0x7B0) = 0.0f;
+        } else {
+            func_1515BA54(arg0->unk23D);
+            func_15124B18(arg0);
+        }
+    } else if ((arg0->unk5F0 & 1) != 0) {
+        func_1515BA1C(arg0->unk23D);
+    } else {
+        func_1515BA10(arg0->unk23D);
+    }
+}
 s32 func_15123934(struct108 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
     s32 v0;
 
@@ -598,9 +662,50 @@ void func_15125690(struct108 *arg0, s32 arg1) {
     }
 }
 
-// Was left as non-compiling live C (F29C/F5EC undefined -> really arg0->0x29C/0x5EC
-// float fields); it has a nonmatching .s, so revert to pragma to un-poison the TU.
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151256BC.s")
+/* Camera "sway"/bob: +0x29C is the sway phase angle and +0x5EC the current sway
+ * amount (structs.h mis-labels both offsets as padding). While swaying is armed
+ * the phase advances by a random 0/2/4 degrees per frame and wraps at 2*PI;
+ * otherwise the phase decays away. The resulting amount is fed to the camera
+ * eye/target orbit routine. */
+void func_151256BC(struct108 *arg0) {
+    f32 twoPi;
+    f32 speed;
+    f32 scale;
+    f32 mult;
+
+    if (((arg0->unk2C & 0x80000) != 0) ||
+        (((arg0->unk5F0 & 8) != 0) && ((arg0->unk2C & 0x40000) == 0))) {
+        speed = (f32) ((u32) func_150ADA20() % 3);
+        twoPi = D_800A3534;
+        *(f32 *) ((u8 *) arg0 + 0x29C) += ((speed + speed) * D_800A3538) * D_800BE9A4;
+        while (twoPi < *(f32 *) ((u8 *) arg0 + 0x29C)) {
+            *(f32 *) ((u8 *) arg0 + 0x29C) -= twoPi;
+        }
+        *(f32 *) ((u8 *) arg0 + 0x5EC) += ((sinf(*(f32 *) ((u8 *) arg0 + 0x29C)) * 4.0f) -
+                                           *(f32 *) ((u8 *) arg0 + 0x5EC)) * D_800A353C;
+        speed = *(f32 *) ((u8 *) arg0 + 0x5EC) * D_800A3540;
+        if ((arg0->unk2C & 0x80000) != 0) {
+            scale = 4.0f;
+            mult = 4.0f;
+        } else {
+            scale = 1.0f;
+            mult = 20.0f;
+        }
+        func_1508EF80((struct17 *) &arg0->unk2F8, (struct17 *) &arg0->unk2BC, speed * scale,
+                      (struct17 *) &arg0->unk2F8);
+        func_1508EF80((struct17 *) &arg0->unk2BC, (struct17 *) &arg0->unk2F8, speed * mult,
+                      (struct17 *) &arg0->unk2BC);
+    } else if (*(f32 *) ((u8 *) arg0 + 0x29C) != 0.0f) {
+        *(f32 *) ((u8 *) arg0 + 0x29C) -= *(f32 *) ((u8 *) arg0 + 0x29C) * D_800A3544;
+        *(f32 *) ((u8 *) arg0 + 0x5EC) += ((sinf(*(f32 *) ((u8 *) arg0 + 0x29C)) * 4.0f) -
+                                           *(f32 *) ((u8 *) arg0 + 0x5EC)) * D_800A3548;
+        speed = *(f32 *) ((u8 *) arg0 + 0x5EC) * D_800A354C;
+        func_1508EF80((struct17 *) &arg0->unk2F8, (struct17 *) &arg0->unk2BC, speed,
+                      (struct17 *) &arg0->unk2F8);
+        func_1508EF80((struct17 *) &arg0->unk2BC, (struct17 *) &arg0->unk2F8, speed * 20.0f,
+                      (struct17 *) &arg0->unk2BC);
+    }
+}
 
 void func_15125924(struct108 *arg0) {
     s32 temp_v1;
@@ -786,40 +891,43 @@ typedef struct {
 } struct_1512623C_arg1;
 
 void func_1512623C(struct127 *arg0, struct_1512623C_arg1 *arg1, s32 arg2, f32 *arg3, f32 *arg4, f32 *arg5, s32 arg6) {
-    s32 temp_v0;
-    f32 sp38[3];
-    f32 sp2C[3];
-    s32 index;
-    volatile s32 pad[2];
+    s32 useObjectPos;
+    f32 localPos[3];
+    f32 worldPos[3];
+    s32 boneIndex;
+    s32 boneMtx;
+    f32 offsetY;
 
-    temp_v0 = 1;
+    useObjectPos = 1;
     if (arg0->unk1D4 != NULL) {
-        temp_v0 = 0;
+        useObjectPos = 0;
         if (arg6 != 0) {
-            index = 3;
-            sp38[0] = 0.0f;
-            sp38[1] = 20.0f;
-            sp38[2] = 0.0f;
+            boneIndex = 3;
+            offsetY = 20.0f;
+            localPos[0] = 0.0f;
+            localPos[1] = offsetY;
+            localPos[2] = 0.0f;
         } else if (arg2 == 0x1B) {
-            index = 4;
-            sp38[1] = 116.0f;
-            sp38[0] = 0.0f;
-            sp38[2] = 130.0f;
+            boneIndex = 4;
+            offsetY = 116.0f;
+            localPos[1] = offsetY;
+            localPos[0] = 0.0f;
+            localPos[2] = 130.0f;
         } else {
-            temp_v0 = 1;
+            useObjectPos = 1;
         }
 
-        if (temp_v0 == 0) {
-            arg2 = (s32)arg0->unk1D4;
-            arg2 += index << 6;
-            func_15143134(sp38, sp2C, arg2);
-            *arg3 = sp2C[0];
-            *arg4 = sp2C[1];
-            *arg5 = sp2C[2];
+        if (useObjectPos == 0) {
+            boneMtx = (s32)arg0->unk1D4;
+            boneMtx += boneIndex << 6;
+            func_15143134(localPos, worldPos, boneMtx);
+            *arg3 = worldPos[0];
+            *arg4 = worldPos[1];
+            *arg5 = worldPos[2];
         }
     }
 
-    if (temp_v0 != 0) {
+    if (useObjectPos != 0) {
         *arg3 = arg0->x_position;
         *arg4 = arg0->y_position + (arg1->unk114 * 0.75f);
         *arg5 = arg0->z_position;
@@ -827,7 +935,79 @@ void func_1512623C(struct127 *arg0, struct_1512623C_arg1 *arg1, s32 arg2, f32 *a
 }
 // ooh mama
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_15126378.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_15127520.s")
+typedef struct {
+    /* 0x00 */ u16 unk0;
+    /* 0x02 */ s16 unk2;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ s16 unk6;
+    /* 0x08 */ u8  pad8[0x8];
+    /* 0x10 */ s32 unk10;
+    /* 0x14 */ s32 unk14;
+    /* 0x18 */ struct108 *unk18;
+    /* 0x1C */ u32 unk1C;
+    /* 0x20 */ s32 unk20;
+    /* 0x24 */ u16 unk24;
+} struct_15127520_arg0;
+
+extern u16 D_800894E0[2][3];
+
+s32 func_15127520(struct_15127520_arg0 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, u16 *arg6) {
+    struct108 *obj;
+    u32 index;
+    u32 oldTime;
+    u32 newTime;
+    f32 time;
+    s32 changed;
+
+    obj = arg0->unk18;
+    index = arg0->unk1C >> 31;
+    oldTime = arg0->unk1C & 0xFFFFFF;
+    time = obj->unk1A4 * D_800A3580;
+    changed = 0;
+
+    if (*arg6 == D_800894E0[index][2]) {
+        *arg6 = 0;
+    }
+
+    arg0->unk2 = obj->unk3D0->x_position;
+    arg0->unk4 = obj->unk3D0->y_position;
+    arg0->unk6 = obj->unk3D0->z_position;
+
+    if (obj->unk3D4->unk197 == 2) {
+        newTime = (u32)time;
+        if (oldTime != newTime) {
+            changed = 1;
+            arg0->unk1C = (index << 31) | newTime;
+        }
+
+        if (changed) {
+            if (*arg6 != D_800894E0[index][0]) {
+                if (arg0->unk24 != 0) {
+                    func_100111C8(arg0->unk24);
+                }
+                arg0->unk24 = 0;
+                arg0->unk10 &= ~0x80;
+                *arg6 = D_800894E0[index][0];
+            }
+        } else if (*arg6 == D_800894E0[index][0]) {
+            if (arg0->unk24 != 0) {
+                func_100111C8(arg0->unk24);
+            }
+            arg0->unk24 = 0;
+            *arg6 = D_800894E0[index][1];
+            func_10010F30(D_800894E0[index][1], 0x4E20, 0x40, 0, 0);
+            arg0->unk10 &= ~0x80;
+        } else if (arg0->unk10 & 0x80) {
+            func_151CC290((s32)obj);
+            func_10010F30(D_800894E0[index][2], 0x4E20, 0x40, 0, 0);
+        }
+    } else {
+        return 1;
+    }
+
+    arg0->unk10 &= ~0x80;
+    return 0;
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151277B0.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_151279A0.s")
 

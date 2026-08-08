@@ -664,9 +664,87 @@ void func_1508B1D4(s32 arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508BC20.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508BF14.s")
+s32 func_1508BF14(void) {
+    s32 numSlots;
+    s32 owner;
+    s32 pass;
+    s32 myIdx;
+    s32 i;
+    s32 j;
+    s32 end;
+    s32 cost;
+    s32 bestCost;
+    s8 counts[16];
+    s32 *owners;
+    s32 *links;
+    s32 *costs;
+    s32 *statuses;
+    s32 *weights;
+    s32 *bestCosts;
+    s32 *bestSlots;
+    s32 bestSlot;
+    s32 n;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508C194.s")
+    myIdx = ((s32 *)D_800D23B0)[1];
+    numSlots = ((s32 *)D_800D23B0)[4];
+    statuses = (s32 *)(D_800D23B0 + 0x15C);
+    weights = (s32 *)(D_800D23B0 + 0x39C);
+    owners = (s32 *)(D_800D23B0 + 0xE64);
+    bestCosts = (s32 *)(D_800D23B0 + 0x45C);
+    bestSlots = (s32 *)(D_800D23B0 + 0x49C);
+    links = (s32 *)(D_800D23B0 + 0x5DC);
+    costs = (s32 *)(D_800D23B0 + 0x9DC);
+    owner = owners[myIdx];
+
+    for (i = 0; i < numSlots; i++) counts[i] = 0;
+
+    for (pass = 0; pass != 2; pass++) {
+        for (i = 0; i < numSlots; i++) {
+            n = 0;
+            if ((statuses[i] == 2) || (statuses[i] == 3)) {
+                n = 1;
+            }
+            if ((n && (pass == 0)) || (!n && (pass != 0))) {
+                if (owners[i] == owner) {
+                    bestSlot = -1;
+                    bestCost = 10000000;
+                    for (j = 0; j < numSlots; j++) {
+                        if (weights[j] > 0) {
+                            if (owners[j] != owner) {
+                                cost = -1;
+                                n = j * 16;
+                                end = n + 16;
+                                while ((n < end) && (links[n] != -1)) {
+                                    if (links[n] == i) {
+                                        cost = costs[n];
+                                        n = end;
+                                    } else {
+                                        n++;
+                                    }
+                                }
+                                if (cost != -1) {
+                                    cost <<= counts[j];
+                                    if (cost < bestCost) {
+                                        bestCost = cost;
+                                        bestSlot = j;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    counts[bestSlot]++;
+                    bestCosts[i] = bestCost;
+                    bestSlots[i] = bestSlot;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+s32 func_1508C194(s32 arg0) {
+    return 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508C1A4.s")
 

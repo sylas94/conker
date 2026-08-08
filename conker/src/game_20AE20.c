@@ -95,7 +95,9 @@ extern u8 D_800E0BD1;
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151DD9E4.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151DDB94.s")
+s32 func_151DDB94(s32 arg0) {
+    return ~arg0;
+}
 
 void func_151DDBA0(void) {
     D_800D2E40 = 0;
@@ -393,7 +395,11 @@ void func_151E4314(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E4BD8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E4DC4.s")
+extern u8 D_800E0B94;
+
+void func_151E4DC4(void) {
+    D_800E0B94 = 0xA;
+}
 
 extern s16 D_800E0B9A;
 
@@ -565,11 +571,91 @@ s8 func_151E5FAC(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E5FF4.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E6964.s")
-
-extern u8 D_800E0BD3;
+extern s8 D_800E0BEA;
+extern s8 D_800E0BD3;
 extern s32 D_800E0BD4;
 extern s32 D_8008FDD8;
+extern u8 **D_800E0B88;
+extern void func_10004074(void *);
+extern void *allocate_memory(s32, s32, s32, s32);
+s32 func_1502B5C8();
+
+void func_151E6964(s32 arg0) {
+    u8 *p;
+    u8 *end;
+    s32 i;
+    s32 size;
+
+    if (D_800E0BEA != D_800BEAAB) {
+        D_800BEAAB = D_800E0BEA;
+        D_800E0BD3 = 0;
+    }
+    if (arg0 == D_800E0BD3) {
+        return;
+    }
+    if (D_800E0BD4 != 0) {
+        func_10004074((void *)D_800E0BD4);
+        D_800E0BD4 = 0;
+        if (D_8008FDD8 != 0) {
+            func_10004074((void *)D_8008FDD8);
+            func_10004074(D_800E0B88);
+            func_10004074(D_800E0BD8);
+            D_8008FDD8 = 0;
+        }
+    }
+    D_800E0BD3 = arg0;
+    if (D_800E0BD3 == 0) {
+        return;
+    }
+
+    D_800E0BD4 = func_1502B5C8(&size, 3, 0x1C, D_800BEAAB, arg0 - 1);
+    p = (u8 *)D_800E0BD4;
+    end = p + size;
+    i = 0;
+    do {
+        while (*p != 0) {
+            p++;
+        }
+        while (*p == 0) {
+            p++;
+        }
+        i++;
+    } while (p < end);
+
+    D_800E0BD8 = allocate_memory((i + 1) << 2, 1, 0, 0);
+    p = (u8 *)D_800E0BD4;
+    end = p + size;
+    i = 0;
+    do {
+        D_800E0BD8[i] = p;
+        i++;
+        while (*p != 0) {
+            p++;
+        }
+        while (*p == 0) {
+            p++;
+        }
+    } while (p < end);
+
+    if (arg0 - 1 != 0) {
+        return;
+    }
+
+    D_8008FDD8 = func_1502B5C8(&size, 3, 0x1C, D_800BEAAB, 2);
+    D_800E0B88 = allocate_memory(0x140, 1, 0, 0);
+    p = (u8 *)D_8008FDD8;
+    i = 0;
+    do {
+        D_800E0B88[i] = p;
+        i++;
+        while (*p != 0) {
+            p++;
+        }
+        while (*p == 0) {
+            p++;
+        }
+    } while (i != 80);
+}
 
 void func_151E6BFC(void) {
     D_800E0BD3 = 0;

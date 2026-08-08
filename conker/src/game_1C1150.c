@@ -53,7 +53,8 @@ void func_15194588(s32 arg0, s32 arg1, s32 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1C1150/func_15194810.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1C1150/func_151949E0.s")
+void func_151949E0(s32 arg0, s32 arg1, s32 arg2) {
+}
 
 extern void func_15104170(s32);
 

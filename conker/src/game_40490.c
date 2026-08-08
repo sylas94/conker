@@ -131,34 +131,26 @@ void func_15012FE0(void) {
 }
 
 void func_15013000(void) {
-    void (**table)(struct178 *);
-    void (*func)(struct178 *);
-    s32 base;
-    struct178 *arg;
-    u32 i;
-    s32 offset;
-    u32 count;
-    u8 idx;
-
     D_800DCDC4 = 0;
     D_800DCD90 = 0.0f;
-fence_15013000:
-    count = D_800D3094;
-    i = 0;
-    offset = 0;
-    if (count != 0) {
-        table = D_80082E30;
-        do {
+    {
+        void (*func)(struct178 *);
+        s32 base;
+        struct178 *arg;
+        u32 i;
+        s32 offset;
+        u8 kind;
+
+        for (i = 0, offset = 0; i < (u32)D_800D3094; i++) {
             base = *(s32 *)&D_800D3098;
-            idx = ((u8 *)base)[offset + 0x15];
-            func = table[(u8)((s32)idx >> 2)];
+            kind = ((u8 *)base)[offset + 0x15] >> 2;
+            func = D_80082E30[kind];
             if (func != NULL) {
                 arg = (struct178 *)(offset + base);
                 func(arg);
             }
-            i++;
             offset += sizeof(struct178);
-        } while (i < (u32)D_800D3094);
+        }
     }
 }
 // requires jump table

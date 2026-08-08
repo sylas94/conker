@@ -178,6 +178,48 @@ extern void func_15102B38(s32, u8, s32, s32, f32 *, s32, s32, f32, s32, s32, s32
 extern void func_150E1570(struct127 *, f32, f32, f32, f32, f32, f32, s32, s32);
 
 
+// PERMUTER CANDIDATE (best 45): logic is byte-correct -- the ONLY residual is a coupled
+// two-register allocation swap (8 lines). IDO ranks the loop-invariant temps by
+// depth-weighted reference count and gives s3..s8 in that order; the *12 array-stride
+// constant scores 21 (guard multu at depth 0 + .cmd multu + loop-bottom multu at depth 1)
+// and the &D_800D1580 base scores 20 (store + float read at depth 1), so IDO hands
+// s3=0xC / s4=&D_800D1580 where the target has s3=&D_800D1580 / s4=0xC. Nothing in the C
+// changes those counts (verified: pointer-walk vs index inner loop, assignment-in-condition
+// to drop one index expression, *(s32*)& on the store, file-local struct types vs casts --
+// all still 45). Everything else matches exactly, including the u8-param promotion, which
+// needs PLAIN TRUTHINESS `if (filter)` / `while (filter)`: the `filter != 0` spelling leaves
+// the param memory-resident (`lbu 0x5b(sp)`) and costs ~850 points of cascade.
+// Reconstruction (byte-correct logic; obj is struct127, 0xB4/0x1C4 are `pad` in structs.h):
+// typedef struct AnimCmd { f32 time; u8 pad4[3]; u8 cmd; s32 arg; } AnimCmd;   // 0xC bytes
+// f32 func_1506AD30(AnimObj *obj, f32 time, u8 filter) {
+//     s32 anim; u8 cmd; s32 i;
+//     if (obj->unk5 == 4) return 0.0f;
+//     D_800D1878 = 0.0f;
+//     if (time < obj->unkB4) obj->unk138 = 0;
+//     D_800D1880 = 1;
+//     while (obj->unk1C4 && (obj->unk1C4[obj->unk138].time <= time) && D_800D1880) {
+//         if (obj->unk1C4[obj->unk138].time < 900.0f) {
+//             D_800D1580 = obj->unk1C4[obj->unk138].arg;
+//             D_800D1874 = *(f32 *)&D_800D1580;
+//             anim = obj->unk2D0->unk28;
+//             if ((D_800C35EA == 0) || (D_800C365E != 0)) {
+//                 cmd = obj->unk1C4[obj->unk138].cmd;
+//                 if (filter) {                 // D_80099A30 = allowed-command list, 0-terminated
+//                     i = 0;
+//                     while (filter) {
+//                         if (D_80099A30[i] == 0) cmd = 0;
+//                         if (cmd == D_80099A30[i]) break;
+//                         i++;
+//                     }
+//                 }
+//                 if (cmd) D_800863FC[cmd]();   // command handler table
+//             }
+//             if (anim != obj->unk2D0->unk28) time = obj->unk2D0->unk8;  // anim changed: resync
+//             else obj->unk138++;
+//         }
+//     }
+//     return D_800D1878;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506AD30.s")
 
 void func_1506AF74(void) {
@@ -376,29 +418,27 @@ void func_1506B5E4(void) {
 }
 
 void func_1506B634(s32 arg0) {
-    u32 temp_v0;
-    u32 temp_v1;
-    u8 temp_a0;
-    struct126 *temp_a1;
-    struct127 *volatile *temp_a2;
+    u32 rand;
+    u32 pick;
+    u8 index;
+    struct126 *player;
 
-    temp_v0 = func_150ADA20();
-    temp_a2 = (struct127 *volatile *)&D_800D154C;
-    temp_v1 = temp_v0 % (u32)(u8)arg0;
-    temp_a0 = temp_v1;
-    temp_a1 = (*temp_a2)->unk31C;
-    if (temp_a1->unk16 != 0) {
+    rand = func_150ADA20();
+    pick = rand % (u32)(u8)arg0;
+    index = pick;
+    player = D_800D154C->unk31C;
+    if (player->unk16 != 0) {
         if (D_800BE9F0 == 0x29) {
-            if ((u8)temp_v1 == 7) {
-                temp_a0 = 0;
+            if ((u8)pick == 7) {
+                index = 0;
             }
         }
-        temp_a1->unkE = ((u8 *)D_80099ABC)[temp_a0];
+        player->unkE = ((u8 *)D_80099ABC)[index];
     } else {
-        temp_a1->unkE = ((u8 *)D_80099AB4)[(u8)temp_v1];
+        player->unkE = ((u8 *)D_80099AB4)[(u8)pick];
     }
 
-    if ((*temp_a2)->unk31C->unkE == 0xA7) {
+    if (D_800D154C->unk31C->unkE == 0xA7) {
         D_800D1580 = 0xFF020144;
         D_800D154C->unk31C->unkC = (func_150ADA20() % 3U) + 2;
         func_1506E8D8();
@@ -648,7 +688,66 @@ void func_1506C43C(void) {
 // requires jump table
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506CE6C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506D2E8.s")
+extern struct127 *func_1505EEF4(s32 arg0);
+extern void func_151A3390(void *arg0, u8 arg1);
+
+typedef struct MarkerPoint {
+    u8 pad0[8];
+    s16 x;
+    s16 y;
+    s16 z;
+} MarkerPoint;
+
+void func_1506D2E8(void) {
+    struct127 *obj;
+    f32 xOff;
+    f32 zOff;
+    f32 yOff;
+    s32 cmd;
+    s32 angle;
+    f32 height;
+
+    cmd = D_800D1580 & 0xFF;
+    obj = func_1505EEF4(func_15083E0C(cmd));
+    if (obj == 0) {
+        return;
+    }
+
+    height = 0.0f;
+    func_151A3390(obj, 0xFF);
+    if ((D_800D1580 & 0xFF00) != 0) {
+        height = D_800D154C->camera->unk780 - 15.0f;
+    }
+
+    angle = D_800D154C->unk7A;
+    obj->unk78 = angle;
+    obj->unk7A = angle;
+    obj->unk76 = angle;
+    func_1505A184(angle, 5000.0f, height, &xOff, &zOff, &yOff);
+
+    ((MarkerPoint **)D_800D2104)[obj->unk13F]->x = D_800D154C->x_position + xOff;
+    ((MarkerPoint **)D_800D2104)[obj->unk13F]->z = D_800D154C->z_position + zOff;
+    ((MarkerPoint **)D_800D2104)[obj->unk13F]->y = D_800D154C->y_position + yOff;
+    obj->unk65 = 0;
+    obj->unk218 = 0;
+
+    if ((D_800D1580 & 0xFF00) != 0) {
+        obj->y_position = D_800D154C->y_position + 70.0f;
+        obj->unk232 = 4;
+        obj->xz_scale = 0.25f;
+        obj->y_scale = 0.25f;
+    } else {
+        obj->unk232 = 2;
+        obj->xz_velocity = -15.0f;
+        obj->y_velocity = 34.0f;
+        obj->gravity = D_80099D44;
+        obj->xz_scale = 0.5f;
+        obj->y_scale = 0.5f;
+    }
+}
+
+void func_1506D4EC(void) {
+}
 
 void func_1506D4F4(void) {
     func_1505E650(D_800D154C, D_800D154C->unk84.uh, 0.009999999776482582f, 0.0f, 0.0f, 0.0f, 0);
@@ -1140,16 +1239,26 @@ void func_1506EEF4(void) {
     D_800D154C->unk287 = 0;
 }
 
-// TBD whats goins on here
-// PERMUTER CANDIDATE (best 190, void): all instructions byte-identical, pure register
-// rename (target keeps &D_800D154C in a2; IDO picks a0). No C form flips it.
-// permuter NO ZERO, best 150 (2x600s, no zero)
-// void func_1506EF5C(void) {
+// PERMUTER CANDIDATE (best 135): all 22 instructions byte-identical and perfectly
+// aligned; the only residual is register naming. The old void reconstruction scored
+// 190 (permuter 2x600s, no zero); declaring the function s32 and returning
+// D_800D1580 >> 16 (v0 is live with exactly that value at jr ra) fixes the a2 base
+// reg, the v1 %hi scratch and v0, and drops it to 135. Remaining: the target keeps
+// the D_800D1580 value in t1 and the scaled index in t6 (andi/sll written in place),
+// where IDO puts them in v1 and a1/t0, which phase-shifts the whole t-register
+// rotation by 5 slots (target starts at t1, IDO at t6). Locals vs inline, named idx,
+// (u8)hi vs hi & 0xFF, and byte-offset vs struct-field store spelling all compile to
+// the identical 135 output, so no C form steers it -- hand this base to the permuter.
+// s32 func_1506EF5C(void) {
 //     s32 temp = D_800D1580;
+//     s32 hi = temp >> 16;
+//     s32 idx = (hi & 0xFF) * 2;
+//
 //     *(u16 *)&D_800D154C->unk282 = 0xFFFF;
 //     D_800D154C->unk276 = 5;
-//     *(u8 *)((u8 *)D_800D154C + ((temp >> 16) & 0xFF) * 2 + 0x284) = temp >> 8;
-//     *(u8 *)((u8 *)D_800D154C + ((temp >> 16) & 0xFF) * 2 + 0x285) = temp;
+//     *((u8 *)D_800D154C + idx + 0x284) = temp >> 8;
+//     *((u8 *)D_800D154C + idx + 0x285) = temp;
+//     return hi;
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506EF5C.s")
 
@@ -1983,19 +2092,14 @@ void func_15071FB0(void) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_15071FDC.s")
-void func_1506160C(struct127 *, s32, u8, u8, s32);
-extern s32 D_800D1580;
-extern struct127 *D_800D154C;
-void func_150721A4(void)
-{
-  u8 new_var;
-  u16 temp_a2 = D_800D1580;
-  unsigned short temp_t6 = D_800D1580 >> 8;
-  u8 temp_t7 = D_800D1580 >> 16;
-  new_var = temp_t7;
-  func_1506160C(D_800D154C, new_var & 0xFFu, temp_a2, temp_t6, 0);
-}
 
+void func_150721A4(void) {
+    u16 lo = D_800D1580;
+    u16 mid = D_800D1580 >> 8;
+    u16 hi = D_800D1580 >> 16;
+
+    func_1506160C(D_800D154C, (u8)hi, lo, mid, 0);
+}
 
 struct127 *func_150721E8(struct127 *arg0) {
     return func_15072208(arg0, 0);
@@ -2038,45 +2142,98 @@ void func_150723E0(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_15072420.s")
-extern u8 D_800BE616;
-extern u8 D_800C3E78;
-extern struct127 D_800CC2D0[26];
-extern s32 D_800D1580;
-extern struct127 *D_800D154C;
-void func_1507266C(void)
-{
-  s32 temp_v1;
-  s32 temp_a2;
-  struct127 *temp_a1;
-  unsigned short new_var;
-  if (D_800BE616 == 0)
-  {
-    if (D_800D154C->unk222 == 0)
-    {
-      return;
+extern u8 *D_800D210C;
+extern void func_1505F188(struct127 *arg0);
+extern s32 func_15082A44(void *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
+
+typedef struct SpawnSlot {
+    u8  pad0[2];
+    u8  unk2;
+    u8  pad3[0x2D];
+} SpawnSlot;
+
+void func_15072420(void) {
+    struct127 *obj;
+    s32 spawnFlags;
+    s32 angle;
+    s32 slot;
+    s32 id;
+    s32 noKill;
+
+    angle = (D_800D1580 >> 8) & 0x7F;
+    noKill = (D_800D1580 >> 15) & 1;
+    spawnFlags = (D_800D1580 >> 16) & 0xFF;
+    id = func_15083E0C(D_800D1580);
+    if (id == -1) {
+        return;
     }
-  }
-  new_var = D_800D1580;
-  temp_a2 = D_800D1580 >> 16;
-  temp_v1 = new_var;
-  temp_a1 = &D_800CC2D0[D_800D154C->unk222];
-  temp_a1->unk65 = D_800C3E78 + 1;
-  temp_a1->unk5C = temp_a2;
-  temp_a1->unk101 = 4;
-  temp_a1->stunned = 0;
-  temp_a1->immune = 0xFF;
-  temp_a1->unk218 = 0;
-  temp_a1->unkE4 = 0;
-  temp_a1->unkE6 = 0;
-  temp_a1->unk232 = temp_v1;
-  temp_a1->unkEC = 1.0f;
-  temp_a1->unkF0 = 1.0f;
-  temp_a1->unkDC = 1.0f;
-  temp_a1->unkE0 = 1.0f;
-  func_151B5BA0(&D_800CC2D0[D_800C3E78], temp_a1, temp_a2);
+    D_800D210C[id] = 0;
+    if (!(spawnFlags & 0x80)) {
+        obj = func_1505EEF4(id);
+        if (obj != 0) {
+            func_15060F28(obj, 0);
+            func_1505F188(obj);
+        }
+    }
+    ((SpawnSlot *)D_800D20FC)[id].unk2 = 0;
+    slot = func_15082A44((SpawnSlot *)((id * 0x30) + (s32)D_800D20FC), id, 0, 0, 0);
+    if (slot == 0) {
+        return;
+    }
+    obj = &D_800CC2D0[slot - 1];
+    if (obj == NULL) {
+        return;
+    }
+    obj->unk65 = (D_800D154C - D_800CC2D0) + 1;
+    obj->unk5C = angle;
+    if (noKill) {
+        obj->unk101 = 0;
+    } else {
+        obj->unk101 = 4;
+    }
+    obj->unk232 = spawnFlags & 0x7F;
+    obj->unk124 = D_800C3E78 + 1;
+    obj->x_position = D_800D154C->x_position;
+    obj->y_position = D_800D154C->y_position;
+    obj->z_position = D_800D154C->z_position;
+    if (D_800BE616 != 0) {
+        if (D_800D154C->id == 0x53) {
+            D_800D154C->unk222 = obj - D_800CC2D0;
+        }
+    }
+    if ((D_800BE9F0 == 0x3F) && (obj->id == 0x16)) {
+        obj->unk94 |= 2;
+    }
 }
 
+void func_1507266C(void) {
+    u16 packed;
+    s32 angle;
+    struct127 *obj;
+
+    if (D_800BE616 == 0) {
+        if (D_800D154C->unk222 == 0) {
+            return;
+        }
+    }
+    packed = D_800D1580;
+    angle = D_800D1580 >> 16;
+    obj = &D_800CC2D0[D_800D154C->unk222];
+    obj->unk65 = D_800C3E78 + 1;
+    obj->unk5C = angle;
+    obj->unk101 = 4;
+    obj->stunned = 0;
+    obj->immune = 0xFF;
+    obj->unk218 = 0;
+    obj->unkE4 = 0;
+    obj->unkE6 = 0;
+    obj->unk232 = packed;
+    obj->unkEC = 1.0f;
+    obj->unkF0 = 1.0f;
+    obj->unkDC = 1.0f;
+    obj->unkE0 = 1.0f;
+    func_151B5BA0(&D_800CC2D0[D_800C3E78], obj, angle);
+}
 
 void func_15072740(void) {
     s32 temp_v0;
@@ -2424,38 +2581,36 @@ void func_15074664(void) {
         D_800D154C->unk31C->unk94 = D_800D1580;
     }
 }
-void func_150746F0(void) {
-    struct127 *volatile *temp_a1;
-    struct127 *temp_a0;
-    s32 temp_v0;
-    struct126 *temp_a1_2;
-    struct108 *temp_v0_2;
 
-    temp_a1 = &D_800D154C;
-    temp_a0 = NULL;
+void func_150746F0(void) {
+    struct127 *target;
+    s32 damage;
+    struct126 *player;
+    struct108 *camera;
+
+    target = NULL;
     if (D_800BE616 != 0) {
-        temp_a1 = &D_800D154C;
-        temp_a0 = *temp_a1;
-    } else if ((*temp_a1)->unk13C != 0) {
-        temp_a0 = D_800CC2D0;
+        target = D_800D154C;
+    } else if (D_800D154C->unk13C != 0) {
+        target = D_800CC2D0;
     }
-    if (temp_a0 != NULL) {
-        temp_v0 = D_800D1580;
-        if (temp_v0 >= temp_a0->health) {
-            temp_a0->health = 0;
-            (*temp_a1)->health = 0;
-            if (temp_a0->interaction_state == 1) {
-                temp_a0->immune = 0xFF;
-                func_1507CD64(temp_a0, 6);
+    if (target != NULL) {
+        damage = D_800D1580;
+        if (damage >= target->health) {
+            target->health = 0;
+            D_800D154C->health = 0;
+            if (target->interaction_state == 1) {
+                target->immune = 0xFF;
+                func_1507CD64(target, 6);
             }
         } else {
-            temp_a1_2 = temp_a0->unk31C;
-            temp_a0->health = temp_a0->health - temp_v0;
-            if (temp_a1_2 != NULL) {
-                temp_v0_2 = temp_a0->camera;
-                if (temp_v0_2 != NULL) {
-                    if (((u8 *)temp_a1_2)[0x197] != 0) {
-                        func_1517F488(0xFF, 0, 0, 0xB4, 0x14, ((u8 *)temp_v0_2)[0x23D]);
+            player = target->unk31C;
+            target->health = target->health - damage;
+            if (player != NULL) {
+                camera = target->camera;
+                if (camera != NULL) {
+                    if (((u8 *)player)[0x197] != 0) {
+                        func_1517F488(0xFF, 0, 0, 0xB4, 0x14, ((u8 *)camera)[0x23D]);
                     }
                 }
             }
@@ -2733,4 +2888,17 @@ void func_150750C4(struct127 *arg0, struct127 *arg1, u8 *arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1507515C.s")
+struct127 *func_1507515C(struct127 *arg0) {
+    struct127 *obj;
+    s32 i;
+
+    obj = D_800CC2D0;
+    for (i = 0; i < 26; i++) {
+        if ((obj->interaction_state != 0) && (obj->id != 0xFF) &&
+            (obj->unk65 == ((arg0 - D_800CC2D0) + 1))) {
+            return obj;
+        }
+        obj++;
+    }
+    return NULL;
+}

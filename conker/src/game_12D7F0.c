@@ -20,7 +20,7 @@ extern Struct15100340 D_80088BC0;
 }
 
 void func_15100340(s32 arg0) {
-    volatile s32 pad;
+    s32 pad;
     Struct15100340 sp44 = D_80088BC0;
     s32 i;
     u8 *ptr;

@@ -17,7 +17,7 @@ s32 func_1514672C(struct17 *arg0);
 s32 func_15046C80(f32 *arg0, s32 arg1, f32 arg2, void *arg3);
 u8 func_151D9534();
 void func_151D9FC0(u8 arg0, f32 arg1, u8 arg2, s32 arg3, s32 arg4, u8 arg5, s32 arg6);
-void func_151DAB58(u8 arg0, f32 arg1, u8 arg2, struct17 *arg3, volatile u8 arg4, u8 arg5, s32 arg6);
+void func_151DAB58(u8 arg0, f32 arg1, u8 arg2, struct17 *arg3, u8 arg4, u8 arg5, s32 arg6);
 s32 func_15131918(s32 arg0, s32 arg1);
 struct three;
 struct struct218XXX;
@@ -255,11 +255,11 @@ typedef struct {
 } Struct151D9534;
 
 u8 func_151D9534(Struct151D9534 *arg0, struct17 *arg1) {
-    volatile u8 sp5F;
+    u8 sp5F;
     struct17 sp50;
-    Struct151D9534Sub *temp_v0;
+    Struct151D9534Sub *sub;
     f32 sp48;
-    f32 temp_f2;
+    f32 damp;
 
     sp5F = 1;
     if (arg0->unk44 < arg1->unk4) {
@@ -272,11 +272,11 @@ u8 func_151D9534(Struct151D9534 *arg0, struct17 *arg1) {
         if (func_15046C80((f32 *)&sp50, 0, arg0->unk44, &arg0->unk80) != 0) {
             sp50.unk4 = arg0->unk80 + 2.0f;
             if (arg0->unkA8.unk19 & 2) {
-                temp_f2 = D_800AB44C;
+                damp = D_800AB44C;
                 arg0->unk44 = (arg0->unk3C * D_800AB450) + sp50.unk4;
-                arg0->unk58 = arg0->unk58 * temp_f2;
+                arg0->unk58 = arg0->unk58 * damp;
                 arg0->unk5C = arg0->unk5C * D_800AB454;
-                arg0->unk60 = arg0->unk60 * temp_f2;
+                arg0->unk60 = arg0->unk60 * damp;
                 if (fabsf(arg0->unk5C) < D_800AB458) {
                     arg0->unk58 = 0.0f;
                     arg0->unk68 &= ~6;
@@ -286,17 +286,15 @@ u8 func_151D9534(Struct151D9534 *arg0, struct17 *arg1) {
                 }
             } else {
                 sp5F = 0;
-                temp_v0 = &arg0->unkA8;
+                sub = &arg0->unkA8;
                 sp48 = (arg0->unk38 + arg0->unk3C) * 0.5f;
                 if (arg0->unk9D == 3) {
-                    func_151D9FC0(temp_v0->unk18, temp_v0->unk14 * sp48, arg0->unk2B, (s32)&arg0->unk84, (s32)&sp50, arg0->unkC, arg0->unk1);
-                    return sp5F;
+                    func_151D9FC0(sub->unk18, sub->unk14 * sp48, arg0->unk2B, (s32)&arg0->unk84, (s32)&sp50, arg0->unkC, arg0->unk1);
+                } else if (func_150ADA20() & 1) {
+                    func_151D9B8C(sub->unk18, (sp48 * D_800AB45C) * sub->unk10, arg0->unk2B, (s32)&arg0->unk84, &sp50, 100, 0, 1, 0, arg0->unkC, arg0->unk1);
+                } else {
+                    func_151DAB58(sub->unk18, (sp48 * D_800AB460) * sub->unk10, arg0->unk2B, &sp50, 1, arg0->unkC, arg0->unk1);
                 }
-                if (func_150ADA20() & 1) {
-                    func_151D9B8C(temp_v0->unk18, (sp48 * D_800AB45C) * temp_v0->unk10, arg0->unk2B, (s32)&arg0->unk84, &sp50, 100, 0, 1, 0, arg0->unkC, arg0->unk1);
-                    return sp5F;
-                }
-                func_151DAB58(temp_v0->unk18, (sp48 * D_800AB460) * temp_v0->unk10, arg0->unk2B, &sp50, 1, arg0->unkC, arg0->unk1);
             }
         }
     }
@@ -523,7 +521,6 @@ typedef struct {
     Struct151DA938_sub unk48;
 } Struct151DA938_v1;
 
-extern void func_151DAB58(u8, f32, u8, struct17 *, volatile u8, u8, s32);
 extern f32 D_800AB49C;
 
 s32 func_151DA938(Struct151DA938 *arg0, s32 arg1, s32 arg2, s32 arg3, f32 arg4, s32 arg5) {
@@ -663,25 +660,14 @@ typedef struct {
     Struct151DAB58Extra field_0x110;
 } AxisOscillatorOwner;
 
-typedef struct {
-    u32 field_0x00;
-} FrameDeltaWord;
-
-void func_151DAB58(u8 arg0, f32 arg1, u8 arg2, struct17 *arg3, volatile u8 arg4, u8 arg5, s32 arg6) {
+void func_151DAB58(u8 arg0, f32 arg1, u8 arg2, struct17 *arg3, u8 arg4, u8 arg5, s32 arg6) {
     void *ret;
     Struct151DAB58Local sp54;
     Struct151DAB58Extra sp48;
-    s32 temp_v0;
-    s32 temp_v1;
-    s32 temp_t0;
+    s32 style;
 
     sp54.unk0 = D_8008FCD0[arg0]();
-    if (arg4 != 0) {
-        temp_v0 = 0x3B;
-    } else {
-        temp_v0 = 0x22;
-    }
-    sp54.unk2 = (temp_v0 << 8) + 3;
+    sp54.unk2 = (((arg4 != 0) ? 0x3B : 0x22) << 8) + 3;
     sp54.unk4 = 0x64;
     sp54.unk12 = 0;
     sp54.unk11 = 0;
@@ -690,8 +676,7 @@ void func_151DAB58(u8 arg0, f32 arg1, u8 arg2, struct17 *arg3, volatile u8 arg4,
     sp54.unk44 = arg2;
     sp54.unk45 = 0xFF;
     sp54.unk1C = *arg3;
-    temp_v0 = D_800AB330[arg0] != 0 ? 0x40000000 : 0;
-    sp54.unk40 = temp_v0 | 0x0CDC0009;
+    sp54.unk40 = ((D_800AB330[arg0] != 0) ? 0x40000000 : 0) | 0x0CDC0009;
     sp54.unk28 = 0.0f;
     sp54.unk2C = 0.0f;
     sp54.unk30 = 0.0f;
@@ -715,22 +700,11 @@ void func_151DAB58(u8 arg0, f32 arg1, u8 arg2, struct17 *arg3, volatile u8 arg4,
     sp54.unk54 = 0x20;
     sp54.unk56 = 7;
     if (func_150ADA20() & 1) {
-        temp_v1 = 1;
+        style = 1;
     } else {
-        temp_v1 = 0;
+        style = 0;
     }
-    temp_v0 = *(u8 *)&arg4;
-    if (temp_v0 != 0) {
-        temp_t0 = 3;
-    } else {
-        temp_t0 = 0;
-    }
-    if (temp_v0 != 0) {
-        temp_v0 = 0xFF;
-    } else {
-        temp_v0 = 0;
-    }
-    ret = func_1513D2F0(&sp54, (s32)&D_800A4AA0, 0, 0x14, 0, 0xE, temp_v1 | 2, temp_t0, temp_v0, 0xC, arg5, arg6);
+    ret = func_1513D2F0(&sp54, (s32)&D_800A4AA0, 0, 0x14, 0, 0xE, style | 2, arg4 ? 3 : 0, arg4 ? 0xFF : 0, 0xC, arg5, arg6);
     if (ret != 0) {
         memcpy((u8 *)ret + 0x110, &sp48, sizeof(sp48));
     }
@@ -911,9 +885,9 @@ void func_151DB4CC(struct218 *arg0) {
 
 s32 func_151DB97C(AxisOscillatorOwner *arg0, s32 arg1) {
     AxisOscillator *p;
-    volatile FrameDeltaWord *delta;
-    f32 sp24;
-    f32 sp20;
+    f32 waveZ;
+    f32 waveY;
+    f32 waveX;
 
     if (!(arg0->field_0xA8.field_0x00 & 2)) {
         p = &arg0->field_0xA8;
@@ -922,22 +896,17 @@ s32 func_151DB97C(AxisOscillatorOwner *arg0, s32 arg1) {
         p = &arg0->field_0xA8;
     }
 
-    delta = (volatile FrameDeltaWord *)&D_800BE9E4;
     if (p->field_0x00 & 1) {
-        p->field_0x08 = p->field_0x08 + (p->field_0x0B * delta->field_0x00);
-        p->field_0x09 = p->field_0x09 + (p->field_0x0C * delta->field_0x00);
-        p->field_0x0A = p->field_0x0A + (p->field_0x0D * delta->field_0x00);
+        p->field_0x08 = p->field_0x08 + (p->field_0x0B * D_800BE9E4);
+        p->field_0x09 = p->field_0x09 + (p->field_0x0C * D_800BE9E4);
+        p->field_0x0A = p->field_0x0A + (p->field_0x0D * D_800BE9E4);
 
-        sp20 = func_151423D8((u8)(p->field_0x08 - 0x40));
-        sp24 = func_151423D8((u8)(p->field_0x09 - 0x40));
-        {
-            f32 sp28;
-
-            sp28 = func_151423D8((u8)(p->field_0x0A - 0x40));
-            arg0->field_0x4C = p->field_0x10 * sp20;
-            arg0->field_0x50 = p->field_0x14 * sp24;
-            arg0->field_0x54 = p->field_0x18 * sp28;
-        }
+        waveX = func_151423D8((u8)(p->field_0x08 - 0x40));
+        waveY = func_151423D8((u8)(p->field_0x09 - 0x40));
+        waveZ = func_151423D8((u8)(p->field_0x0A - 0x40));
+        arg0->field_0x4C = p->field_0x10 * waveX;
+        arg0->field_0x50 = p->field_0x14 * waveY;
+        arg0->field_0x54 = p->field_0x18 * waveZ;
     }
     return 1;
 }

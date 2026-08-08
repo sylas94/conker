@@ -245,7 +245,9 @@ s32 func_151317C8(s32 *a0) {
     return D_80089844[idx](a0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_15D730/func_15131814.s")
+s32 func_15131814(s32 arg0, s32 arg1) {
+    return 0;
+}
 
 void func_15131828(Obj15130280 *arg0, f32 *arg1, u8 *arg2, u8 *arg3) {
     arg0->field_0x4C = arg1[0] * func_151423D8((u8)(arg2[0] - 0x40));

@@ -29,7 +29,71 @@ void func_1507EBB8(s32 arg0, s32 *arg1, s32 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507EC38.s")
+s32 func_1507EC38(u8 *src, s32 srcLen, u8 *out, s32 *outLen, u8 *used) {
+    s32 ret;
+    s32 i;
+    s32 j;
+    s32 found;
+    s32 num;
+    u8 buf[5];
+    s32 n;
+
+    ret = 0;
+    *outLen = 0;
+    for (i = 0; i < srcLen; i++) {
+        found = 0;
+        for (j = 0; j < *outLen; j++) {
+            if (out[j] == src[i]) {
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            for (j = 0; j < 5; j++) {
+                if (used[j] == src[i]) {
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
+                out[*outLen] = src[i];
+                *outLen = *outLen + 1;
+            }
+        }
+    }
+
+    if (*outLen == 0) {
+        num = 0;
+        for (i = 0; i < 5; i++) {
+            if (used[i] != 0) {
+                for (j = 0; j < srcLen; j++) {
+                    if (used[i] == src[j]) {
+                        buf[num] = used[i];
+                        num++;
+                        break;
+                    }
+                }
+            }
+        }
+        if (num == 0) {
+            out[0] = 0;
+            *outLen = 1;
+        } else {
+            n = num >> 1;
+            if (n == 0) {
+                n = 1;
+            }
+            while (n != 0) {
+                num--;
+                out[*outLen] = buf[num];
+                *outLen = *outLen + 1;
+                n--;
+            }
+            ret = 1;
+        }
+    }
+    return ret;
+}
 
 void func_1507EEB8(s32 arg0, void *arg1);
 
@@ -145,7 +209,91 @@ void func_1507F54C(struct127 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507F640.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507FC2C.s")
+extern u8 *D_80086BA0[];
+extern s32 D_800D18C4;
+
+typedef struct {
+    u8 pad0[0x6];
+    u8 unk6;
+    u8 unk7;
+} MoveFlags;
+
+extern MoveFlags D_8009B8B0[];
+
+/* D_800418B0 is really an array of 0x40-byte records; variables.h types it as s32[]. */
+typedef struct {
+    s32 unk0;
+    u8 pad4[0x3C];
+} MoveTimer;
+
+void func_1000D96C(s32 arg0, s32 arg1, s32 arg2);
+void func_1000DE1C(s32 arg0, s32 arg1);
+void func_1000E7A0(u32 arg0, s32 arg1);
+void func_1000E8C4(s32 arg0);
+
+void func_1507FC2C(struct127 *arg0) {
+    struct197 *sound;
+    f32 timer;
+    s32 flags;
+    s32 prev;
+    u8 *state;
+    s32 pose;
+    MoveFlags *info;
+    s32 changed;
+    u8 anim;
+
+    state = (u8 *)arg0->unk31C + 0x58;
+    if (state[4] != 0) {
+        anim = state[4];
+        pose = state[5];
+        info = &D_8009B8B0[D_80086BA0[anim][pose]];
+        flags = info->unk6;
+    } else {
+        flags = 0;
+    }
+
+    if (flags & 0x10) {
+        timer = ((MoveTimer *)D_800418B0)[D_800419A0].unk0;
+        if (timer >= 0.0f) {
+            sound = arg0->unk2D0;
+            sound->unk8 = (sound->unk18 * (32768.0f - timer)) / 32768.0f;
+        }
+    }
+
+    prev = state[6];
+    if (flags != prev) {
+        changed = flags ^ prev;
+
+        if ((changed & flags & 1) == 1) {
+            arg0->unk2F8 |= 1;
+        } else if ((changed & prev & 1) == 1) {
+            arg0->unk2F8 &= ~1;
+        }
+
+        if ((changed & flags & 2) == 2) {
+            func_1000E7A0(1, 0);
+        } else if ((changed & prev & 2) == 2) {
+            func_1000E8C4(1);
+        }
+
+        if ((changed & flags & 4) == 4) {
+            if (D_800D18C4 == 0) {
+                D_800D18C4 = 0x15;
+            } else if (D_800D18C4++ == 0x17) {
+                D_800D18C4 = 0x15;
+            }
+            func_1000D96C(D_800D18C4, 0, 0);
+        } else if ((changed & prev & 4) == 4) {
+            func_1000DE1C(D_800D18C4, 0);
+        }
+
+        if (((changed & flags & 8) != 8) && ((changed & prev & 8) == 8)) {
+            func_100109D0(arg0);
+        }
+
+        state[6] = flags;
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507FEA0.s")
 

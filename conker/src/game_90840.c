@@ -185,7 +185,24 @@ void func_15063B64(struct127 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_90840/func_15063C60.s")
+/* Object-level asm-differ reports score 40 here, but the difference is NOT codegen: all
+ * 137 instructions, registers, branch targets, delay slots and IDO's peel-1-then-unroll-by-4
+ * are identical. The only differing words are four relocation ADDENDS, where the extracted
+ * .s names interior symbols of D_800CC2D0[26] (D_800CC5FC = +0x32C, D_800CC2D4 = +0x4,
+ * D_800CC335 = +0x65, D_800D121C = +0x4F4C) and C naturally spells them as base+offset.
+ * Both resolve to the same linked addresses, so the ROM bytes are identical -- which the
+ * force-clean full-ROM sha1 gate confirms. */
+struct127 *func_15063C60(struct127 *arg0, s32 arg1) {
+    s32 i;
+
+    for (i = 0; i < 25; i++) {
+        if ((D_800CC2D0[i].interaction_state != 0) && (arg1 == D_800CC2D0[i].id) &&
+            (((arg0 - D_800CC2D0) + 1) == D_800CC2D0[i].unk65)) {
+            return &D_800CC2D0[i];
+        }
+    }
+    return NULL;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_90840/func_15063E84.s")
 

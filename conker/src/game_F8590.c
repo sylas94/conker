@@ -61,7 +61,9 @@ s32 func_150CB0E0(f32 *arg0, AnimFrameOwner *arg1, s32 arg2, u8 arg3) {
     return func_15046C80(sp2C, 0, arg0[1] - 500.0f, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_F8590/func_150CB1E0.s")
+s32 func_150CB1E0(s32 arg0, s32 arg1) {
+    return 0xB;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_F8590/func_150CB1F4.s")
 

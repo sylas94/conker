@@ -58,7 +58,9 @@ s32 func_150BA930(struct17 *arg0, struct127 *arg1, s32 *arg2, s32 arg3) {
     func_15046C80(&sp24, 0, arg0->unk4 - 100.0f, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_E7970/func_150BAA00.s")
+s32 func_150BAA00(s32 arg0, s32 arg1) {
+    return 0x9;
+}
 
 void func_150BAA14(struct127 *arg0, s32 arg1, s32 arg2) {
     struct17 sp6C;

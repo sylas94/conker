@@ -73,6 +73,142 @@ void func_1508F9C4(void) {
     D_800D2410[D_800D2456++] = 0.0f;
 }
 
+// PERMUTER CANDIDATE (best honest score 1483; the C below is semantically complete
+// and reproduces every instruction of the body -- only register colouring in `case 2`
+// plus the frame size resist):
+//  (1) frame 0x50 vs 0x40: the target reserves SIX local words (0x38..0x4c) but only
+//      touches two -- `spawn` at 0x44 (sw/lw) and `rate`'s uninitialised home at 0x3c
+//      (lw only).  Mine reserves exactly the two it uses (0x3c/0x38).  The 4 dead words
+//      are IDO's compiler-temp region; neither extra named locals nor block-scoped
+//      locals nor declaration order moves it (all verified).
+//  (2) `case 2` colours `t`/`j` as v1/v0 where the target has v0/v1, which drags
+//      `count` off a2 onto a0 and breaks the in-place `unk02 -=`.  Declaration order
+//      has no effect either way.
+//  (3) `case 0` emits `mul.s $f8,$f6,$f0` where the target has `$f0,$f6`; the
+//      identical expression in `case 2` DOES come out as `$f0,$f18`, so it is an FP
+//      register-allocation artifact, not operand order (both source orders tested).
+//  (4) the loop-end bound compiles to %hi/%lo(D_800D2460+0x60), which is the same
+//      address as the target's %hi/%lo(D_800D24C0) -- reloc spelling only.
+// Notes for whoever picks this up: the two structural discoveries that took it from
+// 9858 to 1483 were (a) indexing D_800D2460[] directly instead of through a pointer
+// local -- a pointer local defeats IDO's alias analysis and makes it reload
+// D_800BE9E4 after every store in case 2, and (b) declaring the per-case scratch
+// ints in block scope.  Also: lvl/rate and the D_800D24C0 countdown/oxygen value are
+// each ONE variable in the original (that is what lands `rate` in s7 and frees v1).
+// Needs, at the top of the TU:
+//   typedef struct { s16 unk00, unk02, unk04, unk06, unk08, unk0A;
+//                    u8 unk0C, unk0D, unk0E, unk0F; } StructD2460;   /* 0x10 bytes */
+//   extern StructD2460 D_800D2460[6];      /* variables.h has u8 [][16] */
+//   extern f32 func_15048A40(u8 arg0);     /* functions.h has it as void */
+//   void func_1508F9F4(void);              /* func_1508F0A4 calls it above */
+//
+// void func_1508F9F4(void) {
+//     s32 spawn;
+//     s32 rate;
+//     s32 air;
+//     s32 i;
+//     f32 cs;
+//
+//     air = D_800D24C0;
+//     if (air != 0) {
+//         air -= D_800BE9E4;
+//         if (air < 0) {
+//             air = 0;
+//         }
+//         D_800D24C0 = air;
+//     }
+//     if (D_800CC2D0[0].in_water != 0) {
+//         air = D_800CC2D0[0].unkB2;
+//     } else {
+//         air = 0;
+//     }
+//     if (air >= 0x5B) {
+//         rate = air / 240;
+//         if (rate >= 7) {
+//             rate = 6;
+//         }
+//         rate = 6 - rate;
+//         rate = rate * 9;
+//         if (rate == 0) {
+//             spawn = 0;
+//         }
+//     } else {
+//         spawn = 0;
+//     }
+//     for (i = 0; i < 6; i++) {
+//         if (D_800D2460[i].unk0D == 2) {
+//             s32 t;
+//             t = D_800D2460[i].unk0A;
+//             t -= D_800BE9E4;
+//             if (t <= 0) {
+//                 t = 6;
+//                 D_800D2460[i].unk0D = 3;
+//             }
+//             D_800D2460[i].unk0A = t;
+//         }
+//         switch (D_800D2460[i].unk0D) {
+//         case 0:
+//             if (spawn != 0 && D_800D24C0 == 0) {
+//                 D_800D24C0 = 10;
+//                 D_800D2460[i].unk0D = 1;
+//                 D_800D2460[i].unk00 = 0xFC;
+//                 D_800D2460[i].unk02 = 0x60;
+//                 D_800D2460[i].unk06 = 0;
+//                 D_800D2460[i].unk0C = 0;
+//                 D_800D2460[i].unk0E = func_150ADA20();
+//                 D_800D2460[i].unk08 = 0x500;
+//                 cs = func_15048A40(D_800D2460[i].unk0E);
+//                 D_800D2460[i].unk0F = 0;
+//                 D_800D2460[i].unk0A = rate;
+//                 D_800D2460[i].unk04 = 0xFC - ((s32)(cs * D_800D2460[i].unk08) >> 8);
+//             }
+//             break;
+//         case 1: {
+//             s32 t;
+//             t = D_800D2460[i].unk06;
+//             t += D_800BE9E4 * 200;
+//             if (t >= 0x666) {
+//                 D_800D2460[i].unk0D = 2;
+//                 t = 0x666;
+//             }
+//             D_800D2460[i].unk06 = t;
+//             break;
+//         }
+//         case 2: {
+//             s32 t;
+//             s32 j;
+//             u8 count;
+//             count = D_800D2460[i].unk0C;
+//             if (count < 0x20) {
+//                 t = count;
+//                 t += D_800BE9E4;
+//                 if (t > 0x20) {
+//                     t = 0x20;
+//                 }
+//                 D_800D2460[i].unk0C = t;
+//                 count = t;
+//             }
+//             D_800D2460[i].unk02 -= (D_800BE9E4 * count) >> 4;
+//             t = D_800D2460[i].unk06;
+//             for (j = 0; j < D_800BE9E4; j++) {
+//                 t = (t * 0x104) >> 8;
+//             }
+//             D_800D2460[i].unk06 = t;
+//             D_800D2460[i].unk0E += D_800BE9E4 * 5;
+//             D_800D2460[i].unk08 += D_800BE9E4 * 30;
+//             cs = func_15048A40(D_800D2460[i].unk0E);
+//             D_800D2460[i].unk0F += D_800BE9E4 * 10;
+//             D_800D2460[i].unk00 = ((s32)(cs * D_800D2460[i].unk08) >> 8) + D_800D2460[i].unk04;
+//             break;
+//         }
+//         case 3:
+//             if (D_800D2460[i].unk0A == 0) {
+//                 D_800D2460[i].unk0D = 0;
+//             }
+//             break;
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_1508F9F4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_1508FD38.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_150900F0.s")
@@ -137,33 +273,29 @@ Gfx* func_15091534(Gfx* arg0, struct257 *arg1, u8 *arg2) {
     return arg0;
 }
 
-void func_150916B4(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
-    volatile s32 pad[2];
-    s32 seconds;
-    s32 hundredths;
-
-    if (arg2 >= 0x57030) {
-        arg2 = 0x57030;
-    }
-
-    hundredths = ((arg2 % 60) * 100) / 60;
-    if (hundredths >= 100) {
-        hundredths = 99;
-    }
-
-    arg0 -= 8;
-    if (arg2 >= 0) {
-        seconds = arg2 / 60;
-        func_15042D94((arg0 - (((seconds / 60) >= 10) ? 5 : 0)) - 8, arg1, (u8)arg3, &D_8009DCC0, seconds / 60);
-        func_15042D94(arg0, arg1, arg3, &D_8009DCC4, seconds % 60);
-        func_15042D94(arg0 + 0x10, arg1, arg3, &D_8009DCCC, hundredths);
-        return;
-    }
-
-    func_15042D94(arg0 - 8, arg1, (u8)arg3, &D_8009DCD4);
-    func_15042D94(arg0, arg1, arg3, &D_8009DCD8);
-    func_15042D94(arg0 + 0x10, arg1, arg3, &D_8009DCE0);
-}
+// Draws "M:SS:HH" (or "--: --: --" for a negative time). Best honest score 20:
+// every instruction and the 0x48 frame size reproduce, but the two spill temps
+// land at 0x34/0x3c instead of 0x30/0x38. The target frame has 8 dead bytes
+// above the compiler-temp region; only a >=8-byte aggregate local lands there
+// (named scalars, block-scoped locals and small arrays all sit *below* the temps
+// and push them up; a used array/struct gets scalarised and loses its slot).
+//   s32 seconds, minutes, hundredths;
+//   if (arg2 >= 0x57030) arg2 = 0x57030;
+//   hundredths = ((arg2 % 60) * 100) / 60;
+//   if (hundredths >= 100) hundredths = 99;
+//   arg0 -= 8;
+//   if (arg2 >= 0) {
+//       seconds = arg2 / 60;
+//       minutes = seconds / 60;
+//       func_15042D94((arg0 - ((minutes >= 10) ? 5 : 0)) - 8, arg1, (u8)arg3, &D_8009DCC0, minutes);
+//       func_15042D94(arg0, arg1, arg3, &D_8009DCC4, seconds % 60);
+//       func_15042D94(arg0 + 0x10, arg1, arg3, &D_8009DCCC, hundredths);
+//       return;
+//   }
+//   func_15042D94(arg0 - 8, arg1, (u8)arg3, &D_8009DCD4);
+//   func_15042D94(arg0, arg1, arg3, &D_8009DCD8);
+//   func_15042D94(arg0 + 0x10, arg1, arg3, &D_8009DCE0);
+#pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_150916B4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_150918EC.s")
 
 void func_15093818(s32 arg0) {
@@ -182,26 +314,35 @@ void func_15093878(void) {
     D_800D244C = allocate_memory(0x80, 1, 1, 0);
 }
 
-// PERMUTER CANDIDATE (best 2014, logic byte-correct — all ops match):
-//  (1) saved-reg rotation: target s4=&D_11AD, s5=&D_800D2450, s6=30, s7=60;
-//      IDO gives s4=&D_800D2450, s5=30, s6=60, s7=&D_11AD (first-use order).
-//  (2) float args: target does runtime `li; mtc1; cvt.s.w` on 120/129/-303;
-//      IDO folds (f32)const / 120.0f / bare-int to immediate float bits (lui/ori).
-// Gfx *func_150938BC(Gfx *arg0) {
-//     s32 i, val, tex;
-//     val = (D_800D2450 / 30) % 60;
-//     i = 4;
-//     do {
-//         tex = func_1510D0EC((s32)&D_11AD[val % 10], 0, 3, 0);
-//         if (tex == (s32)0x80000000) return arg0;
-//         gSPSegment(arg0++, i, tex);
-//         if (i == 3) val = (D_800D2450 / 30) / 60; else val = val / 10;
-//         i--;
-//     } while (i != 0);
-//     func_150A7D00((D_800BE9C0 << 6) + D_800D244C, 120.0f, 129.0f, -303.0f);
-//     gSPMatrix(arg0++, (D_800BE9C0 << 6) + D_800D244C, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_PUSH);
-//     gSPDisplayList(arg0++, D_800D2448);
-//     return arg0;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_150938BC.s")
+// Draws the 4-digit countdown timer (segments 4..1 = digit textures) and the
+// HUD matrix/display list that renders it.
+Gfx *func_150938BC(Gfx *arg0) {
+    s32 x = 120;
+    s32 y = 129;
+    s32 z = -303;
+    s32 i;
+    s32 val;
+    s32 tex;
+
+    val = (D_800D2450 / 30) % 60;
+    i = 4;
+    do {
+        tex = func_1510D0EC((s32)D_11AD + (val % 10), 0, 3, 0);
+        if (tex == (s32)0x80000000) {
+            return arg0;
+        }
+        gSPSegment(arg0++, i, tex);
+        if (i == 3) {
+            val = (D_800D2450 / 30) / 60;
+        } else {
+            val = val / 10;
+        }
+        i--;
+    } while (i != 0);
+
+    func_150A7D00((D_800BE9C0 << 6) + D_800D244C, x, y, z);
+    gSPMatrix(arg0++, (D_800BE9C0 << 6) + D_800D244C, G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+    gSPDisplayList(arg0++, D_800D2448);
+    return arg0;
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_15093B58.s")

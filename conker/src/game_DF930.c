@@ -14,7 +14,9 @@ extern f32 D_8009F90C;
 extern f32 D_8009F910;
 extern f32 D_8009F914;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_DF930/func_150B2480.s")
+s32 func_150B2480(s32 arg0, s32 arg1) {
+    return 0xA;
+}
 
 void func_150B2494(struct127 *arg0, s32 arg1, s32 arg2) {
     struct17 sp3C;

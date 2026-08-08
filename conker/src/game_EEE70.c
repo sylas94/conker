@@ -26,7 +26,9 @@ s32 func_150C19C0(s32 arg0, ActorFields *arg1, u8 arg2) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_EEE70/func_150C1A2C.s")
+s32 func_150C1A2C(s32 arg0, s32 arg1) {
+    return 0x7;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_EEE70/func_150C1A40.s")
 

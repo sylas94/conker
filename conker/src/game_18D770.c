@@ -738,23 +738,23 @@ void func_15161F2C(struct225 *arg0) {
 }
 
 void func_15161F4C(struct225 *arg0, s32 arg1, u8 arg2) {
-    SubA15161F4C *temp_v0 = (SubA15161F4C *)((u8 *)arg0 + 0x18);
-    ArgB15161F4C *b = (ArgB15161F4C *)arg1;
+    SubA15161F4C *ref = (SubA15161F4C *)((u8 *)arg0 + 0x18);
+    ArgB15161F4C *msg = (ArgB15161F4C *)arg1;
     void (*fn)(struct225 *, s32, u8);
 
     if (arg2 == 0) {
-        if ((b->unk0 == temp_v0->unk0) || (b->u4.b4 == temp_v0->unk4)) {
-            func_1516972C(arg0);
-        trailing_label_15161F4C:
-            ;
+        if ((msg->unk0 == ref->unk0) || (msg->u4.b4 == ref->unk4)) {
+            struct225 *dying = arg0;
+
+            func_1516972C(dying);
         }
     } else if (arg2 == 0x2D) {
-        if (temp_v0->unk0 == b->unk0) {
-            temp_v0->unk0 = b->u4.w4;
-            temp_v0->unk4 = b->unk9;
-        } else if (temp_v0->unk0 == b->u4.w4) {
-            temp_v0->unk0 = b->unk0;
-            temp_v0->unk4 = b->unk8;
+        if (ref->unk0 == msg->unk0) {
+            ref->unk0 = msg->u4.w4;
+            ref->unk4 = msg->unk9;
+        } else if (ref->unk0 == msg->u4.w4) {
+            ref->unk0 = msg->unk0;
+            ref->unk4 = msg->unk8;
         }
     }
 
@@ -1126,45 +1126,30 @@ struct225 *func_15163414(Header *header, f32* arg1, f32* arg2, f32* arg3, s8 arg
 }
 
 s32 func_15163504(struct225 *arg0) {
+    struct245 *data;
     s32 ret;
 
+    data = (struct245 *)&arg0->unk18;
     ret = 1;
-    arg0->unk14->unkE = *(f32 *)*(s32 *)((s32)arg0 + 0x18);
-    arg0->unk14->unk10 = *(f32 *)*(s32 *)((s32)arg0 + 0x1C);
-    arg0->unk14->unk12 = *(f32 *)*(s32 *)((s32)arg0 + 0x20);
-    if (*(volatile s8 *)((s32)arg0 + 0x24) != -1) {
-        return D_8008B36C[*(volatile s8 *)((s32)arg0 + 0x24)]();
+    arg0->unk14->unkE = *(f32 *)data->unk0;
+    arg0->unk14->unk10 = *(f32 *)data->unk4;
+    arg0->unk14->unk12 = *(f32 *)data->unk8;
+    if (data->unkC != -1) {
+        return D_8008B36C[data->unkC]();
     }
     return ret;
 }
-// NON-MATCHING: something is missing..
-// s32 func_15163504(struct225 *arg0) {
-//     s32 ret = 1;
-//     arg0->unk14->unkE = arg0->unk18->unk0;
-//     arg0->unk14->unk10 = arg0->unk18->unk4;
-//     arg0->unk14->unk12 = arg0->unk18->unk8;
-//     if (arg0->unk24 != -1) {
-//         ret = D_8008B36C[arg0->unk24]();
-//     }
-//
-//     return ret;
-// }
 
 void func_151635A8(struct225 *arg0, s32 arg1, u8 arg2) {
-    void (**temp_v0)(struct225 *, s32, u8);
+    void (**handlers)(struct225 *, s32, u8);
+    struct245 *data;
 
-    temp_v0 = (void (**)(struct225 *, s32, u8))D_8008B370;
-    if (temp_v0[*(volatile u8 *)((s32)arg0 + 0x25)] != NULL) {
-        temp_v0[*(volatile u8 *)((s32)arg0 + 0x25)](arg0, arg1, arg2);
+    handlers = (void (**)(struct225 *, s32, u8))D_8008B370;
+    data = (struct245 *)&arg0->unk18;
+    if (handlers[data->unkD] != NULL) {
+        handlers[data->unkD](arg0, arg1, arg2);
     }
 }
-// NON-MATCHING: similar issue to func_15163504
-// void func_151635A8(struct225 *arg0, s32 arg1, u8 arg2) {
-//     s32 (*func)(s32) = D_8008B370[arg0->unk25];
-//     if (func != NULL) {
-//         func(arg2);
-//     }
-// }
 
 struct225 *func_15163604(s32 arg0, u8 arg1, u8 arg2, s16 arg3, u8 arg4, s32 arg5, u8 arg6, s32 arg7) {
     struct225 *temp_v0;
@@ -1401,26 +1386,24 @@ typedef struct {
 } ActorRefObject;
 
 void func_15163FEC(struct225 *arg0, ActorRefMessage *arg1, u8 arg2) {
-    ActorRefPayload *temp_v0;
-    s32 temp_v1;
+    ActorRefPayload *payload;
+    s32 owner;
 
-    temp_v0 = (ActorRefPayload *)((u8 *)arg0 + 0x18);
+    payload = (ActorRefPayload *)((u8 *)arg0 + 0x18);
     if (arg2 == 0) {
-        temp_v1 = arg1->field_0x0;
-        if ((temp_v1 == temp_v0->field_0x0) || (arg1->field_0x4.b == temp_v0->field_0x4)) {
+        owner = arg1->field_0x0;
+        if ((owner == payload->field_0x0) || (arg1->field_0x4.b == payload->field_0x4)) {
             func_1516972C(arg0);
         }
     } else if (arg2 == 0x2D) {
-        if (temp_v0->field_0x0 == arg1->field_0x0) {
-            temp_v0->field_0x0 = arg1->field_0x4.w;
-            temp_v0->field_0x4 = arg1->field_0x9;
-        } else {
-            if (temp_v0->field_0x0 == arg1->field_0x4.w) {
-                temp_v0->field_0x0 = arg1->field_0x0;
-                temp_v0->field_0x4 = arg1->field_0x8;
-            }
-        trailing_label_15163FEC:
-            ;
+        if (payload->field_0x0 == arg1->field_0x0) {
+            payload->field_0x0 = arg1->field_0x4.w;
+            payload->field_0x4 = arg1->field_0x9;
+        } else if (payload->field_0x0 == arg1->field_0x4.w) {
+            ActorRefMessage *swap = arg1;
+
+            payload->field_0x0 = swap->field_0x0;
+            payload->field_0x4 = swap->field_0x8;
         }
     } else if (D_8008B374[arg0->unk2D] != NULL) {
         D_8008B374[arg0->unk2D]((s32)arg0);
@@ -1452,26 +1435,24 @@ void func_151640C0(ActorRefObject *arg0, ActorRefMessage *arg1, u8 arg2) {
 }
 
 void func_15164134(struct225 *arg0, ActorRefMessage *arg1, u8 arg2) {
-    ActorRefPayload *temp_v0;
-    s32 temp_v1;
+    ActorRefPayload *payload;
+    s32 owner;
 
-    temp_v0 = (ActorRefPayload *)((u8 *)arg0 + 0x18);
+    payload = (ActorRefPayload *)((u8 *)arg0 + 0x18);
     if (arg2 == 0) {
-        temp_v1 = arg1->field_0x0;
-        if ((temp_v1 == temp_v0->field_0x0) || (arg1->field_0x4.b == temp_v0->field_0x4)) {
+        owner = arg1->field_0x0;
+        if ((owner == payload->field_0x0) || (arg1->field_0x4.b == payload->field_0x4)) {
             func_1516972C(arg0);
         }
     } else if (arg2 == 0x2D) {
-        if (temp_v0->field_0x0 == arg1->field_0x0) {
-            temp_v0->field_0x0 = arg1->field_0x4.w;
-            temp_v0->field_0x4 = arg1->field_0x9;
-        } else {
-            if (temp_v0->field_0x0 == arg1->field_0x4.w) {
-                temp_v0->field_0x0 = arg1->field_0x0;
-                temp_v0->field_0x4 = arg1->field_0x8;
-            }
-        trailing_label_15164134:
-            ;
+        if (payload->field_0x0 == arg1->field_0x0) {
+            payload->field_0x0 = arg1->field_0x4.w;
+            payload->field_0x4 = arg1->field_0x9;
+        } else if (payload->field_0x0 == arg1->field_0x4.w) {
+            ActorRefMessage *swap = arg1;
+
+            payload->field_0x0 = swap->field_0x0;
+            payload->field_0x4 = swap->field_0x8;
         }
     } else if (D_8008B37C[*(u8 *)((s32)arg0 + 0x3D)] != NULL) {
         D_8008B37C[*(u8 *)((s32)arg0 + 0x3D)]((s32)arg0);

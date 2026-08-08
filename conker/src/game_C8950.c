@@ -210,18 +210,10 @@ extern u8 D_800D2E69;
 void func_1509B764(Node1509 *arg0);
 void func_1509BA04(s32 arg0)
 {
-  volatile s32 pad[2];
+  register struct249 *node;
+  register struct249 *next;
   s32 count;
-  struct249 *node;
-  struct249 *next;
-  s32 new_var;
   s32 i;
-  s32 tmp;
-  s32 idx;
-  s32 new_var2;
-  s32 bit;
-  s32 value;
-  u8 *table;
   count = D_800D2F48.length;
   node = D_800D2F48.unk4;
   if (D_800D2E69 != 0)
@@ -232,15 +224,16 @@ void func_1509BA04(s32 arg0)
   i = 0;
   if (count > 0)
   {
+    u8 *table;
+    s32 tmp;
+    s32 value;
     table = (u8 *) (&D_800D2E70);
     do
     {
       value = node->unk0;
       tmp = value & 0xFFFF03FF;
-      idx = tmp >> 3;
-      bit = 1 << (tmp & ((short) 7));
       next = node->next;
-      if ((((u8 *) D_800D2E4C)[new_var2 = idx] & bit) && (arg0 == 0))
+      if ((*(u8 *)((tmp >> 3) + (s32) D_800D2E4C) & (1 << (tmp & 7))) && (arg0 == 0))
       {
         func_1509B764(node);
         table[tmp] = 3;
@@ -252,7 +245,7 @@ void func_1509BA04(s32 arg0)
         func_150ADAF0(node, 3);
         D_8003C8E0 = 0;
         func_1509B764(node);
-        if ((((u8 *) D_800D2E4C)[new_var = idx] & bit) == 0)
+        if ((*(u8 *)((tmp >> 3) + (s32) D_800D2E4C) & (1 << (tmp & 7))) == 0)
         {
           table[tmp] = 0;
         }

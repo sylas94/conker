@@ -9,6 +9,10 @@ u8   func_150599C8(struct127 *arg0, u8 arg1, u16 arg2);
 void func_1505A250(f32 arg0, f32 arg1, f32 arg2, f32 *arg3, f32 *arg4);
 f32  func_1505A3A8(f32 arg0, void *arg1, f32 arg2, f32 arg3, u8 arg4);
 
+s32 func_15080738(s32 arg0);
+void func_150642AC(struct127 *arg0, s32 arg1, f32 arg2, s32 arg3, s32 arg4);
+s32 func_15065A5C(struct127 *arg0, s32 arg1, s32 arg2, f32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8);
+
 u8  func_1505B9C4(void *arg0, struct127 *arg1, s32 arg2, s32 arg3, u8 arg4, s32 arg5, u8 arg6);
 s32 func_1505C1E4(void *arg0, struct127 *arg1, void *arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
 extern struct255 *D_800CC4A4;
@@ -1366,7 +1370,7 @@ struct127 *func_1505EEB0(s32 state, s32 *arg1) {
 //     return tmp;
 // }
 
-// PERMUTER/HARD CANDIDATE best 745 (natural loop) — needs split symbols D_800CC40F (elem0 unk13F)
+// PERMUTER/HARD CANDIDATE best 745 (natural loop) â€” needs split symbols D_800CC40F (elem0 unk13F)
 // and D_800CC5FC (loop base = elem1) which only a hand-peel emits, but hand-peel (best 1205) breaks
 // IDO's counter-merge/folded-read peel structure. EFD0 (unk127/D_800CC3F7) & F0AC (id/D_800CC2D4) identical shape.
 // struct127 *func_1505EEF4(s32 arg0) {
@@ -1404,7 +1408,102 @@ struct127 *func_1505EEB0(s32 state, s32 *arg1) {
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505F188.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505F298.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1506045C.s")
+void func_1506045C(struct127 *arg0, s32 arg1, s32 arg2, f32 arg3, s32 arg4) {
+    s32 stunned;
+    s32 state;
+    s32 expired;
+    s32 held;
+    s32 result;
+    s32 old_unk75;
+    s32 idx;
+
+    result = 0;
+    if (D_800C35EA == 1) {
+        return;
+    }
+    held = 0;
+    stunned = 0;
+    expired = 0;
+
+    if ((*(u16 *)((u8 *)arg0->unk31C + 0x72) != 0) && (arg4 == 0)) {
+        if (D_800BE9E4 < *(u16 *)((u8 *)arg0->unk31C + 0x72)) {
+            *(u16 *)((u8 *)arg0->unk31C + 0x72) -= D_800BE9E4;
+        } else {
+            expired = 1;
+            *(u16 *)((u8 *)arg0->unk31C + 0x72) = 0;
+        }
+    }
+
+    state = arg0->unk31C->unk75 & ~0x80;
+    if ((((u8 *)arg0->unk31C)[0x7C] != 0) && (state == 0)) {
+        state = ((u8 *)arg0->unk31C)[0x7C];
+    }
+
+    if ((D_800BE9F0 != 0x29) && (D_800BE9F0 != 0x2E) && (arg0->unk31C->unk78 == 0) &&
+        (*(u16 *)D_800CC284 & 0x20) && (func_15080738(state) != 0)) {
+        state = 0x1A;
+    }
+
+    if (arg0->unk31C->unk78 == 0x1A) {
+        state = 0x1A;
+    }
+    if (arg0->unk31C->unk78 == 0x2A) {
+        state = 0x2A;
+    }
+
+    if ((arg0->unk13C != 0) || (((u8 *)arg0)[0x137] != 0)) {
+        if (arg4 == 0) {
+            state = 0;
+        } else {
+            held = 1;
+        }
+    }
+
+    idx = arg0->unk65;
+    if ((idx != 0) && (arg4 == 0)) {
+        switch (D_800CC2D0[idx - 1].id) {
+        case 0x23:
+        case 0x8A:
+            state = 0x1B;
+            break;
+        case 0xC:
+            state = 8;
+            break;
+        case 0x28:
+            state = 0;
+            break;
+        default:
+            state = 0xE;
+            break;
+        }
+    }
+
+    if (((u8 *)arg0->unk31C)[0x17] != 0) {
+        state = 0x3C;
+    }
+
+    if ((arg4 == 0) && arg0->unk31C->unk78 && (state != (arg0->unk31C->unk78 & ~0x80))) {
+        old_unk75 = arg0->unk31C->unk75;
+        arg0->unk31C->unk75 = arg0->unk31C->unk78;
+        func_1506045C(arg0, arg1, arg2, arg3, 1);
+        arg0->unk31C->unk75 = old_unk75;
+        arg0->unk31C->unk78 = 0;
+    }
+
+    if (arg0->stunned != 0) {
+        stunned = 1;
+        arg2 = 0;
+        arg1 = 0;
+    }
+
+    if ((state != 0) && (arg0->unk31C->unk4E == 0)) {
+        result = func_15065A5C(arg0, arg1, arg2, arg3, arg4, state, stunned, expired, held);
+    }
+
+    if ((((u8 *)arg0->unk31C)[0x7B] != 0) || (arg2 & 0x4000)) {
+        func_150642AC(arg0, arg2, arg3, held, result);
+    }
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15060778.s")
 void func_15060A30(s32 arg0, struct127 *arg1) {
     if (arg1->camera == NULL) {
@@ -1444,7 +1543,80 @@ s32 func_15060BA4(struct127 *arg0, s32 arg1) {
     return 1;
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15060BE0.s")
+// UNMATCHABLE AT OBJECT LEVEL, best 40 -- the C below is instruction- AND register-identical to
+// the target (IDO peels 25%4==1 iteration, then unrolls the remaining 24 by 4, exactly as the ROM).
+// The ONLY delta is 4 relocation ADDENDS, an artifact of splat naming interior addresses of
+// D_800CC2D0[26] as standalone symbols: the expected .o spells them %lo(D_800CC5FC) [=elem 1, loop
+// base], %lo(D_800CC335) [=elem 0 .unk65, x2] and %lo(D_800D121C) [=elem 25, loop end] with imm 0,
+// where C emits %lo(D_800CC2D0+0x32c/+0x65/+0x4f4c). Those four words link to identical bytes, so
+// the ROM would match. Unreachable from C: the loop end is SYNTHESIZED by IDO as base + 25*0x32c,
+// so it can never carry the D_800D121C symbol, and only a hand-peel emits the other two. Writing
+// the natural pointer-bound form (`ptr != (struct127 *)&D_800D121C`) does name them but injects a
+// divu trip guard and kills the unroll (3765). Same blocker as func_1505EEF4 / func_150626EC.
+// void func_15060D54(struct127 *arg0) {
+//     s32 i;
+//     for (i = 0; i < 25; i++) {
+//         if ((D_800CC2D0[i].interaction_state != 0) && (((arg0 - D_800CC2D0) + 1) == D_800CC2D0[i].unk65)) {
+//             D_800CC2D0[i].unk65 = 0;
+//         }
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15060D54.s")
+// PERMUTER CANDIDATE best 1815 (object-level; the body below is structurally correct and only
+// 2 instructions short of the target). Needs these locally-declared callees/globals:
+//   extern s32 func_1514D310(struct127 *); extern void func_151695F0(struct127 *, u8);
+//   extern void func_15084558(struct127 *); extern void func_1504AF10(struct127 *, s32, s32);
+//   extern void func_1503E260(s32); extern void func_150626EC(struct127 *, s32);
+//   extern void func_15060D54(struct127 *); extern s32 func_150303E4(struct127 *);
+//   extern void func_15188AD0(s32); extern void func_10004074(void *); extern u8 *D_800D210C;
+// Keys already found: the free-list loop only matches with a truncating increment
+// (`s32 i; for (i = 0; i <= D_80082FA0; i = (u8)(i + 1))`) -- a plain `u8 i; i++` makes IDO
+// CSE the zero-extension into a second loop-carried value, which steals s0, homes `i` at
+// sp+0x27 and grows the frame 0x20->0x28 (2180). Binding the unk144 flags word to its own
+// local puts it in a1 as the target does (1830->1815).
+// Residual (unsteerable): (a) target keeps arg0->unk144 in v0 and emits a redundant
+// `move v1,v0` live-range split before the else-else `sb ...,2(v1)`; IDO gives us v1 directly
+// and never emits the copy. (b) target fills the else-else `b` delay slot by DUPLICATING the
+// merge-point `lw a0,0x260(s1)` and branching past it, where IDO sinks our `sb` into the slot.
+// (c) a coupled v0-vs-a0 JUSTREG cascade over the 0x264/0x268/0x26C/0x314/0x31C frees (target
+// loads them to v0 + `move a0,v0`; IDO coalesces ours straight into a0). Named locals,
+// declaration order, register/inner-scope hints and while/do-while forms all leave (a)-(c) fixed.
+// void func_15060F28(struct127 *arg0, s32 arg1) {
+//     u16 flags;
+//     func_1514D310(arg0);
+//     func_151695F0(arg0, 0);
+//     if ((arg0->unk5 != 2) && (arg0->unk5 != 3)) { func_15084558(arg0); func_150626EC(arg0, arg1); }
+//     if (arg1 == 1) { func_1504AF10(arg0, 1, 0); func_1503E260(arg0 - D_800CC2D0); }
+//     if (arg0->unk13F != 0xFF) {
+//         if (arg1 != 2) {
+//             if (arg0->unk144 != NULL) {
+//                 flags = arg0->unk144->unk0;
+//                 if (flags & 0x20) { arg0->unk144->unk2 = 1; D_800D210C[arg0->unk13F] = 0; }
+//                 else if (flags & 1) { D_800D210C[arg0->unk13F] = 0; }
+//                 else { arg0->unk144->unk2 = 1; D_800D210C[arg0->unk13F] &= 0x80; }
+//             } else { D_800D210C[arg0->unk13F] &= 0x80; }
+//         } else { D_800D210C[arg0->unk13F] = 0; }
+//     }
+//     if (*(void **)((u8 *)arg0 + 0x260) != NULL) func_10004074(*(void **)((u8 *)arg0 + 0x260));
+//     if (*(void **)((u8 *)arg0 + 0x264) != NULL) func_10004074(*(void **)((u8 *)arg0 + 0x264));
+//     if (*(void **)((u8 *)arg0 + 0x268) != NULL) func_10004074(*(void **)((u8 *)arg0 + 0x268));
+//     if (*(void **)((u8 *)arg0 + 0x26C) != NULL) func_10004074(*(void **)((u8 *)arg0 + 0x26C));
+//     if (*(void **)((u8 *)arg0 + 0x1D8) != NULL) func_10004074(*(void **)((u8 *)arg0 + 0x1D8));
+//     if (*(struct102 **)((u8 *)arg0 + 0x2D4) != NULL) func_1516972C(*(struct102 **)((u8 *)arg0 + 0x2D4));
+//     if (*(s32 **)((u8 *)arg0 + 0x304) != NULL) {
+//         s32 i;
+//         for (i = 0; i <= D_80082FA0; i = (u8)(i + 1))
+//             func_100043B4(*(s32 **)((u8 *)arg0 + (i * 4) + 0x304), 4);
+//     }
+//     if (*(s32 **)((u8 *)arg0 + 0x314) != NULL) func_100043B4(*(s32 **)((u8 *)arg0 + 0x314), 4);
+//     if (arg0->unk2D0 != NULL) func_10004074(arg0->unk2D0);
+//     if (*(void **)((u8 *)arg0 + 0x324) != NULL) func_10004074(*(void **)((u8 *)arg0 + 0x324));
+//     if ((arg0->unk31C != NULL) && (*(void **)((u8 *)arg0->unk31C + 0x11C) != NULL))
+//         func_10004074(*(void **)((u8 *)arg0->unk31C + 0x11C));
+//     func_10010AA8(arg0); func_150303E4(arg0); func_15060D54(arg0); func_15188AD0((s32)arg0);
+//     if (arg0->unk31C != NULL) func_10004074(arg0->unk31C);
+//     func_1505F188(arg0);
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15060F28.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150611E8.s")
 
@@ -1576,7 +1748,7 @@ void func_15062BDC(struct127 *arg0, f32 arg1, f32 arg2) {
 }
 
 // PERMUTER CANDIDATE best 180 (EVERY instruction matches; remaining diff is a coherent 5-register
-// cycle a0->a1->a3->v1->t0 rooted in the base pointer landing in a0 vs the target's a1 — an IDO
+// cycle a0->a1->a3->v1->t0 rooted in the base pointer landing in a0 vs the target's a1 â€” an IDO
 // free-list coin-flip. Hand-fixes: *(s32*)&arg1 homes arg1 at prologue; explicit `base` local; the
 // nested default-then-adjust wrap shape; flag=arg5. Progression 3331->900->395->360->180.)
 // typedef struct { s32 unk0; s32 unk4; } Entry62D10;

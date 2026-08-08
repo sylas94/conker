@@ -129,7 +129,7 @@ s32 func_150DB630(void *arg0) {
     s32 ret;
 
     ret = 1;
-    if (255.0f < **(f32 * volatile *)((u8 *)arg0 + 0x120)) {
+    if (255.0f < **(f32 * *)((u8 *)arg0 + 0x120)) {
         *(u8 *)((u8 *)arg0 + 0x5C) = 0xFF;
     } else {
         temp_f0 = **(f32 * volatile *)((u8 *)arg0 + 0x120);

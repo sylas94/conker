@@ -85,42 +85,4 @@ s32 func_150AEDD8(struct202 *arg0) {
     return 1;
 }
 
-typedef struct {
-    s32 unk0;
-    u8 unk4;
-} SubA_150AEDF8;
-
-typedef struct {
-    s32 unk0;
-    union {
-        s32 w4;
-        u8 b4;
-    } u4;
-    u8 unk8;
-    u8 unk9;
-} ArgB_150AEDF8;
-
-void func_150AEDF8(struct260 *arg0, s32 arg1, u8 arg2) {
-    SubA_150AEDF8 *temp_v0 = (SubA_150AEDF8 *)((u8 *)arg0 + 0x28);
-    ArgB_150AEDF8 *b = (ArgB_150AEDF8 *)arg1;
-    s32 b0;
-
-    if (arg2 == 0x2D) {
-        if (temp_v0->unk0 == b->unk0) {
-            temp_v0->unk0 = b->u4.w4;
-            temp_v0->unk4 = b->unk9;
-        } else {
-            if (temp_v0->unk0 == b->u4.w4) {
-                temp_v0->unk0 = b->unk0;
-                ((volatile SubA_150AEDF8 *)temp_v0)->unk4 = b->unk8;
-            }
-trailing_label_150AEDF8:
-            ;
-        }
-    } else if (arg2 == 0) {
-        b0 = b->unk0;
-        if ((b0 == temp_v0->unk0) || (b->u4.b4 == temp_v0->unk4)) {
-            func_1516972C((struct102 *)arg0);
-        }
-    }
-}
+#pragma GLOBAL_ASM("asm/nonmatchings/game_DBA60/func_150AEDF8.s")

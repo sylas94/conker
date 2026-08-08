@@ -274,7 +274,92 @@ void func_151872B0(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1B1600/func_151873E4.s")
+struct vtx151873E4 {
+    f32 x;      /* 0x00 */
+    f32 y;      /* 0x04 */
+    f32 z;      /* 0x08 */
+    s32 unkC;   /* 0x0C */
+    s32 unk10;  /* 0x10 */
+};              /* size 0x14 */
+
+typedef struct {
+    u8  pad0[0x10];
+    s16 unk10;
+    u8  pad12[0x2];
+    s16 unk14;
+    u8  pad16[0x39];
+    u8  unk4F;
+    u16 unk50;
+    u16 unk52;
+    u8  pad54[0x1A];
+    u8  unk6E;
+    u8  pad6F[0x31];
+} unkfunc_151873E4; /* size 0xA0 */
+
+extern void func_1510F800(s32);
+extern void func_150A44F0(s32, s16 *, s32);
+extern struct vtx151873E4 *func_150A5E44(s16 *, struct vtx151873E4 *, f32 *, struct vtx151873E4 *);
+
+extern s32 D_800D3690;
+extern s16 D_800D37E0[];
+extern s32 D_800DF0E4;
+extern s32 D_800DF0E8;
+extern s32 D_800DF0EC;
+extern s32 D_800DF0F0;
+extern s32 D_800DF0F4;
+
+s32 func_151873E4(s32 arg0, s32 arg1, s32 arg2, struct vtx151873E4 *arg3, f32 *arg4, struct vtx151873E4 *arg5, s32 arg6) {
+    unkfunc_151873E4 *entry;
+    s32 found;
+    s32 i;
+    s32 radius;
+
+    if (D_800DBEF0 == 0) {
+        return arg6;
+    }
+
+    func_1510F800(2);
+
+    arg3 += arg6;
+    D_800DF0E8 = arg0 - arg2;
+    D_800DF0EC = arg0 + arg2;
+    D_800DF0F0 = arg1 - arg2;
+    D_800DF0F4 = arg1 + arg2;
+
+    found = 0;
+    for (i = 0; i < D_800DBEF0; i++) {
+        entry = (unkfunc_151873E4 *)&D_800DBEF4[i];
+        if (entry->unk6E != 0) {
+            continue;
+        }
+        if (entry->unk4F & 0x60) {
+            continue;
+        }
+        radius = (entry->unk52 < entry->unk50) ? entry->unk50 : entry->unk52;
+        if (D_800DF0EC < entry->unk10 - radius) {
+            continue;
+        }
+        if (entry->unk10 + radius < D_800DF0E8) {
+            continue;
+        }
+        if (D_800DF0F4 < entry->unk14 - radius) {
+            continue;
+        }
+        if (entry->unk14 + radius < D_800DF0F0) {
+            continue;
+        }
+        D_800D37E0[found] = i;
+        found++;
+    }
+
+    if (found != 0) {
+        func_150A44F0(found, D_800D37E0, 0);
+        D_800D3690 = D_800DBE3C;
+        D_800DF0E4 = found;
+        arg6 += func_150A5E44(D_800D37E0, arg3, arg4, arg5) - arg3;
+    }
+    return arg6;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1B1600/func_151875E0.s")
 

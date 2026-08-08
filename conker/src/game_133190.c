@@ -157,7 +157,9 @@ void func_1510608C(struct S1510608C *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_133190/func_151061E0.s")
+s32 func_151061E0(s32 arg0) {
+    return arg0 + 0x88;
+}
 
 struct S151061EC {
     u8 pad0[0x48];
@@ -296,7 +298,7 @@ void func_15107604(s32 **arg0) {
 }
 
 void func_1510761C(struct260 *arg0) {
-    if (*(struct102 *volatile *)((u8 *)arg0 + 0x30) != 0) {
+    if (*(struct102 **)((u8 *)arg0 + 0x30) != 0) {
         func_1516972C(*(struct102 *volatile *)((u8 *)arg0 + 0x30));
     }
 }

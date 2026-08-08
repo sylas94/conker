@@ -124,7 +124,81 @@ void func_1517E1AC(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1AB530/func_1517E28C.s")
+typedef struct {
+    u8 unk0[2];
+} Pair_1517E28C;
+
+extern Pair_1517E28C D_8008D004;
+extern Pair_1517E28C D_8008D008;
+extern Pair_1517E28C D_8008D00C;
+extern u8 D_800DDD60;
+
+typedef struct Node_1517E28C {
+    f32 unk0;
+    f32 unk4;
+    f32 unk8;
+    f32 unkC;
+    f32 unk10;
+    char pad14[0x10];
+    struct Node_1517E28C *next;
+    char pad28[0x2];
+    u16 unk2A;
+    u16 unk2C;
+    u8  unk2E;
+    u8  unk2F;
+    u8  unk30;
+} Node_1517E28C;
+
+extern s32 func_1517EAAC(f32 x, f32 y, f32 z, f32 *outX, f32 *outY);
+extern s32 func_1517EC1C(Node_1517E28C *node, s32 *outDist);
+extern Gfx *func_1517E4A8(Gfx *gfx, Node_1517E28C *node, s32 arg2, s32 arg3, s32 arg4, s32 arg5, u8 *arg6);
+
+Gfx *func_1517E28C(Gfx *gfx, s32 arg1) {
+    s32 alpha;
+    s32 cull;
+    s32 dist;
+    Node_1517E28C *node;
+    f32 *pos;
+    Pair_1517E28C param0 = D_8008D004;
+    Pair_1517E28C param1 = D_8008D008;
+    Pair_1517E28C param2 = D_8008D00C;
+    u8 *flag;
+
+    node = (Node_1517E28C *)D_800DDD64;
+    D_800DDD60 = 0;
+    if (node != NULL) {
+        do {
+            if (node->unk30 != 0) {
+                cull = 0;
+                if (node->unk2E & 1) {
+                    if (D_800DCDD0 == 0) {
+                        cull = 1;
+                    } else {
+                        pos = (f32 *)D_8008CFFC[D_800B0DF0->unk10];
+                        if (func_1517EAAC(pos[0], pos[1], pos[2], &node->unkC, &node->unk10) != 1) {
+                            cull = 1;
+                        }
+                        alpha = (node->unk2A != 0xFFFC) ? -1 : 0xFF;
+                    }
+                } else {
+                    if (func_1517EC1C(node, &dist) != 1) {
+                        cull = 1;
+                    }
+                    alpha = ((s32)(node->unk2C - dist) < 0x1E) ? 0x100 : -1;
+                }
+                flag = (node->unk2E & 2) ? &D_800DD2D0 : NULL;
+                if (!cull) {
+                    gfx = func_1517E4A8(gfx, node, param0.unk0[node->unk2F], param1.unk0[node->unk2F],
+                                        param2.unk0[node->unk2F], alpha, flag);
+                } else if (flag != NULL) {
+                    *flag = 0;
+                }
+            }
+            node = node->next;
+        } while (node != NULL);
+    }
+    return gfx;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1AB530/func_1517E4A8.s")
 

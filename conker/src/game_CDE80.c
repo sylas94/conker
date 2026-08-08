@@ -31,7 +31,9 @@ void func_150A0D14(struct Func150A0D14Arg *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_CDE80/func_150A0D8C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_CDE80/func_150A1040.s")
+s32 func_150A1040(s32 arg0) {
+    return arg0 + 0x400;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_CDE80/func_150A104C.s")
 

@@ -7,7 +7,9 @@ void func_150F2994(s32 arg0, s32 arg1);
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_11F780/func_150F22D0.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11F780/func_150F237C.s")
+s32 func_150F237C(s32 arg0, s32 arg1) {
+    return 0xE;
+}
 
 extern s32 func_150F22D0(void *, void *, s32);
 extern void func_151C329C(void *, s32, s32);

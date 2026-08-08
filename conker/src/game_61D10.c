@@ -39,31 +39,31 @@ void func_15034EB4(struct Obj15034EB4 *obj, s32 idx, s32 idx2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15034F20.s")
+extern u8 D_800C3F00;
+
+void func_15034F20(void) {
+    D_800C3F00 = 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15034F30.s")
 
-extern u8 D_800C3F00;
-struct Foo
-{
-  u8 unk0[12];
+struct Entry150356C8 {
+    u32 unk0;
+    u8 unk4;
+    u8 pad5[4];
+    u8 unk9;
+    u8 unkA;
+    u8 unkB;
 };
-extern struct Foo D_800C3F08[];
-struct Foo *func_150356C8(void)
-{
-  int new_var;
-  u8 temp = D_800C3F00;
-  if (1)
-  {
-    if (temp == 15)
-    {
-      return 0;
+
+extern struct Entry150356C8 D_800C3F08[];
+
+struct Entry150356C8 *func_150356C8(void) {
+    if (D_800C3F00 == 15) {
+        return NULL;
     }
-    temp = temp + 1;
-    new_var = temp;
-    D_800C3F00 = new_var;
-  }
-  return (struct Foo *) ((((u8 *) D_800C3F08) + (((u8) new_var) * 12)) - 12);
+    D_800C3F00++;
+    return &D_800C3F08[D_800C3F00 - 1];
 }
 
 
@@ -71,7 +71,69 @@ struct Foo *func_150356C8(void)
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15035808.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15035D6C.s")
+extern u8 D_80082FC0[];
+extern u8 D_80083140[];
+
+struct Obj15035D6C {
+    u8 unk0;
+    u8 pad1[2];
+    u8 unk3;
+    u8 pad4[2];
+    u8 unk6;
+    u8 pad7[0xC];
+    u8 unk13;
+    u8 unk14;
+    u8 pad15[0xF];
+    Gfx **unk24;
+};
+
+Gfx *func_15035D6C(Gfx *gfx, struct Obj15035D6C *obj, s32 red, s32 green, s32 blue) {
+    struct Entry150356C8 *entry;
+    s32 alpha;
+    s32 i;
+    s32 j;
+
+    if (D_800C3F00 == 0) {
+        return gfx;
+    }
+
+    gSPSetGeometryMode(gfx++, G_CULL_FRONT);
+
+    for (i = 0; i < D_800C3F00; i++) {
+        entry = &D_800C3F08[i];
+        if (entry->unkB != 1) {
+            continue;
+        }
+        if (entry->unk9 != obj->unk0) {
+            continue;
+        }
+        if (entry->unkA != obj->unk6) {
+            continue;
+        }
+
+        alpha = (entry->unk4 * obj->unk3) >> 8;
+
+        gDPPipeSync(gfx++);
+        gSPSegment(gfx++, 3, entry->unk0);
+        gDPSetEnvColor(gfx++, red, green, blue, alpha);
+
+        if (alpha < 255) {
+            gSPSegment(gfx++, 8, D_80082FC0);
+        } else {
+            gSPSegment(gfx++, 8, D_80083140);
+        }
+
+        for (j = 0; j < obj->unk14; j++) {
+            if (!(obj->unk13 & (1 << j))) {
+                gSPDisplayList(gfx++, obj->unk24[j]);
+            }
+        }
+    }
+
+    gSPClearGeometryMode(gfx++, G_CULL_FRONT);
+
+    return gfx;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15035FE8.s")
 
