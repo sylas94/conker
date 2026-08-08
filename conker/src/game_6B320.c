@@ -43,7 +43,9 @@ struct func_1503E3C4_s {
     f32 unk48;
     f32 unk4C;
     f32 unk50;
-    u8 pad54[0x14];
+    u8 pad54[0x10];
+    u8 unk64;
+    u8 pad65[0x3];
 };
 
 struct func_1503E3C4_mtx {
@@ -106,7 +108,74 @@ void func_1503DF0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     D_800C6660[arg0].unkF = 2;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6B320/func_1503DF48.s")
+extern void *allocate_memory(s32, s32, s32, s32);
+extern u8 D_80098914[];
+extern void (*D_80084430[])(struct func_1503E3C4_s *, s32);
+extern void (*D_8008443C[])(s32);
+extern void (*D_80084448[])(s32);
+extern s32 func_1503E1F4(s32 arg0, s32 arg1);
+extern void func_1503E3C4(s32 arg0, s32 arg1, s32 arg2, struct func_1503E3C4_s *arg3, s32 arg4);
+extern void func_1503E82C(s32 arg0);
+extern void func_1503EA54(s32 arg0);
+
+void func_1503DF48(s32 arg0) {
+    struct106 *p;
+    struct func_1503E3C4_s *parts;
+    struct func_1503E3C4_s *part;
+    s8 *hier;
+    s32 state;
+    s32 count;
+    s32 i;
+
+    p = &D_800C6660[arg0];
+    state = p->unkF;
+    if (state == 2) {
+        D_800CC2D0[arg0].unk74 |= 0x80;
+        state = 3;
+        if (D_800CC2D0[arg0].unk1D4 == NULL) {
+            return;
+        }
+    }
+    if (state == 3) {
+        count = D_80098914[*(u8 *)&p->pad[2]];
+        if (p->unk0 == 0) {
+            parts = (struct func_1503E3C4_s *)allocate_memory(count * sizeof(struct func_1503E3C4_s), 1, 0, 0);
+            if (parts == NULL) {
+                return;
+            }
+            p->unk0 = (s32)parts;
+            for (i = 0; i < count; i++) {
+                parts[i].unk64 = 0;
+            }
+        }
+        hier = D_80084454[*(u8 *)&p->pad[2]];
+        for (i = 0; i < count; i++) {
+            if (hier[i] == -2) {
+                continue;
+            }
+            part = (struct func_1503E3C4_s *)((u8 *)p->unk0 + i * sizeof(struct func_1503E3C4_s));
+            if (func_1503E1F4(i, arg0) == 0) {
+                continue;
+            }
+            if (part->unk64 != 0) {
+                continue;
+            }
+            func_1503E3C4(arg0, i, 0, part, 0);
+            D_80084430[*(u8 *)&p->pad[2]](part, arg0);
+            part->unk64 = 1;
+        }
+        D_8008443C[*(u8 *)&p->pad[2]](arg0);
+        state = 1;
+        p->unkF = state;
+    }
+    if (state == 1) {
+        D_80084448[*(u8 *)&p->pad[2]](arg0);
+        if (p->unkF != 0) {
+            func_1503EA54(arg0);
+            func_1503E82C(arg0);
+        }
+    }
+}
 
 struct e1f4_s { s32 f; s8 pad[12]; };
 extern struct e1f4_s D_800C6664[];
@@ -178,7 +247,71 @@ void func_1503E3C4(s32 arg0, s32 arg1, s32 arg2, struct func_1503E3C4_s *arg3, s
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_6B320/func_1503E5F8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6B320/func_1503E82C.s")
+union func_1503E82C_cell {
+    f32 f;
+    s32 word;
+};
+
+struct func_1503E82C_bone {
+    u8 pad0[0x24];
+    f32 unk24;
+    f32 unk28;
+    f32 unk2C;
+    f32 unk30;
+    f32 unk34;
+    f32 unk38;
+    /* scale: also fed to func_150A7CB0, which takes the raw matrix words */
+    union func_1503E82C_cell unk3C;
+    union func_1503E82C_cell unk40;
+    union func_1503E82C_cell unk44;
+    u8 pad48[0x1C];
+    u8 unk64;
+    u8 pad65[0x3];
+};
+
+#define BONES_OF(objIdx) ((struct func_1503E82C_bone *)D_800C6660[objIdx].unk0)
+#define HIERARCHY_OF(objIdx) (*(u8 *)&D_800C6660[objIdx].pad[2])
+
+extern u8 D_80098914[];
+extern void func_150A7DA0(f32 arg0[4][4], f32 arg1, f32 arg2, f32 arg3);
+
+void func_1503E82C(s32 arg0) {
+    s32 count;
+    s32 i;
+    s32 parent;
+    s8 *hier;
+    f32 (*mtx)[4];
+    f32 sp64[4][4];
+
+    if (D_800CC2D0[arg0].unk1D4 == NULL) {
+        return;
+    }
+    count = D_80098914[HIERARCHY_OF(arg0)];
+    hier = D_80084454[HIERARCHY_OF(arg0)];
+    for (i = 0; i < count; i++) {
+        if (hier[i] == -2) {
+            continue;
+        }
+        if (BONES_OF(arg0)[i].unk64 == 0) {
+            continue;
+        }
+        mtx = (f32 (*)[4])((u8 *)D_800CC2D0[arg0].unk1D4 + (i << 6));
+        parent = D_80084454[HIERARCHY_OF(arg0)][i];
+        if (parent != -1) {
+            func_150A7DA0(sp64, BONES_OF(arg0)[i].unk24, BONES_OF(arg0)[i].unk28, BONES_OF(arg0)[i].unk2C);
+            func_150A7A48(sp64, (f32 (*)[4])((u8 *)D_800CC2D0[arg0].unk1D4 + (parent << 6)), sp64);
+            func_150A8050(mtx, BONES_OF(arg0)[i].unk30, BONES_OF(arg0)[i].unk34, BONES_OF(arg0)[i].unk38);
+            func_150A7A48(mtx, sp64, mtx);
+            func_150A7CB0(sp64, BONES_OF(arg0)[i].unk3C.word, BONES_OF(arg0)[i].unk40.word,
+                          BONES_OF(arg0)[i].unk44.word);
+            func_150A7A48(sp64, mtx, mtx);
+        } else {
+            func_150A8050(mtx, BONES_OF(arg0)[i].unk30, BONES_OF(arg0)[i].unk34, BONES_OF(arg0)[i].unk38);
+            func_15043EC8(mtx, BONES_OF(arg0)[i].unk3C.f, BONES_OF(arg0)[i].unk40.f, BONES_OF(arg0)[i].unk44.f,
+                          BONES_OF(arg0)[i].unk24, BONES_OF(arg0)[i].unk28, BONES_OF(arg0)[i].unk2C);
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_6B320/func_1503EA54.s")
 

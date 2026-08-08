@@ -7,7 +7,7 @@ s32 func_1505D024(struct127 *arg0, s32 arg1, u16 arg2, s32 arg3);
 void func_1504715C(f32 *arg0, struct127 *arg1);
 void func_1514B364(f32 *arg0, f32 *arg1, s32 arg2, s32 arg3);
 void func_15197A7C(struct127 *arg0);
-void func_15056A00(struct127 *arg0, s32 arg1, s32 arg2, u8 arg3);
+u8 func_15056A00(struct127 *arg0, u8 arg1, u8 arg2);
 
 typedef struct {
     char pad_0[0x8];
@@ -15,6 +15,11 @@ typedef struct {
     char pad_1[0x2];
     s16 field_0xC;
 } PathPointWindow;
+
+/* D_80099A3C is declared s16[] in the header but is really a table of 10-byte rows. */
+typedef struct {
+    u8 b[0xA];
+} Row56A00;
 
 
 void func_15075400(s32 arg0) {
@@ -146,7 +151,6 @@ void func_15075650(void)
     {
       D_800D154C->unk44 = 0.5f;
     }
- if (1) { } if (1) { } if (1) { }
   }
   if (D_800D154C->unk21E < D_800D154C->unk220)
   {
@@ -605,38 +609,45 @@ call_func_1504715C:
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_150767F4.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_150768DC.s")
-// NON-MATCHING: almost JUSTREG
+// PERMUTER CANDIDATE best 595: the body below is byte-exact everywhere EXCEPT one instruction.
+// (Fixes over the older reconstruction: unkA8 is stored as `i + 0x80` (addiu, the 0x80 "valid" bit
+// that func_15076B5C later masks off with &0x7F), arc/angle are s32 not u8 (the target divides
+// arc by 2 with the signed bgez+addiu correction and compares with a signed slt), and
+// unk218 -= 1 is a struct216* decrement, i.e. addiu -5.)
+// Residual: at 0x1640 the target has a redundant `move t7,t6` homing the shifted func_1505A630
+// result; IDO coalesces that copy away from every C form tried (named local, inlined call,
+// raw+shift split, inner-scope decl, extra named subexpressions). With 0x1640 free, IDO's
+// scheduler speculates `addiu t2,s3,0x80` up into it, which leaves `sb` as the if-body's first
+// instruction; a store can't be speculated into a delay slot, so the final `beqz at,<inc>`
+// degrades to `beqzl at,<latch>` with a duplicated increment. That single artifact also drives a
+// 3-way callee-saved rotation (selfIndex s8<->s5, &D_800D1891 s5<->s6, the 25 bound s6<->s8).
 // void func_150768DC(void) {
-//     u8 temp_s2;
-//     f32 temp_f20;
-//     s32 temp_fp;
-//     struct127 *temp_v0;
-//     struct127 *current;
-//     f32 phi_f22;
+//     struct127 *target;
 //     s32 i;
-//     u8 tmp0;
-//     struct124 *foo;
-//     u8 tmp1;
+//     s32 arc;
+//     s32 angle;
+//     s32 selfIndex;
+//     u8 reaction;
+//     f32 best;
+//     f32 dist;
 //
-//
-//     phi_f22 = D_800D1890 * 8;
+//     best = D_800D1890 * 8;
 //     D_800D154C->unkA8 = 0;
-//     temp_fp = ((s32)D_800D154C - (s32)D_800CC2D0) / (s32)sizeof(struct127);
+//     selfIndex = ((s32)D_800D154C - (s32)D_800CC2D0) / (s32)sizeof(struct127);
 //
 //     for (i = 0; i < 25; i++) {
-//         current = &D_800CC2D0[i];
-//         if ((current->unk0 != 0) && (current->health != 0) && ((current->unkF8 & 0x20) != 0) && (i != temp_fp)) {
-//             if ((D_800D1891 != 0) || (D_800D154C->id != current->id)) {
-//                 if (!(fabsf(D_800D154C->y_position - current->y_position) > 50.0f)) {
-//                     temp_f20 = func_1505A72C(D_800D154C, current);
-//                     if (temp_f20 < phi_f22) {
-//                         foo = D_800D1C90[D_800D154C->id];
-//                         temp_s2 = foo->unk17;
-//                         tmp1 = func_1505A630(current->x_position - D_800D154C->x_position, D_800D154C->z_position - current->z_position, 0) >> 8;
-//                         if ((((((D_800D154C->unk76 >> 8) + D_800D154C->unk2CA) - tmp1) + (temp_s2 / 2)) & 0xFF) < temp_s2) {
-//                             D_800D154C->unkA8 = i;
-//                             phi_f22 = temp_f20;
+//         if ((D_800CC2D0[i].interaction_state != 0) && (D_800CC2D0[i].health != 0) &&
+//             ((D_800CC2D0[i].unkF8 & 0x20) != 0) && (i != selfIndex)) {
+//             if ((D_800D1891 != 0) || (D_800D154C->id != D_800CC2D0[i].id)) {
+//                 if (!(fabsf(D_800D154C->y_position - D_800CC2D0[i].y_position) > 50.0f)) {
+//                     dist = func_1505A72C(D_800D154C, &D_800CC2D0[i]);
+//                     if (dist < best) {
+//                         arc = D_800D1C90[D_800D154C->id]->unk17;
+//                         angle = func_1505A630(D_800CC2D0[i].x_position - D_800D154C->x_position,
+//                                               D_800D154C->z_position - D_800CC2D0[i].z_position, 0) >> 8;
+//                         if ((((((D_800D154C->unk76 >> 8) + D_800D154C->unk2CA) - angle) + (arc / 2)) & 0xFF) < arc) {
+//                             D_800D154C->unkA8 = i + 0x80;
+//                             best = dist;
 //                         }
 //                     }
 //                 }
@@ -647,15 +658,16 @@ call_func_1504715C:
 //     if (D_800D154C->unkA8 != 0) {
 //         D_800D154C->unk218 = func_1507BB28(0, D_800D1893);
 //         D_800D154C->unk218 -= 1;
-//         tmp0 = D_800D1892;
-//         if (tmp0 != 0) {
-//             temp_v0 = &D_800CC2D0[D_800D154C->unkA8 & 0x7F];
-//             temp_v0->unk218 = 0;
-//             temp_v0->unk232 = tmp0;
-//             temp_v0->unk222 = temp_fp;
+//         reaction = D_800D1892;
+//         if (reaction != 0) {
+//             target = &D_800CC2D0[D_800D154C->unkA8 & 0x7F];
+//             target->unk218 = 0;
+//             target->unk232 = reaction;
+//             target->unk222 = selfIndex;
 //         }
 //     }
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_150768DC.s")
 
 void func_15076B5C(void) {
     D_800D154C->unk222 = (D_800D154C->unkA8 & 0x7F);
@@ -1063,53 +1075,26 @@ void func_15077F34(void) {
 }
 
 void func_15077F64(void) {
-    volatile u16 pad[4];
-    volatile u8 pad2;
-    u8 temp_t6;
-    PathPointWindow *temp_v0;
-    f32 temp_f12;
-    f32 temp_f14;
-    s32 temp_t5;
-    s32 phi_a0;
-    s32 phi_a1;
+    f32 dx;
+    f32 dz;
+    u8 turn;
+    u8 index;
+    PathPointWindow *point;
 
-    temp_t6 = D_800D1890 - 1;
-    temp_v0 = (PathPointWindow *)(((u8 *)D_800D2104[D_800D154C->unk13F]) + (D_800D154C->unk21E * 8));
-    temp_f12 = ((f32)temp_v0->field_0x8) - D_800D154C->x_position;
-    temp_f14 = D_800D154C->z_position - ((f32)temp_v0->field_0xC);
-    D_800D154C->unk78 = func_1505A630(temp_f12, temp_f14, 0);
-    ;
-    phi_a0 = (phi_a1 = (((s32)(D_800D154C->unk78 - D_800D154C->unk76)) >> 8) & 0xFF);
-    if (phi_a0 & 0x80) {
-        phi_a1 = -(phi_a1 & 0xFFu);
-        phi_a0 = phi_a1 & 0xFF;
-        phi_a1 = phi_a0;
+    index = D_800D1890 - 1;
+    point = (PathPointWindow *)((u8 *)D_800D2104[D_800D154C->unk13F] + (D_800D154C->unk21E * 8));
+    dx = (f32)point->field_0x8 - D_800D154C->x_position;
+    dz = D_800D154C->z_position - (f32)point->field_0xC;
+    D_800D154C->unk78 = func_1505A630(dx, dz, 0);
+    turn = (D_800D154C->unk78 - D_800D154C->unk76) >> 8;
+    if (turn & 0x80) {
+        turn = -turn;
     }
-    if (((u8 *)D_80099A3C)[(temp_t6 * 5) * 2] < phi_a0) {
+    if (((Row56A00 *)D_80099A3C)[index].b[0] < turn) {
         D_800D154C->unk250 = D_800D1891;
-        func_15056A00(D_800D154C, phi_a1, temp_t6 & 0xFF, temp_t6);
+        func_15056A00(D_800D154C, turn, index);
     }
 }
-// NON-MATCHING: what is D_800D2104 ???
-// void func_15056A00(s32, s32, u8);
-// void func_15077F64(void) {
-//     u8 temp_t6;
-//     struct169 *temp_v0;
-//     s32 phi_a0;
-//     s32 phi_a1;
-//
-//     temp_t6 = D_800D1890 - 1;
-//     temp_v0 = D_800D2104[D_800D154C->unk13F] + (D_800D154C->unk21E);
-//     D_800D154C->unk78 = func_1505A630(temp_v0->unk8 - D_800D154C->x_position, D_800D154C->z_position - temp_v0->unkC, 0);
-//     phi_a0 = phi_a1 = ((s32) (D_800D154C->unk78 - D_800D154C->unk76) >> 8) & 0xff;
-//     if ((phi_a0 & 0x80) != 0) {
-//         phi_a1 = phi_a0 = -phi_a0 & 0xFF;
-//     }
-//     if ((u8)D_80099A3C[temp_t6 * 0xA] < phi_a0) {
-//         D_800D154C->unk250 = (u8) D_800D1891;
-//         func_15056A00(D_800D154C, phi_a1, temp_t6);
-//     }
-// }
 
 void func_15078074(void) {
     f32 temp_f20;
@@ -1400,9 +1385,9 @@ void func_150793D8(void) {
     f32 sp34;
     f32 sp30;
     f32 sp2C;
-    volatile s16 pad0;
-    volatile s16 pad1;
-    volatile s16 pad2;
+    s16 pad0;
+    s16 pad1;
+    s16 pad2;
     s16 x;
     s16 z;
 

@@ -54,7 +54,29 @@ void func_1510E8BC(s32 a0, s32 a1, s32 a2, s32 a3, s32 arg4, s32 arg5, f32 arg6,
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510E950.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510F648.s")
+extern void func_1510F800();
+extern void func_150A64C8(s32, s32, s32 *, s32);
+extern void func_150A44F0(s32, s32 *, s32);
+extern s32 func_150A43E0(s32, s32, s32, s32 *);
+extern f32 D_800A2D98;
+extern s32 D_800D3830;
+
+f32 func_1510F648(f32 arg0, f32 arg1, f32 arg2) {
+    f32 ret;
+    s32 sp28;
+    s32 y;
+
+    func_1510F800(2);
+    y = (s32)arg1;
+    func_150A64C8((s16)(s32)arg0, (s16)(s32)arg2, &sp28, y);
+    func_150A44F0(sp28, &D_800D3830, 0);
+    if (func_150A43E0((s32)arg0, (s32)arg2, sp28, &D_800D3830)) {
+        ret = (f32)(s32)D_800D3300 * 0.00390625f;
+    } else {
+        ret = D_800A2D98;
+    }
+    return ret;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510F720.s")
 

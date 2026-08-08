@@ -736,7 +736,7 @@ void func_151AB930(struct127 *arg0) {
     } sp28;
 
     sp28.unk0 = arg0;
-    sp28.unk4 = ((volatile struct127 *)arg0)->unique_id;
+    sp28.unk4 = ((struct127 *)arg0)->unique_id;
     sp28.unk8 = arg0->unk84.uh;
     sp28.unkC = 0.0f;
     sp28.unk10 = D_800A9014;

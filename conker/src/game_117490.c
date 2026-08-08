@@ -159,7 +159,15 @@ void *func_150E9FE0(void *arg0, s16 arg1, s32 arg2, s32 arg3) {
     return temp_v1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_117490/func_150EA10C.s")
+typedef struct {
+    u8 pad0[0x80];
+    /* 0x80 */ s32 unk80;
+} S150EA10C;
+
+s32 func_150EA10C(S150EA10C *arg0) {
+    arg0->unk80 = 0;
+    return 0x1;
+}
 
 void func_150EA11C(Vec3F_EA11C *arg0, Vec3F_EA11C *arg1, s32 arg2, s32 arg3, f32 arg4, struct_EA11C_arg5 *arg5) {
     void *temp_v0;

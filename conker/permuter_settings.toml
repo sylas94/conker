@@ -1,0 +1,4 @@
+# decomp-permuter settings for the Conker decomp.
+# compiler_type = "ido" enables the IDO-specific randomization passes, which matter a lot
+# for this target (IDO 5.3 -O2 -g3 register allocation / scheduling behaviour).
+compiler_type = "ido"

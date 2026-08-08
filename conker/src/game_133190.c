@@ -298,7 +298,7 @@ void func_15107604(s32 **arg0) {
 }
 
 void func_1510761C(struct260 *arg0) {
-    if (*(struct102 *volatile *)((u8 *)arg0 + 0x30) != 0) {
+    if (*(struct102 **)((u8 *)arg0 + 0x30) != 0) {
         func_1516972C(*(struct102 *volatile *)((u8 *)arg0 + 0x30));
     }
 }

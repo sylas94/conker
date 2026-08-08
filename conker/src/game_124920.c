@@ -94,7 +94,8 @@ void func_150F9720(u8 arg0) {
     func_151494E0((s32)&sp18, 0x42);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_124920/func_150F9788.s")
+void func_150F9788(struct260 *arg0) {
+}
 
 void func_150F9788(struct260 *);
 

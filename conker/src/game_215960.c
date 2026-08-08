@@ -268,7 +268,91 @@ Gfx *func_151ED1E0(Gfx *gfx) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151ED430.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151ED90C.s")
+typedef struct {
+    /* 0x00 */ Gfx **unk0;
+    /* 0x04 */ Gfx *unk4[4];
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ u8 unk16[6];
+    /* 0x1C */ s32 unk1C;
+    /* 0x20 */ s32 unk20;
+    /* 0x24 */ s32 unk24;
+    /* 0x28 */ f32 unk28[2][4][4];
+} GameStruct151ED90C;
+
+extern void *allocate_memory(s32, s32, s32, s32);
+extern s32 func_1503F62C(s32, s32, void *, void *, void *, void *, void *);
+extern void func_1503F5B8(s32, s32, s32, f32, f32, s32);
+
+GameStruct151ED90C *func_151ED90C(s32 arg0, s32 arg1, s32 arg2, f32 arg3) {
+    GameStruct151ED90C *obj;
+    f32 (*mtx1)[4];
+    f32 (*mtx2)[4];
+    Gfx *dst;
+    Gfx *src;
+    s32 cmd;
+    s32 size;
+    s32 i;
+
+    obj = allocate_memory(sizeof(GameStruct151ED90C), 1, 0, 1);
+    if (obj == NULL) {
+        return NULL;
+    }
+    obj->unk15 = 1;
+    if (func_1503F62C(arg0, arg1, obj, &obj->unk14, &obj->unk1C, &obj->unk20, &obj->unk24) != 0) {
+        func_10004074(obj);
+        return NULL;
+    }
+
+    mtx1 = obj->unk28[0];
+    guMtxIdentF(mtx1);
+    mtx2 = obj->unk28[1];
+    guMtxIdentF(mtx2);
+    *(f32 (**)[4])(obj->unk24 + 0x3E0) = mtx1;
+    *(f32 (**)[4])(obj->unk24 + 0x3E4) = mtx2;
+    func_1503F5B8(obj->unk24, 1, arg2, arg3, 0.0f, 0);
+
+    for (i = 0; i < obj->unk14; i++) {
+        src = obj->unk0[i];
+        size = 0;
+        do {
+            cmd = (src->words.w0 >> 24) & 0xFF;
+            src++;
+            size += 8;
+        } while (cmd != 0xDF);
+
+        dst = allocate_memory(size, 1, 1, 1);
+        obj->unk4[i] = dst;
+        if (dst == NULL) {
+            for (size = 0; size < i; size++) {
+                func_10004074(obj->unk4[size]);
+            }
+            func_10004074(obj);
+            return NULL;
+        }
+    }
+
+    for (i = 0; i < obj->unk14; i++) {
+        dst = obj->unk4[i];
+        src = obj->unk0[i];
+        do {
+            dst->words.w0 = src->words.w0;
+            dst->words.w1 = src->words.w1;
+            src++;
+            cmd = (dst->words.w0 >> 24) & 0xFF;
+            if (cmd == 0xEF) {
+                dst->words.w0 &= 0xFFFEFFFF;
+                dst->words.w1 = 0x5041C8;
+            }
+            if (cmd == 0xFC) {
+                dst->words.w0 = 0;
+            }
+            dst++;
+        } while (cmd != 0xDF);
+    }
+
+    return obj;
+}
 
 typedef struct {
     s32 unk0;

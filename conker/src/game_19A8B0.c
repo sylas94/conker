@@ -637,6 +637,70 @@ void func_15170034(s32 arg0, f32 *arg1, f32 *arg2, f32 *arg3) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_15170500.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_151707E0.s")
+typedef struct {
+    char pad_0[0x18];
+    s16 field_0x18;
+    char pad_0x1A[0x5];
+    u8 field_0x1F;
+    char pad_0x20[0x4];
+    u8 field_0x24;
+    char pad_0x25[0x1];
+    s8 field_0x26;
+    u8 field_0x27;
+    char pad_0x28[0x7];
+    u8 field_0x2F;
+} Obj151707E0;
+
+extern s32 func_151EF610(void);
+
+s32 func_151707E0(Obj151707E0 *arg0) {
+    s32 active;
+    s32 temp;
+    s32 velX;
+
+    active = arg0->field_0x24;
+    temp = arg0->field_0x1F;
+    if (active != 0) {
+        if (temp == 0) {
+            arg0->field_0x24 = (func_150ADA20() % 0x19U) + 0xC8;
+        }
+        if (temp != 0xFE) {
+            temp += D_800BE9E4 << 6;
+            if (temp >= 0xFF) {
+                temp = 0xFE;
+            }
+            arg0->field_0x1F = temp;
+        }
+    } else {
+        if (temp != 0) {
+            temp -= D_800BE9E4 << 4;
+            if (temp < 0) {
+                temp = 0;
+            }
+            arg0->field_0x1F = temp;
+        }
+    }
+
+    if ((arg0->field_0x24 == 0) && (temp == 0)) {
+        return 1;
+    }
+
+    func_1516F864((s32) arg0);
+    if (arg0->field_0x2F != 0) {
+        func_1516F8EC((s32) arg0, (func_151EF610() % 0x20) + 0xE6);
+        func_1516F91C((s32) arg0, (func_151EF610() % 0x20) + 0xE6);
+        arg0->field_0x18 = 0;
+    } else {
+        velX = (arg0->field_0x26 << 8) + arg0->field_0x27;
+        temp = arg0->field_0x26 * 0x100;
+        temp += arg0->field_0x27;
+        if (((velX * velX) + (temp * temp)) >= 0x7D1) {
+            func_1516F8EC((s32) arg0, (func_151EF610() % 0x20) + 0xDC);
+            func_1516F91C((s32) arg0, (func_151EF610() % 0x20) + 0xDC);
+        }
+        arg0->field_0x18 = 0;
+    }
+    return 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_151709B4.s")

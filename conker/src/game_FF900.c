@@ -2,42 +2,48 @@
 #include "functions.h"
 #include "variables.h"
 
+/**
+ * Sine-driven RGB oscillator: each channel is base + amplitude * sin(phase),
+ * with the phase advanced by its own rate every frame and wrapped back into
+ * [0, 2*PI) by func_15144B68. The resulting colour is pushed to the global
+ * colour slot (D_800DCD20) via func_1515D4D4.
+ */
 typedef struct {
-    f32 unk0;
-    f32 unk4;
-    f32 unk8;
-    f32 unkC;
-    f32 unk10;
-    f32 unk14;
-    f32 unk18;
-    f32 unk1C;
-    f32 unk20;
-    f32 unk24;
-    f32 unk28;
-    f32 unk2C;
-} struct_func_150D2450_sub;
+    /* 0x00 */ f32 baseR;
+    /* 0x04 */ f32 baseG;
+    /* 0x08 */ f32 baseB;
+    /* 0x0C */ f32 ampR;
+    /* 0x10 */ f32 ampG;
+    /* 0x14 */ f32 ampB;
+    /* 0x18 */ f32 phaseR;
+    /* 0x1C */ f32 phaseG;
+    /* 0x20 */ f32 phaseB;
+    /* 0x24 */ f32 rateR;
+    /* 0x28 */ f32 rateG;
+    /* 0x2C */ f32 rateB;
+} ColourPulse;
 
 typedef struct {
     u8 pad0[0x28];
-    struct_func_150D2450_sub unk28;
-} struct_func_150D2450_arg;
+    /* 0x28 */ ColourPulse pulse;
+} ColourPulseObj;
 
-void func_150D2450(struct_func_150D2450_arg *arg0) {
-    struct_func_150D2450_sub *temp_s0;
+void func_150D2450(ColourPulseObj *arg0) {
+    ColourPulse *pulse;
     f32 pad;
-    f32 temp_f[2];
+    f32 sinPhase[2];
 
-    temp_s0 = &arg0->unk28;
-    temp_f[0] = sinf(temp_s0->unk18);
-    temp_f[1] = sinf(temp_s0->unk1C);
+    pulse = &arg0->pulse;
+    sinPhase[0] = sinf(pulse->phaseR);
+    sinPhase[1] = sinf(pulse->phaseG);
 
     func_1515D4D4(
-        (u8)(temp_s0->unk0 + (temp_f[0] * temp_s0->unkC)),
-        (u8)(temp_s0->unk4 + (temp_f[1] * temp_s0->unk10)),
-        (u8)((sinf(temp_s0->unk20) * temp_s0->unk14) + temp_s0->unk8),
+        (u8)(pulse->baseR + (sinPhase[0] * pulse->ampR)),
+        (u8)(pulse->baseG + (sinPhase[1] * pulse->ampG)),
+        (u8)((sinf(pulse->phaseB) * pulse->ampB) + pulse->baseB),
         0);
 
-    temp_s0->unk18 = func_15144B68(temp_s0->unk18 + (temp_s0->unk24 * D_800BE9A4));
-    temp_s0->unk1C = func_15144B68(temp_s0->unk1C + (temp_s0->unk28 * D_800BE9A4));
-    temp_s0->unk20 = func_15144B68(temp_s0->unk20 + (temp_s0->unk2C * D_800BE9A4));
+    pulse->phaseR = func_15144B68(pulse->phaseR + (pulse->rateR * D_800BE9A4));
+    pulse->phaseG = func_15144B68(pulse->phaseG + (pulse->rateG * D_800BE9A4));
+    pulse->phaseB = func_15144B68(pulse->phaseB + (pulse->rateB * D_800BE9A4));
 }

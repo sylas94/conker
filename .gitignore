@@ -1,5 +1,6 @@
 # directories
 
+.venv/
 __pycache__/
 asm/
 assets/

@@ -479,9 +479,23 @@ void func_1514DC5C(void *arg0) {
     func_151D0F60(arg0, 0, 0xFF, 1);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DC84.s")
+typedef struct {
+    u8 pad0[0x94];
+    /* 0x94 */ s32 unk94;
+} S1514DC84;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_179F30/func_1514DC98.s")
+void func_1514DC84(S1514DC84 *arg0) {
+    arg0->unk94 |= 0x2;
+}
+
+typedef struct {
+    u8 pad0[0x94];
+    /* 0x94 */ s32 unk94;
+} S1514DC98;
+
+void func_1514DC98(S1514DC98 *arg0) {
+    arg0->unk94 |= 0x710;
+}
 
 void func_1514DCAC(arg0)
 struct127 *arg0;

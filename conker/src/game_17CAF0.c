@@ -1,8 +1,12 @@
 #include <ultra64.h>
 #define func_15169260 func_15169260_s32_decl
+#define func_150ADA20 func_150ADA20_hdr_decl
 #include "functions.h"
 #undef func_15169260
+#undef func_150ADA20
 #include "variables.h"
+
+extern s32 func_150ADA20(void);
 
 struct Vec3F { f32 x; f32 y; f32 z; };
 struct Local1514F6E8 { u8 unk0; u8 pad1[3]; struct Vec3F unk4; struct Vec3F unk10; struct Vec3F unk1C; f32 unk28; };
@@ -655,7 +659,17 @@ s32 func_1514F6E8(struct Local1514F6E8 *arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_17CAF0/func_1514F808.s")
+extern void func_15143874(s32, f32, f32 *, f32 *);
+
+void func_1514F808(struct Local1514F6E8 *arg0, f32 arg1, struct Vec3F *arg2) {
+    f32 b;
+    f32 a;
+
+    func_15143874((s16)(func_150ADA20() & 0xFF), func_150ADA68() * arg0->unk28, &a, &b);
+    arg2->x = (((arg0->unk10.x * a) + (arg0->unk1C.x * b)) + arg0->unk4.x) * arg1;
+    arg2->y = (((arg0->unk10.y * a) + (arg0->unk1C.y * b)) + arg0->unk4.y) * arg1;
+    arg2->z = (((arg0->unk10.z * a) + (arg0->unk1C.z * b)) + arg0->unk4.z) * arg1;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_17CAF0/func_1514F8F8.s")
 

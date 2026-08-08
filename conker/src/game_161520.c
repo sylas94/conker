@@ -177,7 +177,6 @@ void func_151347CC(void *arg0, s32 arg1, u8 arg2) {
                 a->unk1C = t;
                 a->unk18 = b->unk8;
             }
-        dummy_label_151347CC: ;
         }
     }
 }

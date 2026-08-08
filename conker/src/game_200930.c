@@ -451,7 +451,55 @@ void func_151D5648(void *arg0, u8 arg1, s32 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_200930/func_151D5A18.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_200930/func_151D5B6C.s")
+extern s32 (*D_80086C90[])(struct127 *, struct127 *, s32);
+s32 func_151452C4(struct17 *arg0, struct17 *arg1, struct17 *arg2, f32 arg3, struct17 *arg4, struct17 *arg5, f32 *arg6, f32 *arg7);
+
+s32 func_151D5B6C(struct17 *arg0, struct17 *arg1, struct127 *arg2, s8 arg3, s32 arg4) {
+    struct127 *obj;
+    s32 i;
+    s32 mask;
+    struct17 point;
+    struct17 hit0;
+    struct17 hit1;
+    f32 t0;
+    f32 t1;
+    f32 radius;
+
+    mask = -1;
+    for (i = 0; i < 25; i = (u8)(i + 1)) {
+        obj = &D_800CC2D0[i];
+        if (obj->interaction_state == 0) {
+            continue;
+        }
+        if (obj->unk5 == 3) {
+            continue;
+        }
+        if ((D_800BE9F0 != 0x23) && (obj->id == 0xFF)) {
+            continue;
+        }
+        if (obj == arg2) {
+            continue;
+        }
+        if ((obj->unkF8 & 0x40) == 0) {
+            continue;
+        }
+        if ((arg3 != -1) && (D_80086C90[arg3](obj, arg2, arg4) == 0)) {
+            continue;
+        }
+        if (obj->unkD2 < obj->unkD4) {
+            radius = obj->unkD4;
+        } else {
+            radius = obj->unkD2;
+        }
+        point.unk0 = obj->x_position;
+        point.unk4 = obj->y_position + obj->unkD6;
+        point.unk8 = obj->z_position;
+        if (func_151452C4(arg0, arg1, &point, radius + radius, &hit0, &hit1, &t0, &t1) != 0) {
+            mask &= ~(1 << i);
+        }
+    }
+    return mask;
+}
 
 void func_151D5D60(s32 arg0, s16 arg1, s32 arg2, s32 *arg3, s8 *arg4) {
     s8 sp27;

@@ -16,7 +16,58 @@ void func_1502AAF8(s32 arg0) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_57FA0/func_1502AB04.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_57FA0/func_1502AC88.s")
+
+typedef struct {
+    /* 0x00 */ u32 addr;
+    /* 0x04 */ u32 age;
+    /* 0x08 */ s32 word0;
+    /* 0x0C */ s32 word1;
+} RomEntry;
+
+extern u32 D_800C3D60;
+extern RomEntry D_800C3D68[16];
+
+void func_1502AB04(s32 count, s32 *src, u32 age, u32 addr);
+
+s32 func_1502AC88(u8 *arg0, s32 arg1, s32 *arg2) {
+    u8 buf[0x38];
+    u32 romAddr;
+    u32 size;
+    s32 *dst;
+    s32 ret;
+    s32 *ptr;
+    u32 i;
+    u32 j;
+    RomEntry tmp;
+
+    arg0 += arg1 * 8;
+    arg0 = (u8 *)((u32)arg0 | 0x80000000);
+
+    for (i = 0; i < 16; i++) {
+        if ((u32)arg0 == D_800C3D68[i].addr) {
+            tmp = D_800C3D68[i];
+            for (j = i; j < 15; j++) {
+                D_800C3D68[j] = D_800C3D68[j + 1];
+            }
+            D_800C3D68[15] = tmp;
+            D_800C3D68[15].age = D_800C3D60;
+            *arg2 = D_800C3D68[15].word1;
+            return D_800C3D68[15].word0;
+        }
+    }
+
+    D_800C3D60++;
+    romAddr = (u32)arg0 & 0x7FFFFFF0;
+    size = (((u32)arg0 & 0xE) + 0x1F) & ~0xF;
+    dst = (s32 *)((u32)buf & ~0xF);
+    func_10004514(romAddr, dst, size, 1);
+    ptr = (s32 *)((u8 *)dst + ((u32)arg0 & 0xF));
+    ret = ptr[0];
+    *arg2 = ptr[1];
+    func_1502AB04(2, ptr, D_800C3D60, (u32)arg0);
+    return ret;
+}
+
 #pragma GLOBAL_ASM("asm/nonmatchings/game_57FA0/func_1502AF04.s")
 extern u8 D_AB1950;
 s32 func_1502AC88(u8 *arg0, s32 arg1, s32 *arg2);

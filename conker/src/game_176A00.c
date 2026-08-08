@@ -656,8 +656,6 @@ s32 func_1514A4EC(struct Foo1514A4EC *arg0) {
     arg0->unk138 = arg0->unk138 * temp_f0;
     arg0->unk34.unk0 = arg0->unk34.unk0 + (arg0->unk130 * D_800BE9A4);
     arg0->unk34.unk4 = arg0->unk34.unk4 + (arg0->unk134 * D_800BE9A4);
-    if (new_var && arg0) {
-    }
     arg0->unk34.unk8 = arg0->unk34.unk8 + (arg0->unk138 * D_800BE9A4);
     return 1;
 }

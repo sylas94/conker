@@ -183,7 +183,86 @@ typedef struct {
 extern Data15133E3C D_800A3860;
 void func_15169260(Data15133E3C *, s32, s32, u8);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_15F680/func_151321D0.s")
+typedef struct {
+    u8 pad_0[0x38];
+    struct17 field_0x38;
+    u8 pad_44[0x1C];
+    u32 field_0x60;
+    s16 field_0x64;
+    u8 pad_66[0xA];
+    u8 field_0x70;
+    u8 field_0x71;
+    u8 field_0x72;
+    u8 pad_73[0x3];
+    u8 field_0x76;
+    u8 field_0x77;
+    u8 pad_78[0xA];
+    s16 field_0x82;
+    s16 field_0x84;
+    u8 pad_86[0xC2];
+    u8 field_0x148;
+} Func151321D0Arg0;
+
+typedef s32 (*Func151321D0Callback)(Func151321D0Arg0 *);
+
+extern Func151321D0Callback D_800898B0[];
+extern Func151321D0Callback D_80089914[];
+extern Func151321D0Callback D_8008997C[];
+extern Func151321D0Callback D_80089988[];
+s32 func_1514672C(struct17 *arg0);
+
+void func_151321D0(Func151321D0Arg0 *arg0) {
+    s32 temp;
+    u8 stopped;
+
+    stopped = 0;
+    arg0->field_0x60 &= 0xFFDFFFFF;
+    if ((arg0->field_0x60 & 0x10) && (arg0->field_0x148 & 0x18)) {
+        temp = D_80089988[arg0->field_0x77](arg0);
+        if (temp == 0) {
+            stopped = 1;
+        }
+    } else if (arg0->field_0x71 != 0) {
+        temp = D_800898B0[arg0->field_0x71](arg0);
+        if (temp == 0) {
+            stopped = 1;
+        }
+    }
+
+    if ((arg0->field_0x72 != 0) && !stopped) {
+        temp = D_80089914[arg0->field_0x72](arg0);
+        if (temp == 0) {
+            stopped = 1;
+        }
+    }
+
+    if ((arg0->field_0x60 & 0x80) && !stopped) {
+        arg0->field_0x64 -= D_800BE9E4;
+        if (arg0->field_0x64 < 0) {
+            stopped = 1;
+        }
+    }
+
+    if ((arg0->field_0x60 & 0x2000) && !stopped) {
+        if (arg0->field_0x64 < arg0->field_0x82) {
+            temp = arg0->field_0x64 * arg0->field_0x84;
+            if (temp < arg0->field_0x70) {
+                arg0->field_0x70 = temp;
+            }
+        }
+    }
+
+    if (!stopped && !(arg0->field_0x60 & 0x80000)) {
+        stopped = func_1514672C(&arg0->field_0x38) == 0;
+    }
+
+    if (stopped) {
+        if (arg0->field_0x76 != 0) {
+            D_8008997C[arg0->field_0x76](arg0);
+        }
+        func_1516972C((struct102 *)arg0);
+    }
+}
 
 extern void (*D_800899B0[])(s32);
 

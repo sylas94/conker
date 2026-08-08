@@ -87,15 +87,19 @@ extern struct Some15171F04 *D_8008CA4C[];
 void func_15169070(s32, s32, s32, u8);
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15167010.s")
-// PERMUTER CANDIDATE (best 405): target uses OSR limit `addiu s2,s0,0x1484` (base-relative)
+// PERMUTER CANDIDATE (best 400): target uses OSR limit `addiu s2,s0,0x1484` (base-relative)
 // + phantom saved reg s1; can't trigger the `<`-preserving strength-reduction form from C.
-// Closest form:
+// Closest form (loop body byte-identical, only the 3-instruction preamble differs):
 // void func_15167010(void) {
 //     void (*func)(void);
+//     struct115 *end;
 //     struct115 *p;
-//     for (p = D_8008B4A8; p < D_8008B4A8 + 101; p++) {
+//     p = D_8008B4A8;
+//     end = p + 101;
+//     while (p < end) {
 //         func = (void (*)(void))p->unk18;
 //         if (func != NULL) { func(); }
+//         p++;
 //     }
 // }
 
@@ -237,6 +241,139 @@ s32 func_15167D84(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
     temp->field_0x48 = *((s8 *)&arg3 + 3);
     return (s32)temp;
 }
+// PERMUTER CANDIDATE / JUSTREG (best 885): structure is byte-exact -- same instruction
+// count, same addresses, same branch forms (beql/bgezl/blezl/bnel/bltzl), frame 0x20 and
+// the `finished` spill at 0x1b(sp) all match. Residual = 73 register-only renames plus one
+// displaced `lbu 0x2d` load. Cause: the three 24.8 accumulate steps need a named local for
+// the sum (it is used twice: >>8 into the s16 and truncated into the u8), and a named local
+// takes v0/v1/a1 out of IDO's round-robin temp pool; the target keeps that sum in the pool
+// (t2/t8/t5) with v0/v1/a1 holding the packed value and the mflo. Dropping the local (writing
+// the expression twice and letting CSE fold it) fails: the `sh 0x22` store invalidates the
+// `arg0->unk30` load and IDO emits a second multu (2825). Splitting packed/product/sum into
+// separate locals just moves which value owns v0/v1 (1095/1285/1495). The tail t3..t9 diff is
+// a single +4 rotation of the temp counter cascading from that one choice.
+// Best reconstruction (score 885):
+// typedef struct {
+//     char pad_0[0x10];
+//     struct Some15171F04 *unk10;
+//     char pad_14[0x8];
+//     s16 unk1C;
+//     s16 unk1E;
+//     s16 unk20;
+//     s16 unk22;
+//     s16 unk24;
+//     s16 unk26;
+//     s16 unk28;
+//     char pad_2A[0x2];
+//     u8 unk2C;
+//     u8 unk2D;
+//     u8 unk2E;
+//     s8 unk2F;
+//     s16 unk30;
+//     s16 unk32;
+//     char pad_34[0x4];
+//     s16 unk38;
+//     s8 unk3A;
+//     char pad_3B[0x4];
+//     u8 unk3F;
+//     char pad_40[0x4];
+//     u16 unk44;
+//     char pad_46[0x2];
+//     s8 unk48;
+// } GameSpriteObject;
+//
+// void func_15167E0C(GameSpriteObject *arg0) {
+//     void (*func)(struct102 *);
+//     u8 finished;
+//     s32 limit;
+//
+//     finished = 0;
+//     if (arg0->unk38 != 0x7FFF) {
+//         arg0->unk38 -= D_800BE9E4;
+//         if (arg0->unk38 < 0) {
+//             arg0->unk38 = 0;
+//             finished = 1;
+//         }
+//     }
+//
+//     if (arg0->unk3A > 0) {
+//         if (arg0->unk3A < arg0->unk3F) {
+//             arg0->unk3F -= arg0->unk3A;
+//         } else {
+//             arg0->unk38 = 0;
+//             finished = 1;
+//         }
+//     }
+//
+//     if (arg0->unk2F != -1) {
+//         func = D_8008C9C8[arg0->unk2F];
+//         if (func != NULL) {
+//             func((struct102 *)arg0);
+//         }
+//     }
+//
+//     if (arg0->unk38 != 0) {
+//         s32 subY;
+//         s32 subX;
+//         s32 subZ;
+//
+//         arg0->unk30 += arg0->unk32;
+//
+//         subY = ((arg0->unk22 << 8) | arg0->unk2E) + arg0->unk30 * D_800BE9E4;
+//         arg0->unk22 = subY >> 8;
+//         arg0->unk2E = subY;
+//
+//         subX = ((arg0->unk20 << 8) | arg0->unk2C) + arg0->unk26 * D_800BE9E4;
+//         arg0->unk20 = subX >> 8;
+//         arg0->unk2C = subX;
+//
+//         subZ = ((arg0->unk24 << 8) | arg0->unk2D) + arg0->unk28 * D_800BE9E4;
+//         arg0->unk24 = subZ >> 8;
+//         arg0->unk2D = subZ;
+//
+//         if (arg0->unk1E != 0) {
+//             limit = (arg0->unk10->unk4 << 8) - 1;
+//             arg0->unk1C += arg0->unk1E * D_800BE9E4;
+//             if (limit < arg0->unk1C) {
+//                 if (arg0->unk44 & 0x20) {
+//                     arg0->unk38 = 0;
+//                     finished = 1;
+//                 } else {
+//                     arg0->unk44 |= 0x80;
+//                     if (arg0->unk44 & 2) {
+//                         arg0->unk1C = limit - (arg0->unk1C % limit);
+//                         arg0->unk1E = -arg0->unk1E;
+//                     } else {
+//                         do {
+//                             arg0->unk1C -= limit;
+//                         } while (limit < arg0->unk1C);
+//                     }
+//                 }
+//             } else if (arg0->unk1C < 0) {
+//                 if (arg0->unk44 & 0x40) {
+//                     arg0->unk38 = 0;
+//                     finished = 1;
+//                 } else if (arg0->unk44 & 2) {
+//                     arg0->unk1C = -arg0->unk1C % limit;
+//                     arg0->unk1E = -arg0->unk1E;
+//                 } else {
+//                     do {
+//                         arg0->unk1C += limit;
+//                     } while (arg0->unk1C < 0);
+//                 }
+//             }
+//         }
+//     } else {
+//         finished = 1;
+//     }
+//
+//     if (finished != 0) {
+//         if (arg0->unk48 != -1) {
+//             D_8008CA20[arg0->unk48]((struct102 *)arg0);
+//         }
+//         func_1516972C((struct102 *)arg0);
+//     }
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15167E0C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_15168118.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1944C0/func_1516865C.s")

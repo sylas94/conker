@@ -271,7 +271,15 @@ void func_151BD2F8(void *arg0, s32 arg1, s32 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1E73B0/func_151BD42C.s")
+typedef struct {
+    u8 pad0[0x80];
+    /* 0x80 */ s16 unk80;
+} S151BD42C;
+
+s32 func_151BD42C(S151BD42C *arg0) {
+    arg0->unk80 = 0;
+    return 0x1;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1E73B0/func_151BD43C.s")
 

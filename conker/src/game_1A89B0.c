@@ -5,7 +5,47 @@
 extern s32 D_800DDD58;
 extern s32 func_1517D074(s32, s16, s16, s16, f32, s32, s32, s32, s32, s32);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1A89B0/func_1517B500.s")
+extern s32 func_151EF610(void);
+extern u8 D_80095CE1[];
+
+s32 func_1517B500(s16 *arg0, s16 *arg1, s32 *arg2, s32 arg3)
+{
+    s32 diff;
+    s32 limit;
+    s32 rnd;
+
+    *arg2 = (*arg2 * 3) / 2;
+    limit = D_80095CE1[((u8 *) arg0)[8] * 10] << 8;
+    if (*arg2 >= limit)
+    {
+        *arg2 = *arg2 - limit;
+    }
+
+    arg1[0] = arg0[0];
+    arg1[1] = arg0[1];
+    arg1[2] = arg0[2];
+
+    diff = 0x29 - ((s8 *) arg0)[0xD];
+    if (diff == 0)
+    {
+        ((s8 *) arg0)[0xD] = (((s8 *) arg0)[0xD] - (func_151EF610() % 8)) + 4;
+    }
+    else if (diff < 0)
+    {
+        rnd = func_151EF610();
+        ((s8 *) arg0)[0xD] = ((((s8 *) arg0)[0xD] - ((func_151EF610() % -diff) >> 1)) - (rnd % 8)) + 4;
+    }
+    else
+    {
+        rnd = func_151EF610();
+        ((s8 *) arg0)[0xD] = ((((func_151EF610() % diff) >> 1) + ((s8 *) arg0)[0xD]) + (rnd % 8)) - 4;
+    }
+
+    arg1[0] = arg0[0];
+    arg1[1] = arg0[1];
+    arg1[2] = arg0[2];
+    return 0;
+}
 
 s32 func_1517B6E8(s16 *arg0, s16 *arg1, s32 *arg2, s32 arg3)
 {

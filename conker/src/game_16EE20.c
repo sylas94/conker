@@ -469,15 +469,18 @@ Gfx *func_15142CF0(Gfx *gfx, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s
 
     return gfx;
 }
-Gfx *func_15142E24(Gfx *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, u8 arg7, s32 arg8, u8 *arg9, s32 argA) {
+Gfx *func_15142E24(Gfx *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, u8 arg7,
+                   s32 arg8, u8 *arg9, s32 argA) {
     s32 temp_v0;
 
     temp_v0 = func_1514306C(arg1, arg6, arg2 >> 16, arg7);
-    if ((temp_v0 != D_800DD1B0) || (arg3 != D_800DD208) || (arg4 != D_800DD20C) || (arg5 != D_800DD210) || (arg8 != D_800DD214)) {
+    if ((temp_v0 != D_800DD1B0) || (arg3 != D_800DD208) || (arg4 != D_800DD20C) || (arg5 != D_800DD210) ||
+        (arg8 != D_800DD214)) {
         if (*arg9 == 1) {
             *arg9 = 0;
         }
-        if ((D_800BE9F0 == 0x18) || (D_800BE9F0 == 0x13) || (D_800BE9F0 == 6) || (D_800BE9F0 == 0x3B) || (D_800BE9F0 == 2) || (D_800BE616 != 0)) {
+        if ((D_800BE9F0 == 0x18) || (D_800BE9F0 == 0x13) || (D_800BE9F0 == 6) || (D_800BE9F0 == 0x3B) ||
+            (D_800BE9F0 == 2) || (D_800BE616 != 0)) {
             argA = 3;
         }
         arg0 = func_15094FE8(arg0, arg1, arg2 >> 8, arg8, 0, 0, 0, arg3, arg4, arg5, argA);
@@ -485,6 +488,11 @@ Gfx *func_15142E24(Gfx *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, 
         D_800DD208 = arg3;
         D_800DD20C = arg4;
         D_800DD210 = arg5;
+        /* BUG (original game): this fifth cache slot is self-assigned instead of being updated
+         * from arg8, so the cached value never changes and the guard above re-fires forever.
+         * Almost certainly a copy/paste slip for "D_800DD214 = arg8;". Faithfully reproduced:
+         * the ROM really does contain the lui/addiu + lw + sw for it. NOT a codegen forcer --
+         * deleting it removes four real instructions rather than reshuffling registers. */
         D_800DD214 = D_800DD214;
     }
     return arg0;
@@ -512,36 +520,43 @@ s16 func_15143044(u8 arg0, s32 arg1) {
 // as a large diff. Reconstruction (switch arg3 1..6): 1:D_800915B0 2:D_80091514 3:0 4:D_80091564[arg1]
 // 5:arg1 6:{x=*(s32*)arg0; (u32)x>=0x10000000 ? ((s32*)x)[arg2] : x} default:D_80090B60[arg1].unk0[arg2]
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514306C.s")
-void func_15143134(struct17 *arg0, f32 *arg1, Mtx *arg2) {
-    f32 sp38[4][4];
-
-    D_800DCA00 = 1;
-    if ((arg0 != NULL) && ((arg0->unk0 != 0.0f) || (arg0->unk4 != 0.0f) || (arg0->unk8 != 0.0f))) {
-        D_800DCA00 = 2;
-        D_800DCA08 = arg0->unk0;
-        D_800DCA0C = arg0->unk4;
-        D_800DCA10 = arg0->unk8;
-        if (D_800C3E90) {
-            D_800DCA00 = 3;
-            D_800DCA04 = arg2;
-            guMtxL2F(sp38, arg2);
-            func_150A7960(sp38[0], arg0->unk0, arg0->unk4, arg0->unk8, arg1, arg1 + 1, arg1 + 2);
-            D_800DCA00 = 4;
-        state4_done:
-            ;
-        } else {
-            D_800DCA00 = 5;
-            D_800DCA04 = arg2;
-            func_150A7960((f32 *)arg2, arg0->unk0, arg0->unk4, arg0->unk8, arg1, arg1 + 1, arg1 + 2);
-            D_800DCA00 = 6;
-        }
-    } else {
-        D_800DCA00 = 7;
-        func_15142314(arg2, 0, arg1);
-        D_800DCA00 = 8;
-    }
-    D_800DCA00 = 0;
-}
+// NON-MATCHING (score 110). Everything matches except the delay slot of the branch that leaves the
+// D_800DCA00 = 4 block: the target emits "sw 4; b epilogue; sw zero(delay)", i.e. IDO filled the slot
+// by duplicating the shared "D_800DCA00 = 0" tail, whereas from this C it fills the slot from its own
+// block ("b tail; sw 4(delay)"). Duplication only happens when the block has no instruction of its own
+// left to sink, i.e. when a basic-block boundary sits directly after "D_800DCA00 = 4;". Writing the
+// clear inline ("D_800DCA00 = 4; D_800DCA00 = 0; return;") does produce the right branch/delay pair but
+// IDO then dead-store-eliminates the "= 4", so that is not it either. No honest construct found that
+// ends the block there; the previous match used an unreferenced label as a code-motion barrier.
+// void func_15143134(struct17 *arg0, f32 *arg1, Mtx *arg2) {
+//     f32 sp38[4][4];
+//
+//     D_800DCA00 = 1;
+//     if ((arg0 != NULL) && ((arg0->unk0 != 0.0f) || (arg0->unk4 != 0.0f) || (arg0->unk8 != 0.0f))) {
+//         D_800DCA00 = 2;
+//         D_800DCA08 = arg0->unk0;
+//         D_800DCA0C = arg0->unk4;
+//         D_800DCA10 = arg0->unk8;
+//         if (D_800C3E90) {
+//             D_800DCA00 = 3;
+//             D_800DCA04 = arg2;
+//             guMtxL2F(sp38, arg2);
+//             func_150A7960(sp38[0], arg0->unk0, arg0->unk4, arg0->unk8, arg1, arg1 + 1, arg1 + 2);
+//             D_800DCA00 = 4;
+//         } else {
+//             D_800DCA00 = 5;
+//             D_800DCA04 = arg2;
+//             func_150A7960((f32 *)arg2, arg0->unk0, arg0->unk4, arg0->unk8, arg1, arg1 + 1, arg1 + 2);
+//             D_800DCA00 = 6;
+//         }
+//     } else {
+//         D_800DCA00 = 7;
+//         func_15142314(arg2, 0, arg1);
+//         D_800DCA00 = 8;
+//     }
+//     D_800DCA00 = 0;
+// }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15143134.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_151432BC.s")
 
@@ -831,34 +846,27 @@ f32 func_15144AA8(s32 arg0) {
 struct17 *func_15144B34(s32 arg0) {
     return (struct17 *)&D_800DBFF0[arg0].unk2F8;
 }
-f32 func_15144B68(f32 arg0);
-extern f32 D_800A56A4;
-f32 func_15144B68(f32 arg0)
-{
-  f32 new_var;
-  new_var = D_800A56A4;
-  if (1)
-  {
-    f32 v = arg0;
-    if (new_var < v)
-    {
-      do
-      {
-        v -= new_var;
-      }
-      while (new_var < v);
-    }
-    if (v < 0.0f)
-    {
-      do
-      {
-        v += new_var;
-      }
-      while (v < 0.0f);
-    }
-    return v;
-  }
-}
+// NON-MATCHING (score 60, the mov.s is one slot early): same blocker as func_1514672C. The original
+// wrote 2*PI as a float literal, which IDO materialises in its own entry region, so the following
+// block schedules as c.lt.s/mov.s. Reading it as extern D_800A56A4 makes it a plain load inside the
+// block and the scheduler pulls the mov.s up to cover the load-use gap. The literal reproduces the
+// target exactly, but this TU contributes no .rodata to conker.ld, so 6.2831855f would not land at
+// 0x800A56A4. Blocked on per-TU rodata migration.
+// f32 func_15144B68(f32 arg0) {
+//     f32 v = arg0;
+//     if (D_800A56A4 < v) {
+//         do {
+//             v -= D_800A56A4;
+//         } while (D_800A56A4 < v);
+//     }
+//     if (v < 0.0f) {
+//         do {
+//             v += D_800A56A4;
+//         } while (v < 0.0f);
+//     }
+//     return v;
+// }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15144B68.s")
 
 f32 func_15144BC8(f32 arg0) {
     f32 v = arg0;
@@ -1138,31 +1146,133 @@ u8 func_15145C90(s32 arg0) {
 // PERMUTER CANDIDATE, best 962 (same one-extra-saved-reg cascade as func_15145CD0; loop body identical).
 // Same as CD0 but flat struct17 arrays: src++ by one struct17, three dest pointers p0/p1/p2 += 3 floats.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15145DB4.s")
-// PERMUTER CANDIDATE, best 1876 (body byte-perfect, all registers match: s0=dest, s1=counter,
-// s2=src, s3=matrix; loop back-edge bgtz matches). ONLY diff: target spills the pointer args a0/a1
-// to their home slots (0xa0/0xa4) and reloads s2/s0 from home at each branch's loop guard, which
-// fills the guard delay slot -> blez; IDO here moves a0->s2, a1->s0 directly (nothing for the guard
-// delay -> blezl) + frame 0x98 vs 0xa0. Pure spill-strategy micro-decision (permuter reload-through-
-// memory mutation). Reconstruction (arg0=struct17** src, arg1=struct17** dst, arg2=Mtx, arg3=count):
+// PERMUTER CANDIDATE, best 123. The reconstruction below is INSTRUCTION-FOR-INSTRUCTION identical
+// to the target (same frame 0xa0, same sp5C at 0x5c, same a0/a1 homing at 0xa0/0xa4 with a reload
+// per branch, same delay slots, same nops). The ONLY residual is a saved-register swap in the loop:
+// target has s1=counter and s2=src, IDO here picks s1=src and s2=counter (s0=dst, s3=arg2, s4=&sp5C
+// all match). IDO orders callee-saved registers by weighted reference count and both variables tie
+// exactly (2 + 6w each: counter = 2 guards + 2x(dec,dec,test), src = 2 inits + 2x(deref,inc,inc));
+// the tie is broken in favour of the local (src) over the parameter (arg3). Verified unsteerable:
+// declaration order has no effect; `pos = *src++` (fewer src refs) moves the increment to the loop
+// head; a local `count = arg3` copy gets coalesced back onto the parameter and additionally splits
+// its live range; walking `arg0` in place instead of `src` DOES produce the target's register order
+// but then IDO keeps a0 in s2 from entry instead of homing+reloading it, and drops a local so the
+// frame shrinks to 0x98. Needs a permuter register-swap mutation.
 // void func_15145EA4(struct17 **arg0, struct17 **arg1, Mtx *arg2, s32 arg3) {
-//     f32 sp5C[4][4]; struct17 *v, *dst;
+//     struct17 *pos; f32 sp5C[4][4]; struct17 **src; struct17 **dst; struct17 *out;
 //     if (D_800C3E90 != 0) {
 //         guMtxL2F(sp5C, arg2);
-//         while (arg3 > 0) { v = *arg0;
-//             if (v && (v->unk0!=0.0f || v->unk4!=0.0f || v->unk8!=0.0f)) { dst=*arg1;
-//                 func_150A7960(sp5C[0], v->unk0,v->unk4,v->unk8, &dst->unk0,&dst->unk4,&dst->unk8); }
-//             else { func_15142314(arg2, 0, (f32*)*arg1); }
-//             arg3--; arg0++; arg1++; }
+//         if (arg3 > 0) {
+//             src = arg0; dst = arg1;
+//             do {
+//                 pos = *src;
+//                 if ((pos != NULL) && ((pos->unk0 != 0.0f) || (pos->unk4 != 0.0f) || (pos->unk8 != 0.0f))) {
+//                     out = *dst;
+//                     func_150A7960(sp5C[0], pos->unk0, pos->unk4, pos->unk8, &out->unk0, &out->unk4, &out->unk8);
+//                 } else {
+//                     func_15142314(arg2, 0, (f32 *)*dst);
+//                 }
+//                 arg3--; src++; dst++;
+//             } while (arg3 > 0);
+//         }
 //     } else {
-//         while (arg3 > 0) { v = *arg0;
-//             if (v && (v->unk0!=0.0f || v->unk4!=0.0f || v->unk8!=0.0f)) { dst=*arg1;
-//                 func_150A7960((f32*)arg2, v->unk0,v->unk4,v->unk8, &dst->unk0,&dst->unk4,&dst->unk8); }
-//             else { func_15142314(arg2, 0, (f32*)*arg1); }
-//             arg3--; arg0++; arg1++; }
+//         if (arg3 > 0) {
+//             src = arg0; dst = arg1;
+//             do {
+//                 pos = *src;
+//                 if ((pos != NULL) && ((pos->unk0 != 0.0f) || (pos->unk4 != 0.0f) || (pos->unk8 != 0.0f))) {
+//                     out = *dst;
+//                     func_150A7960((f32 *)arg2, pos->unk0, pos->unk4, pos->unk8, &out->unk0, &out->unk4, &out->unk8);
+//                 } else {
+//                     func_15142314(arg2, 0, (f32 *)*dst);
+//                 }
+//                 arg3--; src++; dst++;
+//             } while (arg3 > 0);
+//         }
 //     }
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15145EA4.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15146078.s")
+s32 func_15146078(struct17 *arg0, struct17 *arg1, struct17 *arg2) {
+    u8 count;
+    u8 axis;
+    u8 zeroAxis;
+    u32 i;
+    u32 j;
+    u32 k;
+    f32 len;
+    f32 invLen;
+
+    if ((arg0->unk0 == 0.0f) && (arg0->unk4 == 0.0f) && (arg0->unk8 == 0.0f)) {
+        return 0;
+    }
+
+    count = 0;
+    if (arg0->unk0 == 0.0f) {
+        count++;
+        zeroAxis = 0;
+    } else {
+        axis = 0;
+    }
+    if (arg0->unk4 == 0.0f) {
+        count++;
+        zeroAxis = 1;
+    } else {
+        axis = 1;
+    }
+    if (arg0->unk8 == 0.0f) {
+        count++;
+        zeroAxis = 2;
+    } else {
+        axis = 2;
+    }
+
+    if (count == 2) {
+        switch (axis) {
+        case 0:
+            arg1->unk0 = 0.0;
+            arg1->unk4 = 1.0;
+            arg1->unk8 = 0.0;
+            arg2->unk0 = 0.0;
+            arg2->unk4 = 0.0;
+            arg2->unk8 = 1.0;
+            break;
+        case 1:
+            arg1->unk0 = 1.0;
+            arg1->unk4 = 0.0;
+            arg1->unk8 = 0.0;
+            arg2->unk0 = 0.0;
+            arg2->unk4 = 0.0;
+            arg2->unk8 = 1.0;
+            break;
+        case 2:
+            arg1->unk0 = 1.0;
+            arg1->unk4 = 0.0;
+            arg1->unk8 = 0.0;
+            arg2->unk0 = 0.0;
+            arg2->unk4 = 1.0;
+            arg2->unk8 = 0.0;
+            break;
+        }
+        return 1;
+    }
+
+    i = 0;
+    j = 1;
+    k = 2;
+    if ((count == 1) && (zeroAxis == 2)) {
+        j = 2;
+        k = 1;
+    }
+    ((f32 *)arg1)[i] = 1.0;
+    ((f32 *)arg1)[j] = 1.0;
+    ((f32 *)arg1)[k] = -((f32 *)arg0)[i] - (((f32 *)arg0)[j] / ((f32 *)arg0)[k]);
+    func_151450B4(arg1, arg0, arg2);
+    func_151450B4(arg2, arg0, arg1);
+    func_15145128(arg1, arg1, &len, &invLen);
+    func_15145128(arg2, arg2, &len, &invLen);
+    return 1;
+}
+
 extern u8 D_800BE9C0;
 extern u8 D_800D9BD0[][2][8];
 extern s32 D_800D9E10[];
@@ -1219,27 +1329,93 @@ void func_15146508(struct127 *arg0, struct127 *arg1) {
     func_15169040(&tmp, 45, arg0, arg1);
 }
 
+// PERMUTER CANDIDATE, best 575. The reconstruction below is byte-identical everywhere except two
+// spots; frame (0xa0), every stack offset (mtx buffer 0x4c, out-params 0x8c/0x90), every saved-reg
+// assignment and the whole transform loop match exactly. Residuals:
+//   (1) `id = arg1->unk1E` lands straight in $a1 (lhu a1 + beqzl), the target loads it into $v0 and
+//       fills a plain beqz delay slot with `move a1,v0`. Tried: inline field read, named s32/u16
+//       local, bare truthiness -- IDO always forwards the load into the argument register.
+//   (2) the else arm of the unk48 test (`mtx = sp90`) is scheduled into the delay slot of that
+//       block's `b`, where the target hoists the load above the `beqz` and leaves both slots nop
+//       (one instruction shorter here, which shifts the remaining ~60 instructions and is what
+//       inflates the score). Same code from an if/else and from a ternary; a pre-if default
+//       assignment instead makes IDO CSE the two sp90 loads, which is further off.
+// Both are -g3 scheduling/register-selection artifacts with no source-level lever.
+// Types: arg1/the func_1503195C result are the struct126-ish object re-described below, since the
+// fields used (0x02, 0x1e, 0x20, 0x34, 0x48) all fall inside structs.h's pad runs.
+// struct rig1514654C { u8 pad0[0x3E8]; Mtx *unk3E8[2]; u8 pad3F0[0x6]; u8 unk3F6; };
+// struct part1514654C { u8 pad0[2]; u8 unk2; u8 pad3[0x1B]; u16 unk1E; u16 unk20; u8 pad22[0x12];
+//                       Mtx *unk34; u8 pad38[0x10]; struct rig1514654C *unk48; };
+// void func_15145EA4(struct17 **, struct17 **, Mtx *, s32);
+// s32 func_15031070(struct part1514654C *, struct127 *, Mtx **, s32 *);
+//
+// s32 func_1514654C(struct127 *arg0, struct part1514654C *arg1, s32 arg2, struct17 **arg3,
+//                   struct17 **arg4, s32 arg5) {
+//     Mtx *mtx;
+//     struct part1514654C *part;
+//     s32 id;
+//     Mtx *sp90;
+//     s32 sp8C;
+//     f32 sp4C[4][4];
+//     s32 i;
+//
+//     if ((arg0 == NULL) || (arg1 == NULL) || (arg0->unk1D4 == NULL)) {
+//         return 0;
+//     }
+//     if (arg1->unk48 != NULL) {
+//         if (arg1->unk48->unk3F6 == 0) {
+//             return 0;
+//         }
+//         mtx = arg1->unk48->unk3E8[D_800BE9C0] + arg2;
+//     } else {
+//         id = arg1->unk1E;
+//         if (id != 0) {
+//             part = (struct part1514654C *)func_1503195C(arg0, id, 0);
+//             if (part == NULL) {
+//                 return 0;
+//             }
+//             if (func_15031070(part, arg0, &sp90, &sp8C) == 0) {
+//                 return 0;
+//             }
+//             if (part->unk48 != NULL) {
+//                 mtx = &sp90[arg1->unk20];
+//             } else {
+//                 mtx = sp90;
+//             }
+//         } else if (arg1->unk34 != NULL) {
+//             mtx = arg1->unk34 + D_800BE9C0;
+//         } else {
+//             func_15145EA4(arg3, arg4, (Mtx *)arg0->unk1D4 + arg1->unk2, arg5);
+//             return 1;
+//         }
+//     }
+//     if (mtx != NULL) {
+//         guMtxL2F(sp4C, mtx);
+//         for (i = 0; i < arg5; i++) {
+//             func_150A7960(sp4C[0], arg3[i]->unk0, arg3[i]->unk4, arg3[i]->unk8, &arg4[i]->unk0,
+//                           &arg4[i]->unk4, &arg4[i]->unk8);
+//         }
+//     } else {
+//         return 0;
+//     }
+//     return 1;
+// }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514654C.s")
 
-s32 func_1514672C(struct17 *arg0) {
-    f32 temp_f2;
-    f32 temp_f0;
-
-    temp_f2 = D_800A56C4;
-block_1514672C:
-    if ((temp_f2 < fabsf(arg0->unk0)) || (temp_f2 < fabsf(arg0->unk8)) || (temp_f0 = arg0->unk4, (temp_f2 < temp_f0)) || (temp_f0 < D_800A56C8)) {
-        return 0;
-    }
-    return 1;
-}
-// NON-MATCHING: JUSTREG: first 3 statements are out of order
+// NON-MATCHING (score 215, one instruction out of order): the original wrote the bounds as float
+// literals (19500.0f / -9500.0f), which IDO hoists to the top of the entry block as constant loads.
+// Referencing them as extern D_800A56C4/D_800A56C8 makes them ordinary memory reads, so the
+// arg0->unk0 load gets scheduled ahead of them. Writing the literals reproduces the order exactly,
+// but this TU contributes no .rodata to conker.ld (it is /DISCARD/ed), so the constants would not
+// land at 0x800A56C4. Blocked on per-TU rodata migration.
 // s32 func_1514672C(struct17 *arg0) {
-//     if ((D_800A56C4 < fabsf(arg0->unk0)) || (D_800A56C4 < fabsf(arg0->unk8)) || (D_800A56C4 < arg0->unk4) || (arg0->unk4 < D_800A56C8)) {
+//     if ((D_800A56C4 < fabsf(arg0->unk0)) || (D_800A56C4 < fabsf(arg0->unk8)) || (D_800A56C4 < arg0->unk4) ||
+//         (arg0->unk4 < D_800A56C8)) {
 //         return 0;
-//     } else {
-//         return 1;
 //     }
+//     return 1;
 // }
+#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514672C.s")
 
 void func_151467A4(f32 *arg0, f32 arg1, f32 *arg2, f32 arg3, f32 arg4, f32 arg5, f32 arg6, f32 *arg7) {
     *arg0 = *arg0 - D_800BE9A4;

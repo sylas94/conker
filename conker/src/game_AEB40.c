@@ -168,7 +168,7 @@ void func_150836CC(struct127 *arg0, s32 arg1) {
 
 extern s32 allocate_memory(s32, s32, s32, s32);
 
-s32 func_150838EC(struct127 *arg0, u16 arg1, s32 arg2, f32 arg3) {
+s32 func_150838EC(struct127 *arg0, s32 arg1, s32 arg2, f32 arg3) {
     s32 idx;
 
     idx = arg0->id;
@@ -228,7 +228,84 @@ void func_150839B8(struct127 *arg0, s32 arg1, void *arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AEB40/func_15083AC8.s")
+extern struct127 *func_1505ED34(void);
+
+struct127 *func_15083AC8(struct127 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, f32 arg8) {
+    struct127 *obj;
+    GameAEB40ActorSlots *slots;
+    s32 paused;
+    s32 blocked;
+    s32 i;
+
+    func_1503D774(arg2, 0);
+    func_1503D660(arg2, 0);
+    obj = func_1505ED34();
+    obj->unique_id = 0xFF - (obj - D_800CC2D0);
+    obj->unkAB = arg3;
+    obj->interaction_state = arg4;
+    func_150615DC(obj);
+    obj->unk232 = 1;
+    obj->health = 1;
+    obj->immune = 0xFF;
+    obj->unk65 = (arg0 - D_800CC2D0) + 1;
+    obj->unk5C = arg1;
+    obj->unk123 = 1;
+    obj->id = arg2;
+    obj->pad66 = arg0->pad66;
+    obj->pad66 &= ~0x10;
+    obj->pad66 |= 0;
+    *((u8 *)obj + 0x1DD) = *((u8 *)arg0 + 0x1DD);
+    *((u8 *)obj + 0x1DE) = *((u8 *)arg0 + 0x1DE);
+    *((u8 *)obj + 0x1DF) = *((u8 *)arg0 + 0x1DE);
+    *((u8 *)obj + 0x1E0) = *((u8 *)arg0 + 0x1E0);
+    *((u8 *)obj + 0x1E1) = *((u8 *)arg0 + 0x1E1);
+    *((u8 *)obj + 0x1E2) = *((u8 *)arg0 + 0x1E2);
+    if (arg6 == 0) {
+        obj->xz_scale = 1.0f;
+        obj->y_scale = 1.0f;
+        obj->unk154 = 1.0f;
+        obj->unk158 = 1.0f;
+    } else {
+        obj->xz_scale = arg0->xz_scale;
+        obj->y_scale = arg0->y_scale;
+        obj->unk154 = arg0->unk154;
+        obj->unk158 = arg0->unk158;
+    }
+    obj->unk101 = arg6;
+    obj->padAC = arg5;
+    func_1503D774(arg2, 0);
+    if (arg5 & 1) {
+        obj->unkF8 |= 0x4000;
+        *(f32 *)((u8 *)obj + 0x270) = (f32)(u32)*(u16 *)((u8 *)D_800D1C90[arg2] + 0xE) * obj->xz_scale;
+    }
+    paused = 0;
+    if (arg5 & 2) {
+        paused = 1;
+    }
+    slots = (GameAEB40ActorSlots *)obj;
+    for (i = 0; i <= D_80082FA0; i++) {
+        slots->field_0x304[i] = (s32)func_1515D480(1);
+    }
+    if ((&slots->field_0x300)[i] != 0) {
+        obj->unk301[0] = 1;
+    }
+    slots->field_0x314 = func_1515D440();
+    if (D_800C35EA == 1) {
+        blocked = 1;
+    } else {
+        blocked = 0;
+    }
+    if (blocked) {
+        D_800C3638 = 0;
+    }
+    func_150839B8(obj, arg2, NULL);
+    func_150837D4(obj - D_800CC2D0, arg2, 1);
+    func_150838EC(obj, arg7, paused, arg8);
+    if (blocked) {
+        D_800C3638 = 1;
+    }
+    return obj;
+}
 
 extern u8 D_800D2100;
 

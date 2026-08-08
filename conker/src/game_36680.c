@@ -5,7 +5,7 @@
 
 extern f32 D_80095C64[];
 extern u8 D_800DDBD0[];
-s32 func_1500AF08(s32, s32, s32, s16, s32, s32, s32, u8, s32);
+s32 func_1500AF08(s32, s32, s32, s16, s16, s16, s32, u8, s32);
 
 void func_150091D0(void) {
     int tmp0 = 127;
@@ -558,7 +558,64 @@ void func_1500ABA0(s32 arg0) {
 #pragma GLOBAL_ASM("asm/nonmatchings/game_36680/func_1500AC14.s")
 // GOTO hell
 #pragma GLOBAL_ASM("asm/nonmatchings/game_36680/func_1500AD84.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_36680/func_1500AF08.s")
+struct Struct800DDD18
+{
+  s16 unk0;
+  s16 unk2;
+  s16 unk4;
+  u8  unk6;
+  u8  unk7;
+  u8  unk8;
+  u8  unk9;
+  u8  unkA;
+  u8  unkB;
+  u8  unkC;
+  u8  unkD;
+};
+extern struct Struct800DDD18 *D_800DDD18;
+extern u8 D_800DDBC0[];
+extern u8 D_80095CE0[];
+extern s16 D_800BE438[][2];
+extern s32 func_151EF610(void);
+
+s32 func_1500AF08(s32 arg0, s32 arg1, s32 arg2, s16 arg3, s16 arg4, s16 arg5, s32 arg6, u8 arg7, s32 arg8) {
+    s16 scale;
+
+    if (arg0 >= (u32)(*(u16 *)((u8 *)D_800B0DF0 + 0x18) - 1)) {
+        return *(u16 *)((u8 *)D_800B0DF0 + 0x18) - 1;
+    }
+
+    D_800DDD18[arg0].unk0 = arg3;
+    D_800DDD18[arg0].unk2 = arg4;
+    D_800DDD18[arg0].unk4 = arg5;
+
+    if (D_800DDBD0[arg1] >= 2) {
+        if ((1 << arg1) & D_800DDC00) {
+            D_800DDD18[arg0].unk7 = (arg1 << 2) + (arg8 & 1);
+        } else {
+            D_800DDD18[arg0].unk7 = (arg0 & 3) + (arg1 << 2);
+        }
+    } else {
+        D_800DDD18[arg0].unk7 = 60;
+    }
+
+    D_800DDD18[arg0].unk6 = (arg2 << 5) | arg1;
+    D_800DDD18[arg0].unkA = arg7;
+    D_800DDD18[arg0].unk8 = D_800DDBC0[arg1];
+
+    if (arg6 != 0) {
+        scale = (func_151EF610() % arg6 + arg6) - arg6 + 0x100;
+        D_800DDD18[arg0].unkC = (D_800BE438[arg1][0] * scale) >> 10;
+        if (D_80095CE0[D_800DDBC0[arg1] * 10] & 4) {
+            scale = func_151EF610() % arg6 * 4 + scale;
+        }
+        D_800DDD18[arg0].unkD = (D_800BE438[arg1][1] * scale) >> 10;
+    } else {
+        D_800DDD18[arg0].unkC = D_800BE438[arg1][0] >> 2;
+        D_800DDD18[arg0].unkD = D_800BE438[arg1][1] >> 2;
+    }
+    return arg0 + 1;
+}
 s32 func_1500B1F4(s16 arg0, u8 arg1, s32 arg2, s32 arg3, s32 arg4, s16 **arg5) {
     s32 i;
     s32 count;
@@ -594,7 +651,62 @@ s32 func_1500B1F4(s16 arg0, u8 arg1, s32 arg2, s32 arg3, s32 arg4, s16 **arg5) {
     }
     return arg4;
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_36680/func_1500B3B0.s")
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+} Vtx1500B3B0;
+
+typedef struct {
+    Vtx1500B3B0 unk0[3];
+} Tri1500B3B0;
+
+extern void func_15049350(Tri1500B3B0);
+extern f32 *D_80082D80[];
+extern u16 D_800BE430;
+
+s32 func_1500B3B0(s16 arg0, u8 arg1, s32 arg2, s32 arg3, s32 arg4, s16 **arg5) {
+    u32 i;
+    f32 sumX;
+    f32 sumY;
+    f32 sumZ;
+    f32 x;
+    f32 y;
+    f32 z;
+    Tri1500B3B0 tri;
+
+    sumX = 0.0f;
+    sumY = 0.0f;
+    sumZ = 0.0f;
+
+    for (i = 0; i < 3; i++) {
+        tri.unk0[i].x = (f32)arg5[i][0];
+        sumX += tri.unk0[i].x / 3.0f;
+        tri.unk0[i].y = (f32)arg5[i][1];
+        sumY += tri.unk0[i].y / 3.0f;
+        tri.unk0[i].z = (f32)arg5[i][2];
+        sumZ += tri.unk0[i].z / 3.0f;
+    }
+
+    func_15049350(tri);
+
+    for (i = 1; (f32)i <= D_80082D80[arg0][0] * 2;) {
+        x = D_80082D80[arg0][i] + sumX;
+        i++;
+        z = D_80082D80[arg0][i] + sumZ;
+        i++;
+        if (D_800CC214 != 0.0f) {
+            y = ((D_800CC21C - D_800CC210 * x) - D_800CC218 * z) / D_800CC214;
+        } else {
+            y = sumY;
+        }
+        arg4 = func_1500AF08(arg4, arg2, arg3, (s16)(s32)x, (s32)y, (s32)z, 0x80, arg1, D_800BE430 >> arg2);
+    }
+
+    D_800BE430 ^= 1 << arg2;
+    return arg4;
+}
+
 s32 func_1500B714(s16 arg0, u8 arg1, s32 arg2, s32 arg3, s32 arg4, s16 **arg5) {
     u16 angle;
     s32 x;
@@ -739,4 +851,86 @@ void func_1500BE68(void) {
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_36680/func_1500BEC0.s")
+typedef struct {
+    s16 unk0;
+    s16 unk2;
+} Struct8008CF00;
+
+typedef s32 (*ParticleEmitFunc)(s16, u8, s32, s32, s32, s16 **);
+
+typedef struct {
+    ParticleEmitFunc unk0;
+    s32 unk4;
+    s32 unk8;
+} Struct8008CEB8;
+
+extern Struct8008CF00 D_8008CF00[][8];
+extern Struct8008CEB8 D_8008CEB8[];
+extern s32 D_8008CEB4;
+extern u16 D_800BE478[];
+extern u8 D_800DDC80[];
+extern u8 D_800DDC10[];
+extern s16 D_800DDC90[];
+extern void *allocate_memory(s32, s32, s32, s32);
+extern void func_1500AD84(s32, s32, s32);
+extern void func_1510F800(s32);
+extern void func_1517B89C(s32, s32);
+
+void func_1500BEC0(void) {
+    s32 i;
+    s32 grp;
+    u32 val;
+    s32 sub;
+    s32 kind;
+    u16 *pair;
+
+    func_1500BE68();
+    if (*(u16 *)((u8 *)D_800B0DF0 + 0x18) == 0) {
+        return;
+    }
+    if ((D_800BE9F0 == 6) && (D_80038080 == 0)) {
+        return;
+    }
+    if (D_800BE9F0 == 0x1D) {
+        return;
+    }
+
+    for (i = 0, pair = (u16 *)&D_800BE4A0; i < 15; i++, pair += 2) {
+        func_1500AD84(i, pair[0], pair[1]);
+    }
+
+    D_800DDD18 = (struct Struct800DDD18 *)allocate_memory(*(u16 *)((u8 *)D_800B0DF0 + 0x18) * 14, 1, 2, 0);
+    func_1510F800(0);
+
+    if (*(u32 **)&D_800DBE5C != NULL) {
+        for (i = 0; i < D_800DBE4C; i++) {
+            val = (*(u32 **)&D_800DBE5C)[i];
+            if (val & 0xF0000) {
+                sub = ((val >> 16) & 0xF) - 1;
+                kind = (val >> 20) & 7;
+                D_800DDD20 = D_8008CEB8[D_8008CF00[D_800DDC80[sub]][kind].unk0].unk0(
+                    D_8008CF00[D_800DDC80[sub]][kind].unk2, kind, sub,
+                    ((val >> 5) & 3) ^ 3, D_800DDD20,
+                    (s16 **)(D_800DBE3C + i * 12));
+                D_800BE478[sub]++;
+            }
+        }
+    }
+
+    for (i = 0; i < D_800DDD20; i++) {
+        D_800DDD18[i].unkB = 0;
+    }
+
+    D_8008CEB4 = 0;
+    func_1517B89C(0, D_800DDD20 - 1);
+
+    for (i = 0; i != 60; i++) {
+        grp = i >> 2;
+        if (D_800DDBD0[grp] != 0) {
+            D_800DDC90[i] = (func_151EF610() % D_800DDBD0[grp]) << 8;
+        } else {
+            D_800DDC90[i] = 0;
+        }
+        D_800DDC10[grp] = func_151EF610();
+    }
+}

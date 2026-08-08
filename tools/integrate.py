@@ -114,8 +114,16 @@ def main():
         head = f"game: match {len(good)} functions via orchestrator{cycle_tag()}"
         body = "asm-differ score 0; force-clean full-ROM sha1 verifies."
     msg = (f"{head}\\n\\n{funcs}\\n\\n{body}\\n\\n"
-           "Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>")
+           "Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>")
     r = sh(f'git commit -q -m "$(printf \'{msg}\')"')
+    # A failed commit must NOT report success: git exits non-zero on a missing
+    # user.name/user.email or a rejecting hook, which silently left verified
+    # matches staged-but-uncommitted (and rom_status claiming a commit landed).
+    if r.returncode != 0:
+        print(f"INTEGRATE: ROM verified but COMMIT FAILED (git exit {r.returncode}) — "
+              f"{len(good)} matches left STAGED, fix git and re-commit")
+        print((r.stderr or r.stdout).strip()[:500])
+        return
     write_rom_status(True, sh("git rev-parse --short HEAD").stdout.strip())
     print(f"INTEGRATE: committed {len(good)} — {funcs}")
 

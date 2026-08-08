@@ -120,7 +120,46 @@ void func_1519F400(struct Obj1519F400 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1CC440/func_1519F48C.s")
+struct Sub1519F48C {
+    u8 pad0[0x58];
+    s32 unk58;
+    s32 unk5C;
+    s32 unk60;
+};
+
+struct Ref1519F48C {
+    struct Sub1519F48C *unk0;
+    u8 unk4;
+};
+
+struct Obj1519F48C {
+    u8 pad0[0x1E];
+    u16 unk1E;
+    s32 unk20;
+    u8 pad24[0xC];
+    u8 unk30;
+    u8 pad31[0x67];
+    struct Ref1519F48C *unk98;
+};
+
+void func_1519F48C(struct Obj1519F48C *arg0) {
+    struct Ref1519F48C *p = arg0->unk98;
+    s32 *ptr;
+
+    if (p->unk0 != 0) {
+        ptr = (s32 *)((u8 *)p->unk0 + 0x58);
+        if (arg0->unk20 == 6) {
+            ptr[0] = 0;
+        }
+        if (arg0->unk20 == 7) {
+            ptr[2] = 0;
+        }
+        p->unk0 = 0;
+    }
+    arg0->unk30 = 0;
+    arg0->unk1E &= ~2;
+    p->unk4 |= 1;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1CC440/func_1519F4F0.s")
 
@@ -144,8 +183,6 @@ void func_151A0928(struct Obj151A0928 *arg0) {
         ptr[3] = 0;
     }
 }
-
-void func_1519F48C(void);
 
 struct Sub151A0950 {
     u8 pad0[0x18];
@@ -172,7 +209,7 @@ void func_151A0950(struct Obj151A0950 *arg0, struct Arg151A0950 *arg1, u8 arg2) 
         if (v0 != 0) {
             temp = v0->unk18;
             if (arg1->unk0 == temp || arg1->unk4 == v0->unk1C) {
-                func_1519F48C();
+                func_1519F48C((struct Obj1519F48C *)arg0);
             }
         }
     }
