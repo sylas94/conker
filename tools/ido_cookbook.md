@@ -199,3 +199,43 @@ best, REVERT to the stub, flag permuter. Do not keep grinding a stalled diff for
 
 For a stubborn diff, a specific instruction pattern, or a BAIL judgment not covered here,
 grep ~/conker/tools/ido_reference.md (the full idiom set, organized by section).
+
+## Locals, stack homes and the temp counter (wave 2026-08-08, game_77AD0/func_15052F9C)
+
+Four levers found while taking one function 2179 -> 165. All are about *where IDO puts
+things*, not about what the code computes, so they apply to any -O2 -g3 near-miss whose
+diff is register/offset noise rather than wrong instructions.
+
+- **Declaration order pins stack homes.** IDO assigns local homes DESCENDING from the top
+  of the locals area, in DECLARATION order. So the spill offsets in the golden asm read
+  back the original declaration order exactly: a locals area of 0x30..0x47 with spills at
+  0x44/0x40/0x3C/0x38/0x34/0x30 means six locals declared in that order. Recovering it
+  took 2179 -> 910 in a single edit. Do this FIRST on any function with spills — it is
+  free information sitting in the asm.
+- **A local spilled with `sw`/`lw` must be word-typed.** Declaring `s8 state` emitted
+  `sb 0x35($sp)` + `li -0x7f` where golden had `sw 0x30($sp)` + `li 0x81`. Match the
+  spill WIDTH in the asm to the C type.
+- **The t-register counter is a statement-order oracle.** IDO walks t0..t9 round-robin in
+  SOURCE-STATEMENT order; one missing or extra temp shifts every downstream t-number. So
+  a uniform t-rotation in the diff means your statement count is off by one temp, NOT that
+  your logic is wrong — do not rewrite the logic chasing it.
+- **Burning exactly one temp without emitting an instruction.** When the block needs one
+  MORE temp than the natural form consumes, write the store first and read the field back:
+      other->unk76 = arg0->unk7A;  angle = other->unk76;   /* 430 -> 165 */
+  instead of `angle = arg0->unk7A; other->unk76 = angle;`. Store-to-load forwarding means
+  no extra instruction is emitted, but the temp counter advances. This is a legitimate
+  period-authentic shape, not a forcer — the original programmer plausibly wrote either.
+- **Source LINES matter, blank lines do not.** Two statements on the SAME source line can
+  be reordered by the scheduler; on separate lines they are emitted in source order.
+  Blank lines, brace placement and comments have zero effect — stop trying them.
+
+### Unsteerable: the unconditional-branch delay-slot strategy
+IDO fills a `b`'s delay slot two different ways and both occur in the same function:
+  (a) SINK  — move the block's own last instruction down into the slot;
+  (b) COPY  — duplicate the SUCCESSOR block's first instruction into the slot and retarget
+      the branch past it (`b .Lmerge+4`).
+Golden used (b); ~45 scored builds could not find a source form that selects it. Ruled out:
+statement order of the trailing stores, storing through a loaded pointer, source
+formatting, hoisting the store into the merge block, comma-operator and chained-assignment
+forms. If your ONLY residual is a 4-byte shift from delay-slot strategy, treat it as a
+plateau and BAIL per the STALL RULE — it is not reachable from honest C.

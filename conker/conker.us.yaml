@@ -208,7 +208,7 @@ segments:
       - [0x290D0, data] # could be larger/smaller
 
       - [0x2BF20, rodata]
-      - [0x2C080, rodata]
+      - [0x2C080, .rodata, init_2E50]
       - [0x2C0A0, rodata]
       - [0x2C0C0, rodata]
       - [0x2C120, rodata]
