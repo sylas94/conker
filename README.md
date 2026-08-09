@@ -67,6 +67,17 @@ make extract
 make -C conker extract
 ```
 
+> `make -C conker extract` runs `tools/split_conker.py`, not
+> `tools/n64splat/split.py`. Do not call splat directly: the wrapper silences the
+> spimdisasm marker labels that `tools/asm-processor` cannot parse, and refuses
+> splits (e.g. `--modes ld`) that would truncate `conker/undefined_syms_auto.txt`
+> and `conker/undefined_funcs_auto.txt` to empty. To regenerate only `conker.ld`
+> after a `conker.us.yaml` edit:
+>
+> ```sh
+> cd conker && python3 ../tools/split_conker.py conker.us.yaml --modes ld --keep-auto-syms
+> ```
+
 **Compile code (optional)**
 
 ```sh

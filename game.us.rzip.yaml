@@ -6,6 +6,13 @@ options:
   base_path: .
   asset_path: assets/game
   extensions_path: tools/splat_ext
+
+  # This config splits only bin/rzip segments, so it can never populate the
+  # 'referenced' flag that undefined_*_auto.txt is built from. Leaving these on
+  # makes every run truncate the repo-root undefined_*_auto.txt to 0 bytes.
+  create_undefined_funcs_auto: no
+  create_undefined_syms_auto: no
+
 segments:
   - name:  code
     type:  rzip

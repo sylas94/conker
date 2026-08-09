@@ -225,8 +225,11 @@ $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) $(OBJCOPYFLAGS) -O binary $< $@
 
 # extract
+# Go through tools/split_conker.py, NEVER ../tools/n64splat/split.py directly.
+# The wrapper silences the spimdisasm marker labels that break tools/asm-processor,
+# and refuses splits that would truncate undefined_{syms,funcs}_auto.txt. See its docstring.
 $(BUILD_DIR)/splat: check $(BASENAME).$(VERSION).yaml
-	$(PYTHON) ../tools/n64splat/split.py $(BASENAME).$(VERSION).yaml
+	$(PYTHON) ../tools/split_conker.py $(BASENAME).$(VERSION).yaml
 
 %.ok: %.bin
 	@echo "$$(cat $(BASENAME).$(VERSION).sha1)  $<" | sha1sum --check
@@ -309,5 +312,5 @@ progress.debugger.csv: $(TARGET).elf
 
 
 # settings
-.PHONY: all clean default
+.PHONY: all clean default dirs check extract verify replace progress really-clean
 SHELL = /bin/bash -e -o pipefail
