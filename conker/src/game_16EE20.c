@@ -125,7 +125,7 @@ void func_15141DA4(void *arg0, s32 arg1, s32 arg2) {
 void func_15141F78(u8 arg0, struct157 *arg1, f32 arg2, u8 arg3, struct157 *arg4, u8 arg5) {
     struct157 tmp;
     f32 temp_f2;
-    s32 phi_v0;
+    s32 variant;
 
     tmp.unk6 = arg0;
     tmp.unk7 = 0;
@@ -149,12 +149,12 @@ void func_15141F78(u8 arg0, struct157 *arg1, f32 arg2, u8 arg3, struct157 *arg4,
 
     temp_f2 = ((func_150ADA68() * 5.0f) + 10.0f) * arg2;
     if (arg5 == 2) {
-        phi_v0 = 1;
+        variant = 1;
     } else {
-        phi_v0 = 0;
+        variant = 0;
     }
 
-    func_1513C650((s32)&tmp, 0, 0, (s32)&arg1->unk4, *(f32 *)&arg4->unk0, *(f32 *)&arg1->unk0, *(f32 *)&arg4->unk8, temp_f2, temp_f2, arg3, phi_v0, 3, 1, 0, 0xFF, 1);
+    func_1513C650((s32)&tmp, 0, 0, (s32)&arg1->unk4, *(f32 *)&arg4->unk0, *(f32 *)&arg1->unk0, *(f32 *)&arg4->unk8, temp_f2, temp_f2, arg3, variant, 3, 1, 0, 0xFF, 1);
 }
 // NON-MATCHING: need to determine arguments
 // void func_1513C650(s32, s32, s32, u16, s32, s32, s32, f32, f32, s32, s32, s32, s32, s32, u8, s32);
@@ -162,7 +162,7 @@ void func_15141F78(u8 arg0, struct157 *arg1, f32 arg2, u8 arg3, struct157 *arg4,
 // void func_15141F78(u8 arg0, struct157 *arg1, f32 arg2, s32 arg3, struct157 *arg4, u8 arg5) {
 //     struct157 tmp;
 //     f32 temp_f2;
-//     s32 phi_v0;
+//     s32 variant;
 //
 //     tmp.unk6 = arg0;
 //     tmp.unk7 = 0;
@@ -186,11 +186,11 @@ void func_15141F78(u8 arg0, struct157 *arg1, f32 arg2, u8 arg3, struct157 *arg4,
 //     temp_f2 = ((func_150ADA68() * 5.0f) + 10.0f) * arg2;
 //     // --- matching to here ---
 //     if (arg5 == 2) {
-//         phi_v0 = 1;
+//         variant = 1;
 //     } else {
-//         phi_v0 = 0;
+//         variant = 0;
 //     }
-//     func_1513C650(&tmp, 0, 0, arg1->unk4, arg4->unk0, arg1->unk0, arg4->unk8, temp_f2, temp_f2, arg3, phi_v0, 3, 1, 0, 0xFF, 1);
+//     func_1513C650(&tmp, 0, 0, arg1->unk4, arg4->unk0, arg1->unk0, arg4->unk8, temp_f2, temp_f2, arg3, variant, 3, 1, 0, 0xFF, 1);
 // }
 
 s32 func_151420F8(s32 arg0) {
@@ -1059,32 +1059,32 @@ s32 func_1514563C(struct17 *arg0, struct17 *arg1, struct17 *arg2, struct17 *arg3
 // void func_15145740(struct127 *arg0, struct17 *arg1, struct17 *arg2, struct17 *arg3, f32 arg4) {
 //     struct194 tmp;
 //     f32 temp_f6;
-//     s16 phi_v1;
-//     s16 phi_t0;
+//     s16 pitch;
+//     s16 yaw;
 //
 //     if ((arg0->unk4 == 0x96) && ((arg0->unk31C->unk7D != 0))) {
-//         phi_t0 = arg0->unk7A + arg0->unk31C->unk80;
+//         yaw = arg0->unk7A + arg0->unk31C->unk80;
 //     } else {
 //         if (arg0->unk31C != 0) {
-//             phi_t0 = arg0->unk7A - arg0->unk31C->unk12;
+//             yaw = arg0->unk7A - arg0->unk31C->unk12;
 //         } else {
-//             phi_t0 = arg0->unk7A;
+//             yaw = arg0->unk7A;
 //         }
 //     }
 //     if ((arg0->unk4 == 0x96) && (arg0->unk31C->unk7D != 0)) {
-//         phi_v1 = arg0->unk31C->unk82 + 1024;
+//         pitch = arg0->unk31C->unk82 + 1024;
 //     } else {
-//         phi_v1 = arg0->unk1D1 * 200;
+//         pitch = arg0->unk1D1 * 200;
 //     }
-//     tmp.unk14 = phi_t0;
-//     tmp.unk10 = phi_v1 * 0.005493164f;
+//     tmp.unk14 = yaw;
+//     tmp.unk10 = pitch * 0.005493164f;
 //     tmp.unk0 = tmp.unk10 * D_800A56B4;
-//     func_1505A184(phi_t0, 2000.0f, tmp.unk10, &arg1->unk0, &arg1->unk8, &arg1->unk4);
+//     func_1505A184(yaw, 2000.0f, tmp.unk10, &arg1->unk0, &arg1->unk8, &arg1->unk4);
 //     if (arg2 != 0) {
 //         arg2->unk4 = cosf(tmp.unk0) * 1000.0f;
 //         temp_f6 = sinf(tmp.unk0) * 1000.0f;
 //         tmp.unk8 = temp_f6;
-//         tmp.unk4 = phi_t0 * D_800A56B8;
+//         tmp.unk4 = yaw * D_800A56B8;
 //         arg2->unk0 = cosf(tmp.unk4) * tmp.unk8;
 //         arg2->unk8 = sinf(tmp.unk4) * -temp_f6;
 //         if (arg3 != 0) {

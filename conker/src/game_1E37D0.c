@@ -171,12 +171,12 @@ struct T151B8318 {
 };
 
 void func_151B8318(struct102 *arg0, struct S151B8318 *arg1, u8 arg2) {
-    int new_var;
+    int id;
     struct T151B8318 *v0 = *(struct T151B8318 **)((u8 *)arg0 + 0x98);
     struct S151B8318 *v1 = v0->unk4;
 
     if (arg2 == 0) {
-        if ((v1->unk0 == (new_var = arg1->unk0)) || (arg1->unk4 == v1->unk4)) {
+        if ((v1->unk0 == (id = arg1->unk0)) || (arg1->unk4 == v1->unk4)) {
             func_1516972C(arg0);
         }
     }

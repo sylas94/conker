@@ -28,19 +28,19 @@ s32 func_16000028(void) {
 
 void func_16000058(void) {
     s32 i;
-    s32 phi_s2;
+    s32 pos;
 
     func_16001338(255, 255, 255);
     func_160012B0(44, &D_160046D0); // "MAIN MENU"
-    phi_s2 = 108;
+    pos = 108;
     for(i = 0; i < 2; i++) {
         if (D_16003B1C == i) {
             func_16001338(255, 0, 0);     // red
         } else {
             func_16001338(255, 255, 255); // white
         }
-        func_160012B0(phi_s2, D_16003B20[i]);
-        phi_s2 += 32;
+        func_160012B0(pos, D_16003B20[i]);
+        pos += 32;
     }
     if (D_16003B1C == 2) {
         func_16001338(255, 0, 0);     // red
@@ -49,12 +49,12 @@ void func_16000058(void) {
     }
     if (D_16003AF0 != 0) {
         if ((D_1600389C->unk120 == 32) && (D_160038A4 == 0)) {
-            func_160012B0(phi_s2, &D_160046DC);
+            func_160012B0(pos, &D_160046DC);
         } else if (D_16003AF0 != 0) {
-            func_160012B0(phi_s2, &D_160046E8);
+            func_160012B0(pos, &D_160046E8);
         }
     } else {
-        func_160012B0(phi_s2, &D_160046F4); // "RETRY CODE"
+        func_160012B0(pos, &D_160046F4); // "RETRY CODE"
     }
     func_16001338(255, 255, 255);
     func_160012B0(611, &D_16004700); // "Version"
@@ -312,9 +312,9 @@ void func_16001338(u8 arg0, u8 arg1, u8 arg2);
 //     u8 range_prefix;
 //     u32 temp_s2;
 //     s32 temp_s5;
-//     s32 phi_s1;
-//     u32 *phi_s2;
-//     u32 phi_s5;
+//     s32 pos;
+//     u32 *addr;
+//     u32 rangeBase;
 //     s32 i;
 //
 //     temp_s0 = D_1600389C->unkF4;
@@ -324,26 +324,26 @@ void func_16001338(u8 arg0, u8 arg1, u8 arg2);
 //     if (((temp_s2 & 3) == 0) && (temp_s2 >= 0x80000000U) && (temp_s2 < 0x80800001U)) {
 //         if (D_16003B4C == 0) {
 //             func_16001338(255, 0, 0); // red
-//             phi_s5 = &D_8002D4B0;
+//             rangeBase = &D_8002D4B0;
 //         } else {
 //             temp_s5 = &D_8002D4B0 - 0x2B50; // 11088 ?
 //             if ((temp_s2 >= temp_s5) && (temp_s2 < (temp_s5 + 0x400))) {
 //                 func_16001338(128, 128, 255); // purple
-//                 phi_s5 = temp_s5;
+//                 rangeBase = temp_s5;
 //             } else if ((temp_s2 >= (u32) &D_8002D8B0) && (temp_s2 < ((u32)&D_8002D8B0 + 0x4000))) {
 //                 func_16001338(255, 128, 128); // light red
-//                 phi_s5 = temp_s5;
+//                 rangeBase = temp_s5;
 //             } else {
 //                 func_16001338(255, 255, 255);
-//                 phi_s5 = temp_s5;
+//                 rangeBase = temp_s5;
 //             }
 //         }
-//         phi_s1 = 97; // "a"
-//         phi_s2 = temp_s2;
+//         pos = 97; // "a"
+//         addr = temp_s2;
 //         for (i = 0; i < 22; i++) {
-//             func_16001044(phi_s1, 0, phi_s2);
-//             func_160012B0(phi_s1 + 8, &D_160047BC);
-//             range_prefix = (*phi_s2 >> 24);
+//             func_16001044(pos, 0, addr);
+//             func_160012B0(pos + 8, &D_160047BC);
+//             range_prefix = (*addr >> 24);
 //             if (range_prefix == 0x80) {                   // 0x80000000
 //                 func_16001338(128, 128, 255);
 //             } else if (range_prefix == 0x15) {            // 0x15000000
@@ -355,19 +355,19 @@ void func_16001338(u8 arg0, u8 arg1, u8 arg2);
 //             } else {
 //                 func_16001338(255, 255, 255);
 //             }
-//             func_16001044(phi_s1 + 0xC, 0, *phi_s2);
-//             func_160012B0(phi_s1 + 0x16, &D_160047C0);
+//             func_16001044(pos + 0xC, 0, *addr);
+//             func_160012B0(pos + 0x16, &D_160047C0);
 //             func_16001338(255, 255, 255);
-//             func_16001044(phi_s1 + 0x16, 1, *phi_s2);
-//             if (((u32) phi_s2 >= phi_s5) && ((u32) phi_s2 < (phi_s5 + 0x400))) {
+//             func_16001044(pos + 0x16, 1, *addr);
+//             if (((u32) addr >= rangeBase) && ((u32) addr < (rangeBase + 0x400))) {
 //                 func_16001338(128, 128, 0xFF);
-//             } else if (((u32) phi_s2 >= (u32) &D_8002D8B0) && ((u32) phi_s2 < ((u32)&D_8002D8B0 + 0x4000))) {
+//             } else if (((u32) addr >= (u32) &D_8002D8B0) && ((u32) addr < ((u32)&D_8002D8B0 + 0x4000))) {
 //                 func_16001338(255, 128, 128);
 //             } else {
 //                 func_16001338(255, 255, 255);
 //             }
-//             phi_s1 += 0x20;
-//             phi_s2 += 4;
+//             pos += 0x20;
+//             addr += 4;
 //         }
 //     }
 // }

@@ -206,7 +206,7 @@ f32 func_15048FC8(struct17 *arg0) {
 
 s32 func_150490A8(struct17 *arg0) {
     f32 temp_f12;
-    s32 phi_v1;
+    s32 angle;
 
     temp_f12 = sqrtf((arg0->unk0 * arg0->unk0) + (arg0->unk8 * arg0->unk8));
 
@@ -215,16 +215,16 @@ s32 func_150490A8(struct17 *arg0) {
     }
 
     temp_f12 = arg0->unk0 / temp_f12;
-    phi_v1 = func_15048864(temp_f12);
+    angle = func_15048864(temp_f12);
 
     if (0.0f < arg0->unk8) {
-        if (phi_v1 < 64) {
-            phi_v1 = 128 - phi_v1;
+        if (angle < 64) {
+            angle = 128 - angle;
         } else {
-            phi_v1 = 384 - phi_v1;
+            angle = 384 - angle;
         }
     }
-    return phi_v1;
+    return angle;
 }
 
 void func_15049148(struct17 *arg0, f32 arg1, struct17 *arg2) {

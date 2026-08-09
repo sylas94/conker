@@ -15,41 +15,41 @@ void func_10004250(void) {
     s32 temp_v0;
     u32 temp_v1;
     OSIntMask mask;
-    struct54 *phi_s0;
+    struct54 *node;
 
     mask = osSetIntMask(1);
 
-    if (phi_s0 = D_800380B4) {
+    if (node = D_800380B4) {
         do {
-            temp_v1 = phi_s0->unk8;
+            temp_v1 = node->unk8;
             temp_v0 = temp_v1 >> 0x18;
             if (2 == temp_v0) {
-                func_10004074(&phi_s0->unkC);
+                func_10004074(&node->unkC);
             } else if ((temp_v0 == 3) || (temp_v0 == 4)) {
-                phi_s0->unk8 = ((temp_v0 - 1) << 0x18) | (temp_v1 & 0xFFFFFF);
+                node->unk8 = ((temp_v0 - 1) << 0x18) | (temp_v1 & 0xFFFFFF);
             }
-        } while(phi_s0 = phi_s0->unk0);
+        } while(node = node->unk0);
     }
     osSetIntMask(mask);
 }
 
 void func_10004308(void) {
     u32 temp_t6;
-    struct54 *phi_s0;
+    struct54 *node;
     OSIntMask mask;
 
     mask = osSetIntMask(1);
-    phi_s0 = D_800380B4;
+    node = D_800380B4;
     func_15042D50();
 
-    if (phi_s0) {
+    if (node) {
         do {
-            temp_t6 = phi_s0->unk8 >> 24;
+            temp_t6 = node->unk8 >> 24;
             if (temp_t6 == 1 || temp_t6 == 2 || temp_t6 == 3 || temp_t6 == 4) {
-                func_10004074(&phi_s0->unkC);
+                func_10004074(&node->unkC);
             }
         }
-        while (phi_s0 = phi_s0->unk0);
+        while (node = node->unk0);
     }
     osSetIntMask(mask);
 }

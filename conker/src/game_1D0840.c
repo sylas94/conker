@@ -657,7 +657,7 @@ struct struct151A4E34
 s32 func_151A4E34(struct struct151A4E34 **arg0, s32 arg1)
 {
   struct struct151A4E34 *v0 = arg0[0];
-  unsigned long new_var;
+  unsigned long slot;
   s32 v1 = (s32) v0->unk1D4;
   if (v1 == 0)
   {
@@ -667,8 +667,8 @@ s32 func_151A4E34(struct struct151A4E34 **arg0, s32 arg1)
   {
     return 0;
   }
-  new_var = (((((((((*(((u8 *) arg0) + 5)) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF;
-  func_15143134(((u8 *) arg0) + 8, arg1, v1 + (((new_var & 0xFFFF) & 0xFFFF) << 6));
+  slot = (((((((((*(((u8 *) arg0) + 5)) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF;
+  func_15143134(((u8 *) arg0) + 8, arg1, v1 + (((slot & 0xFFFF) & 0xFFFF) << 6));
   return 1;
 }
 
@@ -677,10 +677,10 @@ void func_151A4E9C(void *arg0)
 {
   u8 *p;
   u8 v;
-  int new_var;
+  int mask;
   *((u8 *) (((u8 *) arg0) + 0x30)) = 0;
   *((u16 *) (((u8 *) arg0) + 0x1E)) &= 0xFFFD;
- new_var = 0xFFu; do { p = *((u8 **) (((u8 *) arg0) + 0x98)); v = (p[0x30] & new_var) | 1; *(p + 0x30) = v; *((volatile u8 *) (p + 0x30)) = v | 4; } while (0);
+ mask = 0xFFu; do { p = *((u8 **) (((u8 *) arg0) + 0x98)); v = (p[0x30] & mask) | 1; *(p + 0x30) = v; *((volatile u8 *) (p + 0x30)) = v | 4; } while (0);
 }
 
 

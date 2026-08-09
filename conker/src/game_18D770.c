@@ -306,7 +306,7 @@ struct225 *func_15160A58(void *arg0, u8 arg1, void *arg2, u8 arg3, s16 arg4, s32
 //     ?32 sp3C;
 //     ?32 sp38;
 //     struct225 *temp_v0;
-//     s32 phi_v1;
+//     s32 result;
 //
 //     if (arg0 == 0) {
 //         return NULL;
@@ -641,8 +641,8 @@ s32 func_15161A68(struct225 *arg0) {
     struct233 **tmp = &D_800C3958; // fakematch?
 
     if (D_800C35EA == 1) {
-        f32 phi_f0;
-        f32 phi_f2;
+        f32 clamped;
+        f32 capped;
         struct233 *temp_v0 = *tmp + (s32) arg0->unk18;
 
         arg0->unk14->unkE = temp_v0->unk0;
@@ -650,54 +650,54 @@ s32 func_15161A68(struct225 *arg0) {
         arg0->unk14->unk12 = temp_v0->unk8;
 
         if (temp_v0->unk24 < 0.0f) {
-            phi_f0 = 0.0f;
+            clamped = 0.0f;
         } else {
             if (temp_v0->unk24 > 255.0f) {
-                phi_f2 = 255.0f;
+                capped = 255.0f;
             } else {
-                phi_f2 = temp_v0->unk24;
+                capped = temp_v0->unk24;
             }
-            phi_f0 = phi_f2;
+            clamped = capped;
         }
-        temp_v0->unk24 = phi_f0;
-        arg0->unk14->unk5 = phi_f0;
+        temp_v0->unk24 = clamped;
+        arg0->unk14->unk5 = clamped;
         if (temp_v0->unk28 < 0.0f) {
-            phi_f0 = 0.0f;
+            clamped = 0.0f;
         } else {
             if (temp_v0->unk28 > 255.0f) {
-                phi_f2 = 255.0f;
+                capped = 255.0f;
             } else {
-                phi_f2 = temp_v0->unk28;
+                capped = temp_v0->unk28;
             }
-            phi_f0 = phi_f2;
+            clamped = capped;
         }
-        temp_v0->unk28 = phi_f0;
-        arg0->unk14->unk6 = phi_f0;
+        temp_v0->unk28 = clamped;
+        arg0->unk14->unk6 = clamped;
         if (temp_v0->unk2C < 0.0f) {
-            phi_f0 = 0.0f;
+            clamped = 0.0f;
         } else {
             if (temp_v0->unk2C > 255.0f) {
-                phi_f2 = 255.0f;
+                capped = 255.0f;
             } else {
-                phi_f2 = temp_v0->unk2C;
+                capped = temp_v0->unk2C;
             }
-            phi_f0 = phi_f2;
+            clamped = capped;
         }
-        temp_v0->unk2C = phi_f0;
-        arg0->unk14->unk7 = phi_f0;
+        temp_v0->unk2C = clamped;
+        arg0->unk14->unk7 = clamped;
 
         if (temp_v0->unk18 < 0.0f) {
-            phi_f0 = 0.0f;
+            clamped = 0.0f;
         } else {
             if (temp_v0->unk18 > 255.0f) {
-                phi_f2 = 255.0f;
+                capped = 255.0f;
             } else {
-                phi_f2 = temp_v0->unk18;
+                capped = temp_v0->unk18;
             }
-            phi_f0 = phi_f2;
+            clamped = capped;
         }
-        temp_v0->unk18 = phi_f0;
-        arg0->unk14->unk2F = phi_f0;
+        temp_v0->unk18 = clamped;
+        arg0->unk14->unk2F = clamped;
 
     }
     return 1;

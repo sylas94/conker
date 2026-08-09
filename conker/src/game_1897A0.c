@@ -60,40 +60,40 @@ typedef struct {
 
 s32 func_1515D030(Struct1515D030 *arg0, s32 arg1) {
     s8 temp_v0;
-    s32 phi_v1;
+    s32 result;
 
     temp_v0 = arg0->unk2C;
-    phi_v1 = 1;
+    result = 1;
     if ((s32) temp_v0 >= 3) {
         arg0->unk2C = (s8) (temp_v0 - 1);
         arg0->unk2E = (s8) (arg0->unk2E - 1);
         if ((s32) arg0->unk2E < 0) {
             arg0->unk2E = (s8) (arg0->unk25 - 1);
-            phi_v1 = 1;
+            result = 1;
         }
     } else {
-        phi_v1 = 0;
+        result = 0;
     }
-    return phi_v1;
+    return result;
 }
 
 // s32 func_1515D030(void *arg0, ? arg1) {
 //     s8 temp_v0;
-//     s32 phi_v1;
+//     s32 result;
 //
 //     temp_v0 = arg0->unk2C;
 //     if ((s32) temp_v0 >= 3) {
 //         arg0->unk2C = (s8) (temp_v0 - 1);
 //         arg0->unk2E = (s8) (arg0->unk2E - 1);
-//         phi_v1 = 1;
+//         result = 1;
 //         if ((s32) arg0->unk2E < 0) {
 //             arg0->unk2E = (s8) (arg0->unk25 - 1);
-//             phi_v1 = 1;
+//             result = 1;
 //         }
 //     } else {
-//         phi_v1 = 0;
+//         result = 0;
 //     }
-//     return phi_v1;
+//     return result;
 // }
 
 struct260 *func_151491F4(s16 arg0, s8 arg1, s8 arg2, u8 arg3, u8 arg4, s32 arg5, u8 arg6, s32 arg7);
@@ -135,7 +135,7 @@ s32 func_1515D088(Struct1515D088Arg0 *arg0)
 //     s32 temp_t7;
 //     s32 temp_v0;
 //     void * temp_v0_2;
-//     s32 phi_v1;
+//     s32 result;
 //
 //     temp_t7 = arg0->unk18;
 //     temp_v0 = temp_t7 & 0xFF;
@@ -146,13 +146,13 @@ s32 func_1515D088(Struct1515D088Arg0 *arg0)
 //     sp30 = arg0;
 //     sp34 = 0.0f;
 //     temp_v0_2 = func_151491F4(0x12C, -1, 0x11, 0, 0xD, 0xC, 0xFF, 1);
-//     phi_v1 = &temp_v0_2;
+//     result = &temp_v0_2;
 //     if (temp_v0_2 != 0) {
 //         sp3C = temp_v0_2;
 //         memcpy(temp_v0_2->unk28, &sp30, 0xC); // memcpy
-//         phi_v1 = sp3C;
+//         result = sp3C;
 //     }
-//     return phi_v1;
+//     return result;
 // }
 
 typedef struct {

@@ -646,13 +646,13 @@ struct Foo1514A4EC {
 
 s32 func_1514A4EC(struct Foo1514A4EC *arg0) {
     f32 temp_f0;
-    s32 new_var;
+    s32 dummy;
 
     temp_f0 = arg0->unk140;
     arg0->unk40 = arg0->unk34;
     arg0->unk130 = arg0->unk130 * temp_f0;
     arg0->unk134 = arg0->unk134 + (arg0->unk13C * D_800BE9A4);
-    new_var = arg0 && arg0;
+    dummy = arg0 && arg0;
     arg0->unk138 = arg0->unk138 * temp_f0;
     arg0->unk34.unk0 = arg0->unk34.unk0 + (arg0->unk130 * D_800BE9A4);
     arg0->unk34.unk4 = arg0->unk34.unk4 + (arg0->unk134 * D_800BE9A4);

@@ -307,10 +307,10 @@ s32 func_1518F058(f32 *arg0)
   f32 t0;
   f32 t1;
   f32 t2;
-  int new_var;
+  int dummy;
   arg0[0x50] = arg0[0x54] * arg0[0x50];
   arg0[0x51] += arg0[0x53] * D_800BE9A4;
-  new_var = arg0 && arg0;
+  dummy = arg0 && arg0;
   arg0[0x52] = arg0[0x54] * arg0[0x52];
   t0 = arg0[0x50] * D_800BE9A4;
   t1 = arg0[0x51] * D_800BE9A4;
@@ -319,7 +319,7 @@ s32 func_1518F058(f32 *arg0)
   arg0[0xE] = arg0[0xE] + t1;
   arg0[0xF] = arg0[0xF] + t2;
   arg0[0x10] = arg0[0x10] + t0;
-  if (new_var && arg0)
+  if (dummy && arg0)
   {
   }
   arg0[0x11] = arg0[0x11] + t1;
@@ -1177,15 +1177,15 @@ void func_15191980(struct102 *arg0, s32 arg1, u8 arg2)
   {
     if ((*((s32 *) (((u8 *) arg0) + 0x10)) == *((s32 *) arg1)) || ((*((u8 *) (((u8 *) arg0) + 0x14))) == *((u8 *) ((*arg1p) + 4))))
     {
-      u8 *new_var3;
+      u8 *base;
       u8 old;
-      u8 *new_var;
+      u8 *flagsPtr;
 
       old = *((u8 *) (((u8 *) arg0) + 0x18));
-      new_var = (u8 *) (((u8 *) arg0) + 0x18);
-      new_var3 = (u8 *) arg0;
-      *new_var = *((u8 *) (((u8 *) arg0) + 0x18)) | 1;
-      *((s16 *) (new_var3 + 0x16)) = 0x64;
+      flagsPtr = (u8 *) (((u8 *) arg0) + 0x18);
+      base = (u8 *) arg0;
+      *flagsPtr = *((u8 *) (((u8 *) arg0) + 0x18)) | 1;
+      *((s16 *) (base + 0x16)) = 0x64;
       ;
     }
   }
@@ -1212,16 +1212,16 @@ void func_1516972C(struct102 *arg0);
 void func_15169850(s32, u8, s32, s32, s32);
 void func_15191A84(struct102 *arg0, s32 arg1, u8 arg2)
 {
-  s32 *new_var2;
+  s32 *arg1p;
   struct Struct1518F49C *p;
-  u8 *new_var3;
+  u8 *base;
   u8 old;
-  u8 *new_var;
+  u8 *flagsPtr;
   p = (struct Struct1518F49C *) (((u8 *) arg0) + 0x28);
-  new_var2 = (s32 *) (&arg1);
+  arg1p = (s32 *) (&arg1);
   if (((arg2 == 0xC) || (arg2 == 0xE)) || (arg2 == 0x50))
   {
-    if ((((struct Struct1518F49C *) arg1)->unk0 == p->unk0) || ((*((u8 *) ((*new_var2) + 4))) == p->unk4))
+    if ((((struct Struct1518F49C *) arg1)->unk0 == p->unk0) || ((*((u8 *) ((*arg1p) + 4))) == p->unk4))
     {
       func_1516972C(arg0);
     }
@@ -1237,10 +1237,10 @@ void func_15191A84(struct102 *arg0, s32 arg1, u8 arg2)
     if ((((struct Struct1518F49C *) arg1)->unk0 == p->unk0) || ((*((u8 *) ((*((s32 *) (&arg1))) + 4))) == p->unk4))
     {
       old = *((u8 *) (((u8 *) arg0) + 0xD));
-      new_var = (u8 *) (((u8 *) arg0) + 0xD);
-      new_var3 = (u8 *) arg0;
-      *new_var = (*((u8 *) (((u8 *) arg0) + 0xD))) | 1;
-      *((s16 *) (new_var3 + 0xE)) = 0x64;
+      flagsPtr = (u8 *) (((u8 *) arg0) + 0xD);
+      base = (u8 *) arg0;
+      *flagsPtr = (*((u8 *) (((u8 *) arg0) + 0xD))) | 1;
+      *((s16 *) (base + 0xE)) = 0x64;
       dummy_label_15191A84_1:
       ;
 

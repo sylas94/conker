@@ -71,7 +71,7 @@ f32 func_150488C8(f32 arg0) {
     f32 temp_f2;
     f32 temp_f14;
     f32 temp_f16;
-    f32 phi_f0;
+    f32 next;
     s32 index;
 
     temp_f2 = fabsf(arg0) * D_8009900C;
@@ -80,12 +80,12 @@ f32 func_150488C8(f32 arg0) {
     temp_f16 = (u32)D_80098E00[index];
 
     if (index < 255) {
-        phi_f0 = (u32)D_80098E00[index + 1];
+        next = (u32)D_80098E00[index + 1];
     } else {
-        phi_f0 = D_80099010;
+        next = D_80099010;
     }
 
-    temp_f16 = ((((phi_f0 - temp_f16) * temp_f14) + temp_f16) * D_80099014) / 65536.0f;
+    temp_f16 = ((((next - temp_f16) * temp_f14) + temp_f16) * D_80099014) / 65536.0f;
     if (arg0 < 0.0f) {
         return -temp_f16;
     }

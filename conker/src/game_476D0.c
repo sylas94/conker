@@ -29,7 +29,7 @@ struct struct1501A764c {
 
 
 void func_1501A220(s32 arg0, s32 arg1) {
-    s32 phi_s0;
+    s32 count;
     s32 i;
     s32 var_s1;
     f32 temp_f0;
@@ -40,13 +40,13 @@ void func_1501A220(s32 arg0, s32 arg1) {
     var_s1 = D_80082FA0;
 
     if (var_s1 == 0) {
-        phi_s0 = 1;
+        count = 1;
     } else {
-        phi_s0 = var_s1 + 2;
+        count = var_s1 + 2;
     }
 
-    D_800BE628 = allocate_memory(phi_s0 * 0x180, 1, 1, 0);
-    D_800BE62C = allocate_memory(phi_s0 * 16, 1, 1, 0);
+    D_800BE628 = allocate_memory(count * 0x180, 1, 1, 0);
+    D_800BE62C = allocate_memory(count * 16, 1, 1, 0);
 
     if (D_80082FA0 == 1) {
         temp_f0 = (f32)D_800BE63C[0] - 2.0f;

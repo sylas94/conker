@@ -391,20 +391,20 @@ void func_1515F850(s32 arg0, s32 arg1) {
 
 long func_1515FB70(u8 *a0, u8 *a1)
 {
-  long new_var;
+  long offset;
   s32 v0;
-  s32 *new_var2;
+  s32 *slot;
   v0 = (*((u8 *) (a0 + 0x3B))) == 1;
   if ((*((u8 *) (a0 + 0x3B))) == 1)
   {
- if (0) { *new_var2 = v0; }
+ if (0) { *slot = v0; }
     v0 = *((s32 *) (a1 + 0x1C));
     if (v0 >= 0)
     {
-      new_var = 0x1C;
+      offset = 0x1C;
       if (!v0)
       {
-        new_var2 = (s32 *) (a1 + new_var);
+        slot = (s32 *) (a1 + offset);
       }
     }
   }

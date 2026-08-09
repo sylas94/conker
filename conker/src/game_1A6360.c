@@ -169,15 +169,15 @@ void func_15179AB8(void)
   s32 i;
   s32 off;
   s32 **p;
-  int new_var;
+  int stride;
   s32 *obj;
   i = ((s16) D_800DD436) - 1;
-  new_var = 4;
+  stride = 4;
   if (i < 0)
   {
     return;
   }
-  off = i * new_var;
+  off = i * stride;
   p = (s32 **) (((u8 *) D_800DD440) + off);
   do
   {
@@ -190,7 +190,7 @@ void func_15179AB8(void)
         return;
       }
     }
-    off -= new_var;
+    off -= stride;
     p--;
   }
   while (off >= 0);

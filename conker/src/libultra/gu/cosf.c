@@ -16,7 +16,7 @@ f32 cosf(f32 x)
   f32 result;
   f32 *c;
   s32 n;
-  s32 *new_var;
+  s32 *nptr;
   n = *((s32 *) (&x));
   if (((n >> 22) & 0x1FF) < 0x136)
   {
@@ -39,8 +39,8 @@ f32 cosf(f32 x)
     {
       n = (s32) (t - 0.5f);
     }
-    new_var = &n; /* reload n through memory (matches original codegen) */
-    t = ((f32) (*new_var)) - 0.5f;
+    nptr = &n; /* reload n through memory (matches original codegen) */
+    t = ((f32) (*nptr)) - 0.5f;
     y = xa - (t * D_80085EA4);
     y = y - (t * D_80085EA8);
     ysq = y * y;

@@ -92,7 +92,7 @@ void func_150B709C(Struct150B709C *arg0) {
 extern s32 D_800BE9E4;
 void func_150B71A8(void *arg0)
 {
-  u8 *new_var;
+  u8 *base;
   s16 temp_v0;
   unsigned int temp_v1;
   temp_v1 = 0x1000;
@@ -115,8 +115,8 @@ void func_150B71A8(void *arg0)
     *((s16 *) (((u8 *) arg0) + 0x3A)) = temp_v0 + (D_800BE9E4 * 0x100);
     if ((*((s16 *) (((u8 *) arg0) + 0x3A))) >= 0x1001)
     {
-      new_var = (u8 *) arg0;
-      *((s16 *) (new_var + 0x3A)) = temp_v1;
+      base = (u8 *) arg0;
+      *((s16 *) (base + 0x3A)) = temp_v1;
     }
   }
 }

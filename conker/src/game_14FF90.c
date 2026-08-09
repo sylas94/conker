@@ -179,7 +179,7 @@ void func_15122AE0(void) {
 #pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_15122C5C.s")
 // NON-MATCHING: 80% there
 // void func_15122C5C(struct108 *arg0) {
-//     f32 phi_f12;
+//     f32 blend;
 //     u8 temp_v0_2;
 //     struct167 *temp_a1;
 //     struct167 *temp_a0;
@@ -228,14 +228,14 @@ void func_15122AE0(void) {
 //     if (arg0->unk23C != 0) {
 //         arg0->unk19C = arg0->unk1A4;
 //         arg0->unk1A0 = arg0->unk1A8;
-//         // phi_f12 = *(s32*)&arg0; // unk0?
+//         // blend = *(s32*)&arg0; // unk0?
 //     } else {
 //         arg0->unk19C += (arg0->unk1A4 - arg0->unk19C) * D_800A34D4;
 //         arg0->unk1A0 += (arg0->unk1A8 - arg0->unk1A0) * D_800A34D4;
-//         phi_f12 = D_800A34D4;
+//         blend = D_800A34D4;
 //     }
 //
-//     func_1510B128(phi_f12, temp_v0_2, arg0->unk19C, arg0->unk1A0, D_800BE628[temp_v0_2].unk84, (arg0->unk2C & 0x100) ? 16.0f : 0.0f);
+//     func_1510B128(blend, temp_v0_2, arg0->unk19C, arg0->unk1A0, D_800BE628[temp_v0_2].unk84, (arg0->unk2C & 0x100) ? 16.0f : 0.0f);
 //     func_15097798(arg0->unk23D);
 //     func_15125A6C(arg0);
 //     func_15128CB0(arg0);
@@ -508,17 +508,17 @@ void func_15124B18(struct108 *arg0) {
 void func_1512523C(struct108 *arg0) {
     f32 temp_f12;
     f32 temp_f2;
-    f32 phi_f14;
+    f32 dist;
 
     temp_f2 = arg0->unk2BC - arg0->unk2F8;
     temp_f12 = arg0->unk2C4 - arg0->unk300;
     temp_f12 = sqrtf((temp_f2 * temp_f2) + (temp_f12 * temp_f12));
     if (temp_f12 < 0.0f) {
-        phi_f14 = -temp_f12;
+        dist = -temp_f12;
     } else {
-        phi_f14 = temp_f12;
+        dist = temp_f12;
     }
-    temp_f2 = func_150484A0(arg0->unk2FC - arg0->unk2C0, phi_f14) * D_800A351C;
+    temp_f2 = func_150484A0(arg0->unk2FC - arg0->unk2C0, dist) * D_800A351C;
     arg0->unk388 = temp_f2;
     if (temp_f2 > 180.0f) {
         arg0->unk388 -= 360.0f;
@@ -854,7 +854,7 @@ void func_15125C40(struct108 *arg0)
 
 void func_15126138(struct108 *arg0) {
     struct127 *temp_v0_2;
-    struct108 *phi_a0;
+    struct108 *unused;
 
     func_151247C0(arg0);
 
@@ -1019,7 +1019,7 @@ typedef struct {
 
 void func_15127EB8(struct108 *arg0) {
     struct127 *temp_v1;
-    struct127 *phi_v0;
+    struct127 *target;
     u8 temp_a0;
 
     func_151239CC(arg0, 1);
@@ -1036,15 +1036,15 @@ void func_15127EB8(struct108 *arg0) {
 
     temp_v1 = arg0->unk3D0;
     temp_a0 = temp_v1->unk65;
-    phi_v0 = (temp_a0 != 0) ? &D_800CC2D0[temp_a0] - 1 : temp_v1;
+    target = (temp_a0 != 0) ? &D_800CC2D0[temp_a0] - 1 : temp_v1;
 
-    *(u8 *)((u8 *)phi_v0 + 0x2FC) &= ~(1 << arg0->unk23D);
-    phi_v0->unk74 &= ~(1 << arg0->unk23D);
+    *(u8 *)((u8 *)target + 0x2FC) &= ~(1 << arg0->unk23D);
+    target->unk74 &= ~(1 << arg0->unk23D);
     arg0->unk23C = 1;
 }
 // NON-MATCHING: not too far away
 // void func_15127EB8(struct108 *arg0) {
-//     struct127 *phi_v0;
+//     struct127 *target;
 //
 //     func_151239CC(arg0, 1);
 //     arg0->unk3D4->unk197 = (u8)0;
@@ -1058,13 +1058,13 @@ void func_15127EB8(struct108 *arg0) {
 //     func_150627D4(arg0->unk3D0);
 //     D_800DBFF4[arg0->unk23D] = (u8)2;
 //
-//     phi_v0 = &arg0->unk3D0;
-//     if (phi_v0->unk65 != 0) {
-//         phi_v0 = &D_800CC2D0[phi_v0->unk65];
+//     target = &arg0->unk3D0;
+//     if (target->unk65 != 0) {
+//         target = &D_800CC2D0[target->unk65];
 //     }
 //
-//     phi_v0->unk2FC &= ~(1 << arg0->unk23D);
-//     phi_v0->unk74 &= ~(1 << arg0->unk23D);
+//     target->unk2FC &= ~(1 << arg0->unk23D);
+//     target->unk74 &= ~(1 << arg0->unk23D);
 //     arg0->unk23C = (u8)1;
 // }
 

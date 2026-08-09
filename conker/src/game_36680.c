@@ -355,13 +355,13 @@ s32 func_150B060C(u8, void*, s32);
 void func_1500A6D8(s32 arg0, s32 arg1) {
     struct220 sp48;
     u8 sp30[0x18];
-    s32 phi_v0;
+    s32 variant;
     struct220 sp24;
     void *temp_v0;
 
     sp24 = D_80082BEC;
-    phi_v0 = (D_800BE9F0 == 6) ? 1 : 0;
-    if (func_150B060C(*((u8*)&sp24 + (phi_v0 * 3) + arg1 - 0x49), &sp30, arg1) != 0) {
+    variant = (D_800BE9F0 == 6) ? 1 : 0;
+    if (func_150B060C(*((u8*)&sp24 + (variant * 3) + arg1 - 0x49), &sp30, arg1) != 0) {
         sp48.unk0 = 0;
         sp48.unk1 = 23;
         sp48.unk2 = 300;
@@ -380,15 +380,15 @@ void func_1500A6D8(s32 arg0, s32 arg1) {
 //     ? sp30;
 //     ? sp24;
 //     s32 temp_v0;
-//     s32 phi_v0;
+//     s32 variant;
 //
 //     sp24.unk0 = (s32) (void *)0x80082BEC->unk0;
 //     sp24.unk4 = (u16) (void *)0x80082BEC->unk4;
-//     phi_v0 = 0;
+//     variant = 0;
 //     if (D_800BE9F0 == 6) {
-//         phi_v0 = 1;
+//         variant = 1;
 //     }
-//     if (func_150B060C((&sp24 + ((phi_v0 * 4) - phi_v0) + arg1)->unk-49, &sp30, arg1) != 0) {
+//     if (func_150B060C((&sp24 + ((variant * 4) - variant) + arg1)->unk-49, &sp30, arg1) != 0) {
 //         sp48 = 0;
 //         sp49 = 23;
 //         sp4A = 300;
@@ -508,7 +508,7 @@ void func_1500A94C(s32 arg0, s32 arg1) {
 
 void func_1500A990(s32 arg0) {
     struct164 tmp;
-    f32 phi_f18;
+    f32 rnd;
     struct164 *temp_v0;
 
     tmp.unk0 = 35.0f;
@@ -518,18 +518,18 @@ void func_1500A990(s32 arg0) {
     tmp.unk10 = 30.0f;
     tmp.unk14 = 50.0f;
 
-    phi_f18 = (u32)(osGetCount() * func_150ADA20()) & 0xFFFF;
-    phi_f18 *= D_80095BB8;
-    tmp.unk18 = (phi_f18 + phi_f18) * D_80095BBC;
+    rnd = (u32)(osGetCount() * func_150ADA20()) & 0xFFFF;
+    rnd *= D_80095BB8;
+    tmp.unk18 = (rnd + rnd) * D_80095BBC;
 
-    phi_f18 = (u32)(osGetCount() * func_150ADA20()) & 0xFFFF;
-    phi_f18 *= D_80095BC0;
-    tmp.unk1C = (phi_f18 + phi_f18) * D_80095BC4;
+    rnd = (u32)(osGetCount() * func_150ADA20()) & 0xFFFF;
+    rnd *= D_80095BC0;
+    tmp.unk1C = (rnd + rnd) * D_80095BC4;
 
-    phi_f18 = (u32)(osGetCount() * func_150ADA20()) & 0xFFFF;
-    phi_f18 *= D_80095BC8;
+    rnd = (u32)(osGetCount() * func_150ADA20()) & 0xFFFF;
+    rnd *= D_80095BC8;
 
-    tmp.unk20 = (phi_f18 + phi_f18) * D_80095BCC;
+    tmp.unk20 = (rnd + rnd) * D_80095BCC;
     tmp.unk24 = D_80095BD0;
     tmp.unk28 = D_80095BD4;
     tmp.unk2C = D_80095BD8;

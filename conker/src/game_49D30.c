@@ -253,7 +253,7 @@ void func_1501DF04(s32 arg0)
 {
   struct127 *obj;
   u8 temp_s0;
-  s32 new_var;
+  s32 argCopy;
   if (func_100127D0() != 0)
   {
     func_151F2BA8();
@@ -272,7 +272,7 @@ void func_1501DF04(s32 arg0)
       do
       {
         temp_s0 = D_800C3C99;
-        func_1501DE18(new_var = arg0);
+        func_1501DE18(argCopy = arg0);
       }
       while ((temp_s0 != 0) && (D_800C35C4 == 0));
     }
@@ -722,7 +722,7 @@ void func_150233BC(void) {
 
 void func_150233E4(void) {
     s32 i;
-    int new_var;
+    int zero;
     struct_game49D30_2 *entry;
 
     i = 0;
@@ -731,8 +731,8 @@ void func_150233E4(void) {
         if (entry->unk0 != 0) {
             func_1516D2E0(entry->unk34);
             entry->unk34 = 0;
-            new_var = 0;
-            entry->unk0 = new_var;
+            zero = 0;
+            entry->unk0 = zero;
         }
         i++;
     } while (&D_800C3D48 != &((struct_game49D30_2 *) D_800C3CA0)[i]);
@@ -828,18 +828,18 @@ extern s32 func_150229E4(struct127 *);
 void func_15022998(s32 *arg0);
 void func_1502378C(void)
 {
-  s32 new_var;
-  s32 *new_var2;
+  s32 result;
+  s32 *objArg;
   s32 i;
   s32 limit;
   s32 active;
   struct127 *obj;
   obj = D_800CC2D0;
  i = 0; if ((*((u8 *) (&D_800C3654))) != 0) { func_1504A730(); return; } for (active = 1, limit = 0x19; i != (limit ^ 0); obj++) { if (obj->interaction_state != 0) { D_800C3E78 = i;
-      func_15022998(new_var2 = (s32 *) obj);
+      func_15022998(objArg = (s32 *) obj);
       func_1507E73C(obj);
-      new_var = func_150229E4(obj);
-      if (new_var != 0)
+      result = func_150229E4(obj);
+      if (result != 0)
       {
  do { } while (0);
         func_1502178C(obj, 0, -1);

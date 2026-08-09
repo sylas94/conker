@@ -321,15 +321,15 @@ s32 func_151ACB38(u8 *arg0, u8 *arg1) {
 s32 func_151AE3A8(u8 *arg0);
 s32 func_151ACB60(u8 *arg0)
 {
-  s32 new_var;
+  s32 result;
   s32 v0 = *((s32 *) ((*((s32 *) ((*((s32 *) (arg0 + 0x1C))) + 0x31C))) + 0x9C));
   if (v0 != 0)
   {
-    new_var = func_151AE3A8(arg0);
+    result = func_151AE3A8(arg0);
     if (arg0)
     {
     }
-    return new_var;
+    return result;
   }
 }
 

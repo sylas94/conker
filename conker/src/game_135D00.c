@@ -148,7 +148,7 @@ struct Arg0_15109064
 void func_15109064(struct Arg0_15109064 *arg0, s32 *arg1, u8 arg2)
 {
   u8 *v0 = (((u8 *) arg0) + arg0->off) + 0xF8;
-  u8 *new_var;
+  u8 *flag;
   switch (arg2)
   {
     case 0x1D:
@@ -159,9 +159,9 @@ void func_15109064(struct Arg0_15109064 *arg0, s32 *arg1, u8 arg2)
       break;
 
     case 0x1E:
-      if ((*((u8 *) (new_var = v0 + 0x20))) != 0)
+      if ((*((u8 *) (flag = v0 + 0x20))) != 0)
     {
-      *((u8 *) new_var) = 0;
+      *((u8 *) flag) = 0;
     }
     else
     {

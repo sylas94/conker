@@ -407,7 +407,7 @@ extern s32 D_800D1F80[187];
 extern void func_150843AC(void *arg0, s32 arg1);
 void func_150843AC(void *arg0, s32 arg1)
 {
-  unsigned char new_var;
+  unsigned char limit;
   s32 *p;
   s32 i;
   u8 idx;
@@ -415,9 +415,9 @@ void func_150843AC(void *arg0, s32 arg1)
   {
     return;
   }
-  new_var = 8;
+  limit = 8;
   idx = ((u8 *) (*((s32 *) (((u8 *) arg0) + 0x2C4))))[arg1];
-  for (p = (s32 *) (((s8 *) arg0) + (arg1 << 3)), i = 0; i != new_var; p++, i += 4)
+  for (p = (s32 *) (((s8 *) arg0) + (arg1 << 3)), i = 0; i != limit; p++, i += 4)
   {
     s32 cur = *((s32 *) (((u8 *) p) + 0x28C));
     if (cur != 0)
