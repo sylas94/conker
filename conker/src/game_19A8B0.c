@@ -387,7 +387,10 @@ void func_1516EED4(s32 a0, s32 a1, u8 a2, s32 a3) {
 }
 
 s32 func_1516F024(Obj1516FadeState *arg0) {
-    volatile s32 pad[4];
+    /* Reserves the 16 bytes at the top of the -g3 stack frame (sp+0x58..0x67)
+     * that the shipped build allocated but never referenced.  Declared first so
+     * the remaining locals land on their original stack homes. */
+    s32 pad[4];
     s32 temp_a2;
     struct Table1516F024 sp48;
     struct Table1516F024 sp3C;
@@ -454,21 +457,21 @@ void func_1516F1C0(s32 a0, s32 a1, u8 a2, s32 a3) {
         0, 4, 2, a2, a3);
 }
 
-void func_1516F2F8(u8 a0, s32 a1, s32 a2, s32 a3, volatile u8 a4, s32 a5) {
+void func_1516F2F8(u8 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5) {
     func_1516D99C(3, 0, 0, 0x2B,
         0, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0,
         2, 0, 0, 0, 0, 0, 0, 2,
         0, 0, 0, 0, 0, 0, 0, 0x50,
         0x50, 0, 0, a1, 4, 4, a0, 0x10,
         0, 0, 0x81, 4, 0, 1, 0, 0,
-        0, 1, 0, a4, a5);
+        0, 1, 0, LOW_U8(a4), a5);
     func_1516D99C(3, 0, 0, 0x2B,
         0, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0,
         2, 0, 0, 0, 0, 0, 0, 3,
         0, 0, 0, 0, 0, 0, 0, 0x50,
         0x50, 0, 0, 7, 4, 4, a0, a2,
         0, 0, 0x81, 5, 0, 1, 0, 0,
-        0, 1, a3, a4, a5);
+        0, 1, a3, LOW_U8(a4), a5);
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516F548.s")

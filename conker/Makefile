@@ -138,6 +138,12 @@ $(BUILD_DIR)/$(SRC_DIR)/libultra/io/pfschecker2.c.o: OPT_FLAGS := -O1
 
 $(BUILD_DIR)/$(SRC_DIR)/libultra/os/getthreadpri.c.o: OPT_FLAGS := -O1
 
+# libultra was shipped compiled without debug info. At -g3 IDO schedules the
+# "addiu sp,sp,N" stack restore into the "jr ra" delay slot; the ROM's epilogue
+# leaves that slot as a nop. Plain SDK source at -O2 -g0 reproduces the ROM
+# bytes exactly (previously faked with a trailing dummy label).
+$(BUILD_DIR)/$(SRC_DIR)/libultra/gu/guNormalize.c.o: OPT_FLAGS := -O2
+
 $(BUILD_DIR)/$(SRC_DIR)/init_3920.c.o: OPT_FLAGS := -O2
 # NOTE: game_DAE50 RNG (func_150ADA20/ADA68) needs -mips3 for native u64 dsll32/dsrl, BUT a
 # -mips3 object CANNOT be linked into this 32-bit ROM ("linking 32-bit with 64-bit code" ld

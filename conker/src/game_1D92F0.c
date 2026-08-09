@@ -556,7 +556,7 @@ void func_151AEAB4(f32 *arg0, s32 arg1, u8 arg2)
   f32 temp_f12;
   f32 temp_f2;
   sp.sp87 = func_150ADA20();
-  sp.sp86 = ((((((((((((func_150ADA20() & 0x7F) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) - 0x3F) & 0xFF;
+  sp.sp86 = (u8) (func_150ADA20() & 0x7F) - 0x3F;
   sp.sp7C = func_151423D8(sp.sp87);
   sp.sp78 = func_151423D8((u8) (sp.sp87 - 0x40));
   sp.sp74 = func_151423D8(sp.sp86);

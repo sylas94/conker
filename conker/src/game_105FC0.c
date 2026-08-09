@@ -196,7 +196,6 @@ s32 func_150D8E4C(Func150D8E4CObj *arg0)
     struct126 *stats;
     s32 i;
     s32 stride;
-    s32 *delta;
 
     payload = arg0->unk98;
     base = arg0->unk94;
@@ -216,7 +215,6 @@ s32 func_150D8E4C(Func150D8E4CObj *arg0)
         } while (i != arg0->unk2D);
     }
 
-    delta = &D_800BE9E4;
     stride = sizeof(Func150D8E4CEntry);
 stride_set:
     if (arg0->unk2C > 0) {
@@ -228,7 +226,7 @@ stride_set:
         arg0->unk5C = 0.0f;
     }
 
-    payload->unk4D += *delta;
+    payload->unk4D += D_800BE9E4;
     if (payload->unk4D >= 0x3D) {
         actor = payload->unk0;
         if (actor != NULL) {

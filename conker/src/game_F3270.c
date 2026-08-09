@@ -16,7 +16,7 @@ typedef struct {
     char pad_0x0[0x18];
     s32 field_0x18;
     char pad_0x1C[0x40];
-    GameF3270SpawnedObject *volatile field_0x5C;
+    GameF3270SpawnedObject *field_0x5C;
 } GameF3270SpawnOwner;
 
 typedef struct {
@@ -42,7 +42,7 @@ typedef struct {
 
 typedef struct {
     char pad_0x0[0x58];
-    GameF3270Object *volatile field_0x58;
+    GameF3270Object *field_0x58;
 } GameF3270ObjectOwner58;
 
 GameF3270Object *func_150C6460(GameF3270ObjectOwner58 *arg0);
@@ -51,7 +51,7 @@ GameF3270SpawnedObject *func_150C5F94(s32 arg0, GameF3270SpawnOwner *arg1);
 void func_150C5DC0(GameF3270ObjectOwner58 *arg0) {
     GameF3270B0State *temp;
 
-    if (arg0->field_0x58 != 0) {
+    if (*(s32 *)&arg0->field_0x58 != 0) {
         temp = &arg0->field_0x58->field_0xB0;
         temp->field_0x4 = 1;
         done:
@@ -96,7 +96,7 @@ void func_150C5F40(GameF3270SpawnOwner *arg0) {
     GameF3270Child58State *temp;
 
     temp_a2 = arg0->field_0x18;
-    if (arg0->field_0x5C != 0) {
+    if (*(s32 *)&arg0->field_0x5C != 0) {
         temp = &arg0->field_0x5C->field_0x58;
         temp->field_0x4 = 1;
         done:

@@ -657,7 +657,7 @@ struct struct151A4E34
 s32 func_151A4E34(struct struct151A4E34 **arg0, s32 arg1)
 {
   struct struct151A4E34 *v0 = arg0[0];
-  unsigned long slot;
+  u32 offset;
   s32 v1 = (s32) v0->unk1D4;
   if (v1 == 0)
   {
@@ -667,8 +667,8 @@ s32 func_151A4E34(struct struct151A4E34 **arg0, s32 arg1)
   {
     return 0;
   }
-  slot = (((((((((*(((u8 *) arg0) + 5)) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF;
-  func_15143134(((u8 *) arg0) + 8, arg1, v1 + (((slot & 0xFFFF) & 0xFFFF) << 6));
+  offset = ((*(((u8 *) arg0) + 5)) << 4) << 2;
+  func_15143134(((u8 *) arg0) + 8, arg1, v1 + offset);
   return 1;
 }
 

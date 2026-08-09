@@ -93,7 +93,9 @@ typedef struct {
 
 void func_151CD3CC(struct260 *arg0, s32 arg1, u8 arg2) {
     Sub151CD3CC *sub;
-    volatile s32 unused[3];
+    /* Reserves 12 bytes at the top of the -g3 stack frame that the shipped
+     * build allocated but never referenced. */
+    s32 unused[3];
 
     sub = (Sub151CD3CC *)((s32)arg0 + 0x28);
     if (arg2 == 0x17) {
