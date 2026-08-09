@@ -983,7 +983,7 @@ segments:
       - [0x23A490, rodata]
       - [0x23A4A0, rodata]
       - [0x23A4C0, rodata]
-      - [0x23A4F0, rodata] # , game/entrypoint] # jumptable 0x80095A30
+      - [0x23A4F0, .rodata, game/entrypoint] # jumptable 0x80095A30
       - [0x23A510, rodata]
       - [0x23A5D0, rodata]
       - [0x23A600, rodata]
