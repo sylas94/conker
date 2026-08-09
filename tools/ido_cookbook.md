@@ -239,3 +239,45 @@ statement order of the trailing stores, storing through a loaded pointer, source
 formatting, hoisting the store into the merge block, comma-operator and chained-assignment
 forms. If your ONLY residual is a 4-byte shift from delay-slot strategy, treat it as a
 plateau and BAIL per the STALL RULE — it is not reachable from honest C.
+
+## Float-literal spelling, and flag artefacts (wave 2026-08-09, libultra/gu)
+
+Two levers found while removing undefined behaviour from cosf.c. Both are general.
+
+- **Break a float-constant CSE by changing its SPELLING, not the code.** IDO pools
+  *identical* float literals within a function into one value with one long live range,
+  which ties up a register across the whole block. Writing two occurrences differently --
+  `if (0.0f < x)` and `if (0.f <= t)` -- splits them into two short-lived pool temps and
+  shifts the FP allocation, with no instruction added or removed. cosf.c depends on this;
+  normalising the spelling there silently breaks the match (measured: diff=92). Consider
+  this before reaching for a chained-mask or dummy-local forcer.
+- **A working copy is an honest substitute for an uninitialised read.** An uninitialised
+  read makes a variable live-in at function entry, so it becomes one web spanning the
+  block and gets a long-lived register instead of a short pool temp. A real `y = x;` copy
+  placed before the value is consumed reproduces that legitimately. This is what let
+  cosf.c stop reading two uninitialised locals (real UB) while keeping the match.
+
+**Not every "forcer" is a forcer -- check the FLAGS first.** guNormalize.c carried a
+trailing `dummy_label:` that turned out to compensate for a compiler flag, not codegen:
+the plain unmodified SDK source is byte-identical at `-O2 -g0`, while at the tree default
+`-O2 -g3` IDO schedules `addiu sp,sp,24` into the `jr ra` delay slot, which the shipped
+code does not do. **libultra was shipped built without debug info.** The honest fix is a
+one-line per-file `OPT_FLAGS` override in conker/Makefile (the mechanism already exists --
+init_3920.c.o uses a bare `-O2`), not C surgery.
+
+DIAGNOSTIC, cheap, do it first on any stubborn libultra/SDK-derived site: compile the clean
+canonical source outside the build system across the `-g0/-g1/-g2/-g3` x `-O1/-O2` grid and
+diff against `expected/`. If a flag combination matches, stop -- it is a flag artefact.
+
+**IDO's redundant-load CSE is keyed on the C TYPE of the access, not just the address.**
+A null test and a following deref of the same word get CSE'd into one load; writing the
+test as a same-address, different-type read -- `*(s32 *)&obj->ptrField != 0` -- keeps both
+loads. This replaces `volatile` on a struct field, which is much worse because it changes
+the type for every user of the typedef and claims the memory is externally modified.
+
+**Structurally closed, do not re-probe:** all 46 unreferenced-label sites
+(`dummy_label_*`, `trailing_label_*`, `block_*`, bare `done:`/`skip:`) were probed --
+0 deletable, 0 reshapable. An unreferenced label is an instruction-free basic-block
+boundary and has no honest C equivalent. Same for the 18 chained no-op mask sites: they
+are temp-counter forcers (removing N masks rotates the temp pool by -N mod 10) and only
+one, game_F2820.c:103, had a reshape (operand re-association).
