@@ -124,7 +124,10 @@ f32 func_1001FA78(f32 arg0[4][4], s32 arg1) {
         arg0[1][1] -= 4.0f;
     }
     else {
-        arg0[1][1] = arg0[1][1]; // ???
+        /* Original-game redundancy: this self-assignment is real code -- it emits a
+           load/store round-trip of arg0[1][1] plus the branch over it (see also
+           game_16EE20.c:496). It is not a codegen hack; do not delete. */
+        arg0[1][1] = arg0[1][1];
     }
 
     tmp = arg0[1][1];

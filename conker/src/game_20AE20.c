@@ -313,7 +313,6 @@ void func_151E30C4(void) {
     D_8008FD90 = 1;
     *(s8 *)&D_8008FD94 = 1;
 
-before_cam_mode:
     D_800BE618 = 1;
     D_80087260 = 3;
     if (D_800E9D00 & 0x200) {

@@ -326,7 +326,7 @@ s32 func_15197AB4(f32 *arg0)
   int dummy;
   arg0[0x50] = arg0[0x57] * arg0[0x50];
   arg0[0x51] += arg0[0x56] * D_800BE9A4;
-  dummy = arg0 && arg0;
+  dummy = (arg0 != 0);
   arg0[0x52] = arg0[0x57] * arg0[0x52];
   arg0[0x53] = arg0[0x58] * arg0[0x53];
   arg0[0x54] += arg0[0x56] * D_800BE9A4;
@@ -335,9 +335,6 @@ s32 func_15197AB4(f32 *arg0)
   arg0[0xE] += arg0[0x51] * D_800BE9A4;
   arg0[0xF] += arg0[0x52] * D_800BE9A4;
   arg0[0x10] += arg0[0x53] * D_800BE9A4;
-  if (dummy && arg0)
-  {
-  }
   arg0[0x11] += arg0[0x54] * D_800BE9A4;
   arg0[0x12] += arg0[0x55] * D_800BE9A4;
   return 1;
