@@ -1352,7 +1352,7 @@ segments:
       - [0x247170, rodata]
       - [0x247180, rodata]
       - [0x2476E0, rodata]
-      - [0x247780, rodata]
+      - [0x247780, .rodata, game_138520] # float pool for func_1510C8A8 (D_800A2CC0)
       - [0x247790, rodata]
       - [0x2477E0, rodata]
       - [0x247810, rodata]

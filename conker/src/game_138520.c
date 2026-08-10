@@ -110,4 +110,67 @@ Gfx *func_1510B7B4(Gfx *gfx, s32 idx) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510C4AC.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510C8A8.s")
+typedef struct {
+    /* 0x00 */ s16 tc0;
+    /* 0x02 */ s16 tc1;
+} UvWobbleSrc;
+
+typedef struct {
+    /* 0x00 */ UvWobbleSrc *unk00;
+    /* 0x04 */ UvWobbleSrc *unk04;
+    /* 0x08 */ u8 unk08;
+    /* 0x09 */ u8 unk09;
+    /* 0x0A */ u8 unk0A;
+    /* 0x0B */ u8 unk0B;
+    /* 0x0C */ u8 unk0C;
+    /* 0x0D */ u8 unk0D;
+    /* 0x0E */ u16 unk0E;
+    /* 0x10 */ u16 unk10;
+    /* 0x12 */ u16 unk12;
+} UvWobble;
+
+extern UvWobble *D_800D9E60[];
+extern Vtx *D_800B0E10[];
+extern f32 sinf(f32);
+extern f32 cosf(f32);
+
+void func_1510C8A8(void) {
+    s32 i;
+    s32 j;
+    UvWobble *wob;
+    Vtx *vtx;
+    f32 ang;
+    s16 offX;
+    s16 offY;
+
+    for (i = 0; i < D_800D9E64; i++) {
+        wob = D_800D9E60[i];
+        if (wob->unk0C == 0) {
+            if (wob->unk00 != NULL) {
+                f32 sn;
+                f32 cs;
+
+                wob->unk0E += wob->unk10 * D_800BE9E4;
+                vtx = D_800B0E10[0];
+                vtx += wob->unk0A;
+                ang = wob->unk0E * 9.587380191e-05f;
+                sn = sinf(ang);
+                cs = cosf(ang);
+                offX = (s16)(s32)(wob->unk12 * sn);
+                offY = (s16)(s32)(wob->unk12 * cs);
+                for (j = 0; j < wob->unk08; j++) {
+                    vtx[j].v.tc[0] = wob->unk00[j].tc0 + offX;
+                    vtx[j].v.tc[1] = wob->unk00[j].tc1 + offY;
+                }
+            }
+            if (wob->unk04 != NULL) {
+                vtx = D_800B0E10[1];
+                vtx += wob->unk0B;
+                for (j = 0; j < wob->unk09; j++) {
+                    vtx[j].v.tc[0] = wob->unk04[j].tc0 + offX;
+                    vtx[j].v.tc[1] = wob->unk04[j].tc1 + offY;
+                }
+            }
+        }
+    }
+}
