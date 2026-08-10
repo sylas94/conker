@@ -129,6 +129,11 @@ $(BUILD_DIR)/$(SRC_DIR)/init_214F0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_22040.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_22460.c.o: OPT_FLAGS := -g
 
+# game_221290 is Rare's compressed-audio bitstream decoder; the shipped code for
+# this whole TU is unoptimised -g output (constant-divisor `div`, every local
+# reloaded per reference, dead `b end / nop` after an explicit return).
+$(BUILD_DIR)/$(SRC_DIR)/game_221290.c.o: OPT_FLAGS := -g
+
 
 $(BUILD_DIR)/$(SRC_DIR)/libultra/io/ai.c.o: OPT_FLAGS := -O1
 $(BUILD_DIR)/$(SRC_DIR)/libultra/io/aigetstat.c.o: OPT_FLAGS := -O1
