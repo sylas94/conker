@@ -144,6 +144,17 @@ before iterating.
   arg casts, last-arg literals) — often a 1-try match.
 
 ## Diagnosing a FALSE non-zero score
+- **A score for a function over 4096 bytes is measured on a PREFIX unless you pass
+  `--max-lines`.** `diff.py --max-lines` defaults to 1024 and caps the diff at
+  `max_lines * 4` = 4096 **bytes**; past that it emits a `...` row, and
+  `score_diff_lines()` then rewinds to the end of the last 50-instruction matching streak
+  and stops counting. func_1517BBAC (5144 B) read **791** by default and **40536** truncation-
+  free, and a whole wave planned around that 791 as a hard plateau. Worse, the ranking
+  INVERTS: a candidate reading 123 was truly 40381 while one reading 594 was truly 38831.
+  **Always score with `--max-lines 4096`** (`tools/iter_match.sh` now does; a bare
+  `diff.py -o <func> -R` does NOT). No effect at or below 4096 B — verified identical, and
+  still 0 for functions that genuinely match. Only 12 remaining stubs exceed the limit, but
+  they hold 5.4% of the remaining bytes and are exactly what a byte-first strategy selects for.
 - A switch that matches byte-for-byte but scores non-zero may be ONLY compiler-jtbl
   rodata refs (anonymous LOCAL `.rodata` vs a NAMED jtbl symbol). Re-run with
   `-R`/`--no-show-rodata-refs`; a clean 0 confirms matched.
@@ -376,10 +387,27 @@ Permuting 11 unreferenced locals in func_151EA15C changed the score by exactly z
 the COUNT mattered (it sets L, hence the frame). Do not burn builds permuting locals that
 are never spilled.
 
-Two independent confirmations since, both on 3000+ byte functions: swapping `mid`↔`d2` in
-func_1517BBAC and `j`↔`y1` in func_15093B58 each changed the score by **exactly 0**. On big
-functions the s-register assignment is allocator-internal, not source-ordered. Stop permuting
-declarations; it is the single most common wasted build.
+**Corrected 2026-08-10 — the stronger version of this claim was wrong.** An earlier revision
+of this section read "on big functions the s-register assignment is allocator-internal, not
+source-ordered; stop permuting declarations." That is false, and it was arrived at exactly the
+way bad rules always are: two single permutations came back at zero, and the zero was
+generalised.
+
+What actually holds. Permuting locals at a **null site** — locals never spilled, or not
+contested for a register — is free: swapping `mid`↔`d2` in func_1517BBAC and `j`↔`y1` in
+func_15093B58 both scored **exactly 0** change. Permuting a local whose allocation *is*
+contested is worth hundreds: on func_15093B58's `bigMap` base, moving `bigMap` from last to
+first cost **+658**, moving it after `half` cost **+722**, and moving `j` after `y1` — the
+very swap that had been free on the other base — cost **+400**.
+
+Both measurements are real; they differ because the *base* differs. So:
+
+> A null result from one permutation licenses nothing. Declaration order is inert for
+> uncontested locals and load-bearing for contested ones, and which is which changes as soon
+> as the surrounding source changes. Re-probe on the base you actually intend to ship.
+
+The cheap discriminator: if the local has a stack home that golden references, or is live
+across a call, its position is load-bearing. If it never spills, don't spend builds on it.
 
 ## The register-colouring wall, and why score misranks variants (wave 2026-08-10)
 
