@@ -375,3 +375,82 @@ Declaration order pins stack homes **only for locals whose homes are actually re
 Permuting 11 unreferenced locals in func_151EA15C changed the score by exactly zero — only
 the COUNT mattered (it sets L, hence the frame). Do not burn builds permuting locals that
 are never spilled.
+
+Two independent confirmations since, both on 3000+ byte functions: swapping `mid`↔`d2` in
+func_1517BBAC and `j`↔`y1` in func_15093B58 each changed the score by **exactly 0**. On big
+functions the s-register assignment is allocator-internal, not source-ordered. Stop permuting
+declarations; it is the single most common wasted build.
+
+## The register-colouring wall, and why score misranks variants (wave 2026-08-10)
+
+Two 3000–5000 B functions were driven to structural correctness and both stalled the same way:
+`func_1517BBAC` 40705 → **791**, `func_15093B58` 6200 → **3575**. Neither residual was a
+misunderstanding of the code. Both were *graph colouring* — golden and IDO filled the same nine
+callee-saved registers with different sets, and every downstream row cascaded from that.
+
+**The lesson that costs the most if you miss it: asm-differ's score MISRANKS variants near the
+end.** In func_15093B58 the winning structural insight — caching parameter 5 in a local instead
+of re-loading it twice — collapsed golden's two `lbu` loads into one, removed both speculative
+hoists, and dropped the structural diff to 7 inserts / 7 deletes / 9 reorders. It scored
+**4350, worse than the 3575 it replaced**, because an exact structure with a 4-register
+permutation on top costs ~323 register rows while a wrong structure with lucky registers does not.
+
+> Track **inserts / deletes / reorders** separately from register-only rows. Instruction
+> structure converges to zero; a register permutation over an exact structure is one lever away.
+> A lower score over the wrong structure is not close to anything.
+
+`diff.py -o <func> -R` categorises rows; count them. func_1517BBAC's 791 was 464 register-only
+out of 1105 rows — i.e. 42% of the "score" was one bad colouring, not 464 mistakes.
+
+**What actually moves a colouring:** removing a loop-invariant hoist that is eating a
+callee-saved register (func_1517BBAC lost two registers to `&D_800BE9C0` and to a hoisted
+literal `26`, where golden spent them on the loop counter and a different address); or adding
+a cached-pointer local so a value stops being rematerialised. Declaration order and
+assignment-statement position are **measured no-ops** for this. If no source-level lever
+exists, that is what the permuter is for — bail and hand it the seed.
+
+### Sub-laws banked from the same two functions
+
+**Loop bound opacity decides unrolling.** A compile-time-known bound makes IDO peel 3 and
+unroll ×4. If golden's loop is *not* unrolled and has *no* entry test, the bound is opaque —
+write a `do { } while (p < &SYMBOL);` against the splat symbol for the end address, not a
+counted `for`. (`extern u32 D_800DDC7C;` used as a fill-loop bound is honest and load-bearing.)
+
+**A 2-D array is not its flattening.** `s32 (*)[26]` subscripted `[type][k]` and
+`((s32*)&base)[type*26 + k]` generate different code. The 2-D form was worth 160 points and
+collapsed the compiler-temp area from 12 words to 10. Same family as the struct-vs-array trap.
+
+**`x * 3` has exactly one spelling.** Seven forms probed with the project's exact flags
+(`x*3`, `3*x`, `u8 arr[][3]`, `&arr[i*3]`, pointer arithmetic, s16/s8/unsigned index): every
+multiply and every array-scale form emits the CSD reduction `sll t,x,2; subu t,t,x`. Only a
+literal addition chain written as a **reassigning statement** — `idx = idx + idx + idx;` —
+emits golden's `addu t8,s0,s0 / addu s0,t8,s0`. Inlined into the subscripts instead, it cost
+−2400 in register churn.
+
+**Ternary ≠ if/else, and it reaches the float registers.**
+`bh = (D_8008FE1C == 1.0f) ? 4 : 6;` was worth **1810 points** over the `bh = 6; if (...) bh = 4;`
+form. It produces golden's `li 6 … bc1f JOIN / b JOIN + li 4` layout *and* simultaneously flipped
+two unrelated float locals into golden's `$f24`/`$f26`. Swapping their declaration order had
+done nothing — the ternary was the lever.
+
+**`==` operand slot.** `if (D_8008FE1C == 1.0f)` emits `c.eq.s $f4,$f0` — IDO puts the **right**
+operand of `==` in the `fs` slot. `1.0f == D_8008FE1C` gives the reversed encoding.
+
+**Constant folding into `%lo`.** `func(…, (s32)(D_CF2 + 1), …)` folds to `%lo(D_CF2+0x1)`;
+`(s32)D_CF2 + 1` emits a separate `addiu`.
+
+**Read the arithmetic order, not the store order.** Independent `sh` stores are scheduled, so
+their order is not source order — but the `addu`/`subu` that feed them *are* in source order.
+Golden computed both maxima before both minima, so the source reads
+`xmax = px + range; xmin = px - range;`, not the store-order reading. Worth 190 points.
+
+**IDO deletes a dead increment.** An explicit `v++` after `v`'s last use produced an identical
+instruction count. A trailing `addiu $sN,$sN,0x10` in golden is therefore never a plain dead
+increment — look for a real remaining use.
+
+### L0 correction: flag-sweeping a TU whose .text is injected asm is meaningless
+The all-pragma flag sweep only works while the TU still contains genuine compiled C. For a TU
+that is *entirely* GLOBAL_ASM, every flag setting produces the same injected bytes and the
+sweep "passes" for all of them. The correct form of the test there: put your C in, and check
+that **other, already-matched C functions in the same TU still score 0** against
+`expected/build/src/<tu>.c.o`. That is what proved game_BC510.c is tree-default `-O2 -g3`.
