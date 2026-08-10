@@ -281,3 +281,41 @@ the type for every user of the typedef and claims the memory is externally modif
 boundary and has no honest C equivalent. Same for the 18 chained no-op mask sites: they
 are temp-counter forcers (removing N masks rotates the temp pool by -N mod 10) and only
 one, game_F2820.c:103, had a reshape (operand re-association).
+
+## Mine the matched corpus for the golden byte pattern (2026-08-09, func_15007168)
+
+The strongest technique found so far, and it replaces guessing entirely. When you cannot
+work out what source shape produces a stubborn instruction sequence, **stop guessing and
+go find the sequence in code that already matches.** 611 built objects in `build/src/`
+are, by definition, proof of what IDO emits for known-good C.
+
+    for o in build/src/**/*.c.o; do mips-linux-gnu-objdump -d "$o"; done > /tmp/corpus.dis
+    # then grep the corpus for the golden opcode pattern, and read the C that produced it
+
+Worked example. `func_15007168` died two bytes short for ~100 attempts: golden emits
+`lui $v1 ; lui $v0` (DESCENDING register order) and every hand-written variant produced
+ascending. Searching the corpus for `lui rA ; lui rB ; addiu rB ; addiu rA` found 128
+descending sites; one was `func_15008DD0` in game/done/game_36280.c, whose entire body is
+
+    s32 i;  for (i = 0; i < 2; i++) { D_800DD460[i] = 0; }
+
+So a descending lui pair is the signature of a **strength-reduced index loop**, not of two
+pointer locals: the loop optimiser creates the limit's web first (colouring it `v0`) but
+emits the derived cursor's address first (so `lui v1` leads). Rewriting the clear loop from
+a two-pointer do-while to `for (i = 0; i < 0x68; i++) D_800BE2F0[i] = 0;` reproduced all
+four instructions on the first try, and the function went to zero differing bytes.
+
+GENERALISABLE RULE: two address materialisations whose `lui` order is DESCENDING by
+register number => write an index loop over an array, not a pointer walk.
+
+BEWARE OVER-GENERALISING A SWEEP. A 72-cell sweep (declaration order x assignment order x
+same-line/multi-line x three do-while shapes) found `lui $v0` first in ALL 72 cases, and the
+earlier attempt concluded IDO does this unconditionally. It does -- *for the pointer-local
+family*. Golden itself was the counterexample sitting in plain sight. If an exhaustive sweep
+says something is impossible but the golden code does it, your sweep is exploring one family
+and the answer is in another.
+
+RELATED, cheap, do it first: **verify every callee prototype against its real definition
+before any codegen surgery.** func_15007B3C went 522 -> 470 from a single fix -- a callee
+declared `(void)` that is really `(s32)`. Passing the loop counter put it in `$a0` with no
+move and flipped the whole loop's register assignment to match golden.
