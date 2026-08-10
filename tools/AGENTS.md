@@ -58,6 +58,17 @@ Two engines run in PARALLEL: the **orchestrator** (LLM agents match `GLOBAL_ASM`
   src) crack against old context and score ~30-80 in-project (won't port) — they refresh on re-import. `apply_
   wins` extract is now redefinition-aware (`_project_types()`): strips only project-header typedefs (Gfx/Mtx/
   s32, 461 names), KEEPS agent-local typed `struct_<hex>` (the type-sweep's) — else typed funcs fail to compile.
+- **TU-AWARE PERMUTER — `conker/permuter_tu.sh` (2026-08-10).** Fixes the "NON-PORTS" bullet above at the root.
+  Stock decomp-permuter compiles an ISOLATED single-function source: `src/ast_util.py:extract_fn()` demotes every
+  other function definition in base.c to a bare prototype, and IDO -O2 -g3 codegen is TU-dependent. `permuter_tu.sh`
+  keeps base.c single-function (so the randomizer is unchanged) but its generated `compile.sh` splices the candidate
+  back into the real TU and compiles the WHOLE file with the repo's exact flags + asm-processor, in a private
+  per-worker temp dir (never the shared `build/`). MEASURED on game_1A89B0/func_1517BBAC: 1.2 s per whole-TU compile
+  on 16 cores, and its object's target-function disassembly is byte-identical to `make build/src/<tu>.c.o` —
+  whereas the isolated compile of the same source is NOT (different sha1). `setup` / `selftest` / `run` / `extract` /
+  `chain`; **always run `selftest` first** (5 controls incl. a pycparser round-trip check and a negative control),
+  and `run` forces `--stack-diffs` because without it the scorer rewrites every sp offset to `addr(sp)` and reports
+  0 for sources asm-differ scores in the hundreds. A permuter 0 is still only a CANDIDATE — re-score with asm-differ.
 - **CYCLE-5 GAP WORK — ALL DONE & COMMITTED (2026-06-23):**
   1. ✅ Cookbook tweaks (score-magnitude-tracks-size reframe; reloc-spelling + stack-aggregate-off-by-word BAIL
      bullets; register/volatile-last + STALL rule) — committed `0df39e8`.
