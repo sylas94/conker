@@ -319,3 +319,59 @@ RELATED, cheap, do it first: **verify every callee prototype against its real de
 before any codegen surgery.** func_15007B3C went 522 -> 470 from a single fix -- a callee
 declared `(void)` that is really `(s32)`. Passing the loop counter put it in `$a0` with no
 move and flipped the whole loop's register assignment to match golden.
+
+## Temp creation order, and the negative test that kills whole families of guesses
+
+Derived closing func_151EA15C (3232 B). It took the last 13 divergent rows to zero in a
+single build, after ~100 builds of shape-guessing had failed.
+
+**The rule.** IDO hands out stack homes for COMPILER-MANAGED values (CSE temps, hoisted
+subexpressions) in DESCENDING address order, in order of temp CREATION. Creation numbering
+follows C STATEMENT order, and RIGHT-TO-LEFT within a statement. Measured across the matched
+corpus: 73% of >=5-argument call sites materialise the stack argument before `a0`, and for
+`a->x = b->y;` the RHS address temp is numbered before the LHS.
+
+So: **map golden's compiler-managed slots in descending address order and you have read off
+the original creation order.** Do this before writing expressions, not after.
+
+**The negative test — this is the valuable half.** If a temp is numbered AFTER the temp
+belonging to the LAST statement of the block, it cannot have been created by the front end
+walking the statement where it appears. It must be synthesised by a later pass (copy
+propagation / CSE). Therefore **no reordering of statements or arguments can ever produce
+it**, and your C must not name that expression directly.
+
+Worked example. Golden numbered the `xbase + 0x3C` temp after line 375's temp — the last
+statement of the loop body — while the expression appears at line 357. That single
+observation killed the entire "shuffle the statements / shuffle the arguments" family before
+a build was spent on it, and pointed straight at the fix: an earlier `x = xbase;` made `x`
+and `xbase` provably equal, so writing
+
+    func_15042D94(x + 0x3C, ...)      /* not xbase + 0x3C */
+
+makes the front end create an `x + 0x3C` node; `xbase + 0x3C` then only comes into existence
+when copy propagation substitutes `x` and CSE folds it — a later-pass temp, hence the last
+number. One token, 13 rows.
+
+Corpus exemplars confirming the home-ordering rule independently of decomp style:
+`game_B3020.c func_1508BF14` (four `base + constant` locals taking strictly descending homes
+in statement order), `libultra/audio/n_synallocvoice.c`, and `game_1FA770.c func_151D1138`
+(RHS-before-LHS numbering).
+
+### A non-zero score can be a genuine byte match
+func_151EA15C shipped at **score 10**. The residual was 2 rows where golden reads
+`%hi/%lo(D_8008FE48)` and the C emits `%hi(D_8008FE44)` + `%lo(D_8008FE44+0x4)`.
+`D_8008FE48` is a splat AUTO-GENERATED symbol (`undefined_syms_auto.txt`) invented for that
+interior address — exactly what a strength-reduced pointer walk emits. Both pairs resolve at
+link time to `3C108009 / 2610FE48`, and the `%hi` is 0x8009 either way since both offsets
+have bit 15 set. asm-differ is comparing an unlinked `.o` relocation against splat's
+symbolised disassembly.
+
+When your only residual is relocation SPELLING against an auto-generated symbol: hand-resolve
+the HI16/LO16 pair, confirm the bytes, and let the ROM gate be the arbiter. Do NOT invent an
+`extern` array bound to silence it — that is a fake, and the score is not the deliverable.
+
+### L2 caveat, measured
+Declaration order pins stack homes **only for locals whose homes are actually referenced**.
+Permuting 11 unreferenced locals in func_151EA15C changed the score by exactly zero — only
+the COUNT mattered (it sets L, hence the frame). Do not burn builds permuting locals that
+are never spilled.
