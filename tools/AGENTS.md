@@ -69,6 +69,16 @@ Two engines run in PARALLEL: the **orchestrator** (LLM agents match `GLOBAL_ASM`
   `chain`; **always run `selftest` first** (5 controls incl. a pycparser round-trip check and a negative control),
   and `run` forces `--stack-diffs` because without it the scorer rewrites every sp offset to `addr(sp)` and reports
   0 for sources asm-differ scores in the hundreds. A permuter 0 is still only a CANDIDATE — re-score with asm-differ.
+  **Two traps it now handles for you.** (1) *Fake constructs*: setup zeroes the ten randomization passes that can
+  only emit banned code (`perm_refer_to_var` → `if (var) {}`, `perm_ins_block` → `if (1) {...}`, `perm_empty_stmt`,
+  `perm_add_self_assignment`, `perm_dummy_comma_expr`, `perm_add_mask`, `perm_xor_zero`, `perm_mult_zero`,
+  `perm_duplicate_assignment`, `perm_pad_var_decl`), so a win is shippable instead of having to be un-faked.
+  `PERMUTER_TU_ALLOW_FAKE=1` restores them for diagnosis only. (2) *Frame trade-away*: the scorer weighs a stack
+  byte at 1 but a reordering at 60 and an insertion at 100, so on a function whose last blocker is frame size it
+  BUYS register wins by GROWING the frame — measured on func_1517BBAC, every "improved" output came back at frame
+  232 vs the seed's 224 vs golden's 216, i.e. further from a match than it started. `./permuter_tu.sh frame <dir>`
+  reports both frames and prints the gate to use; `PERMUTER_TU_MAX_FRAME=<n>` fails any candidate whose frame grew,
+  `PERMUTER_TU_REQUIRE_FRAME=<n>` demands an exact frame (only usable once the base already has it).
 - **CYCLE-5 GAP WORK — ALL DONE & COMMITTED (2026-06-23):**
   1. ✅ Cookbook tweaks (score-magnitude-tracks-size reframe; reloc-spelling + stack-aggregate-off-by-word BAIL
      bullets; register/volatile-last + STALL rule) — committed `0df39e8`.

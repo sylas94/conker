@@ -40,6 +40,12 @@
 #         (e) TU-context control: the same function compiled in ISOLATION and its
 #             bytes compared, to show whether TU context actually matters here.
 #
+#   ./permuter_tu.sh frame <dir>
+#       Print the golden frame size and the command that confines the search to it.
+#       Do this whenever the residue is "everything is right except sp offsets": the
+#       permuter's weights (stack 1 vs reordering 60 / insertion 100) will otherwise
+#       BUY register wins by growing the frame, which can never reach zero.
+#
 #   ./permuter_tu.sh run <dir> [-j N] [extra permuter args]
 #       Runs decomp-permuter with --stack-diffs (MANDATORY: without it the scorer
 #       rewrites every sp-relative offset to "addr(sp)" and normalises `addiu sp,sp,N`,
@@ -172,6 +178,26 @@ python3 "$AP/asm_processor.py" $opt "\$W/tu.c" > "\$W/tu.i.c"
 "$CC" -c -32 $CFLAGS $INC $opt $MIPSBIT -o "\$OUT" "\$W/tu.i.c"
 python3 "$AP/asm_processor.py" $opt "\$W/tu.c" --post-process "\$OUT" \\
     --assembler "mips-linux-gnu-as $ASFLAGS" --asm-prelude "$AP/prelude.inc"
+
+# Optional FRAME GATE.  The permuter's penalty weights are stack=1 vs reordering=60 /
+# insertion=100, so on a function whose last blocker is frame size it will happily buy a
+# register win by GROWING the frame -- measured on func_1517BBAC: every "improved" output
+# came back with a bigger frame than the seed.  Setting PERMUTER_TU_REQUIRE_FRAME=<bytes>
+# makes a wrong-sized frame a COMPILE FAILURE, so the search is confined to sources that
+# can still reach zero.  Get the golden number from  ./permuter_tu.sh frame <dir>.
+# PERMUTER_TU_MAX_FRAME=<bytes>     reject any candidate whose frame GREW (use your current
+#                                   frame; safe with any base, and stops the trade-away)
+# PERMUTER_TU_REQUIRE_FRAME=<bytes> reject anything but an exact frame (only usable once your
+#                                   base already has it -- otherwise the base itself fails)
+if [ -n "\${PERMUTER_TU_REQUIRE_FRAME:-}\${PERMUTER_TU_MAX_FRAME:-}" ]; then
+  got=\$("$dir/objdump_fn.sh" "\$OUT" | sed -n '2p' | grep -oE '\\-[0-9]+' | tr -d -)
+  if [ -n "\${PERMUTER_TU_REQUIRE_FRAME:-}" ]; then
+    [ "\$got" = "\$PERMUTER_TU_REQUIRE_FRAME" ] || exit 1
+  fi
+  if [ -n "\${PERMUTER_TU_MAX_FRAME:-}" ]; then
+    [ -n "\$got" ] && [ "\$got" -le "\$PERMUTER_TU_MAX_FRAME" ] || exit 1
+  fi
+fi
 EOF
   chmod +x "$dir/compile.sh"
 
@@ -194,6 +220,42 @@ compiler_type = "ido"
 func_name = "$func"
 objdump_command = "$dir/objdump_fn.sh"
 EOF
+  if [ "${PERMUTER_TU_ALLOW_FAKE:-0}" = "1" ]; then
+    echo "permuter_tu: WARNING -- fake-construct passes ENABLED (PERMUTER_TU_ALLOW_FAKE=1)."
+    echo "permuter_tu: output will need a manual banned-construct audit before it can ship."
+  else
+    # This project bans fake matching constructs outright (see the NO FAKE MATCHES rule).
+    # Zero the randomization passes that can only produce banned code, so that anything the
+    # permuter finds is shippable as-is instead of having to be reverse-engineered afterwards.
+    #   perm_refer_to_var        -> `if (var) {}`            (dead read to pin a register)
+    #   perm_ins_block           -> `if (1) { ... }`
+    #   perm_empty_stmt          -> no-op statements
+    #   perm_add_self_assignment -> `x = x;` / `x += 0;` / `x++; x--;`
+    #   perm_dummy_comma_expr    -> `(0, x)`
+    #   perm_add_mask            -> no-op `& 0xFFFFFFFF` chains
+    #   perm_xor_zero            -> `x ^ 0`
+    #   perm_mult_zero           -> `x * 0`
+    #   perm_duplicate_assignment-> a redundant repeat of an assignment
+    #   perm_pad_var_decl        -> an unused local whose only job is to move the frame
+    # Everything left is an ordinary spelling choice a human could have written.
+    cat >> "$dir/settings.toml" <<'EOF'
+
+# Passes that can only emit constructs this project bans. See permuter_tu.sh.
+# Set PERMUTER_TU_ALLOW_FAKE=1 at setup time to keep them (exploration only --
+# such a result is a diagnostic hint, never a shippable match).
+[weight_overrides]
+perm_refer_to_var = 0
+perm_ins_block = 0
+perm_empty_stmt = 0
+perm_add_self_assignment = 0
+perm_dummy_comma_expr = 0
+perm_add_mask = 0
+perm_xor_zero = 0
+perm_mult_zero = 0
+perm_duplicate_assignment = 0
+perm_pad_var_decl = 0
+EOF
+  fi
   cat > "$dir/harness.env" <<EOF
 TU="$tu"
 FUNC="$func"
@@ -268,7 +330,8 @@ PY
 
   echo "=== (c) positive control: score of the unmodified base ==="
   local base_score
-  base_score=$(python3 "$PERMUTER/permuter.py" "$dir" --stack-diffs --debug 2>&1 \
+  # --debug drops debug_source.c / debug_compiled_object.o in the CWD, so run it in a temp dir
+  base_score=$(cd "${TMPDIR:-/tmp}" && python3 "$PERMUTER/permuter.py" "$dir" --stack-diffs --debug 2>&1 \
                | grep -oP "base score = \K[0-9]+" | head -1)
   echo "    base score = ${base_score:-<none>}"
   [ -n "$base_score" ] || { echo "    FAIL: no base score"; rc=1; }
@@ -292,7 +355,7 @@ print("    perturbations applied:", n)
 PY
   sed -i "s#$dir#$B#g" "$B/compile.sh" "$B/settings.toml"
   local neg_score
-  neg_score=$(python3 "$PERMUTER/permuter.py" "$B" --stack-diffs --debug 2>&1 \
+  neg_score=$(cd "${TMPDIR:-/tmp}" && python3 "$PERMUTER/permuter.py" "$B" --stack-diffs --debug 2>&1 \
               | grep -oP "base score = \K[0-9]+" | head -1)
   echo "    perturbed score = ${neg_score:-<none>}   (baseline ${base_score:-?})"
   if [ -n "$neg_score" ] && [ -n "$base_score" ] && [ "$neg_score" -gt "$base_score" ]; then
@@ -355,8 +418,27 @@ cmd_chain() {
   echo "permuter_tu: base.c replaced from $out; previous kept as base.c.prev; outputs cleared"
 }
 
+# ---------------------------------------------------------------- frame
+cmd_frame() {
+  local dir; dir="$(cd "$1" && pwd)"
+  local g; g=$("$dir/objdump_fn.sh" "$dir/target.o" | sed -n '2p' | grep -oE '\-[0-9]+' | tr -d -)
+  local b; b=$("$dir/compile.sh" "$dir/base.c" -o "$dir/.frame.o" >/dev/null 2>&1 \
+             && "$dir/objdump_fn.sh" "$dir/.frame.o" | sed -n '2p' | grep -oE '\-[0-9]+' | tr -d -)
+  rm -f "$dir/.frame.o"
+  echo "golden frame = $g bytes;  base.c frame = ${b:-?} bytes"
+  if [ "${b:-0}" = "$g" ]; then
+    echo "confine the search to it (frame already correct):"
+    echo "  PERMUTER_TU_REQUIRE_FRAME=$g ./permuter_tu.sh run \"$dir\" -j 12 --best-only --stop-on-zero"
+  else
+    echo "base frame is wrong, so an EXACT gate would reject the base. Stop the permuter"
+    echo "from trading the frame away instead:"
+    echo "  PERMUTER_TU_MAX_FRAME=${b:-$g} ./permuter_tu.sh run \"$dir\" -j 12 --best-only --stop-on-zero"
+  fi
+}
+
 case "${1:-}" in
   setup)    shift; cmd_setup "$@" ;;
+  frame)    shift; cmd_frame "$@" ;;
   selftest) shift; cmd_selftest "$@" ;;
   run)      shift; cmd_run "$@" ;;
   extract)  shift; cmd_extract "x" "$@" ;;
