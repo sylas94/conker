@@ -474,7 +474,38 @@ void func_1516F2F8(u8 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5) {
         0, 1, a3, LOW_U8(a4), a5);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516F548.s")
+/* Spawns two type-0xD particle emitters at (arg0, arg1, arg2) -- identical apart
+ * from their spawn table entry (arg10 vs arg11) and the second one's extra mode
+ * byte 6 -- then plays 3-D sound 7 at the same spot with arg3 as its user data.
+ * The position is latched into posX/posY/posZ while the first emitter is being
+ * built so both later calls reuse it. */
+void func_1516F548(
+    s32 arg0, s32 arg1, s32 arg2, s32 arg3,
+    s32 arg4, s32 arg5, s32 arg6, s32 arg7,
+    s32 arg8, s32 arg9, s32 arg10, s32 arg11,
+    s32 arg12, s32 arg13, s32 arg14, s32 arg15,
+    s32 arg16) {
+    s32 posX;
+    s32 posY;
+    s32 posZ;
+
+    func_1516D99C(posX = (s16)arg0, posY = (s16)arg1, posZ = (s16)arg2, 0xD,
+        0, 0x67, 0x17, 0xD, 0, 0, 0x12, 0,
+        2, (u8)arg4, 0, (u8)arg6, 0, 0, 0, arg10,
+        0, 0, 0, 0, 0, 0, 0, (s16)((arg7 << 12) / 4096),
+        (s16)((arg7 << 12) / 4096), (s16)((arg8 << 12) / 4096), (s16)((arg8 << 12) / 4096), (u16)arg3, (u8)arg9, 0x14, 0xFF, 0x10,
+        (s16)arg5, 0xC8, 1, 0, 0, 1, 0, 0,
+        0, 0, 0, LOW_U8(arg15), arg16);
+    func_1516D99C(LOW_S16(posX), LOW_S16(posY), LOW_S16(posZ), 0xD,
+        0, 0x67, 0x17, 0xD, 0, 0, 0x12, 0,
+        2, (u8)arg4, 0, (u8)arg6, 0, 0, 0, arg11,
+        0, 0, 0, 0, 0, 0, 0, (s16)((arg7 << 12) / 4096),
+        (s16)((arg7 << 12) / 4096), (s16)((arg8 << 12) / 4096), (s16)((arg8 << 12) / 4096), (u16)arg3, (u8)arg9, 0x14, 0xFF, 0x10,
+        (s16)arg5, 0xC8, 1, 6, 0, 1, 0, 0,
+        0, 0, 0, LOW_U8(arg15), arg16);
+    func_1000FA64(7, LOW_S16(posX), LOW_S16(posY), LOW_S16(posZ), 0x36B0, 0x3E8, 0x64,
+        (s32)func_1000EBC4, (void *)arg3, 0, 0, 0);
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516F864.s")
 

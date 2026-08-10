@@ -139,7 +139,53 @@ Gfx *func_151E86E4(Gfx *gfx, s32 xl, s32 yl, s32 xh, s32 yh, s32 tile, s32 s, s3
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151EA15C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151EADFC.s")
+typedef struct {
+    /* 0x00 */ s32 v[7];
+} PlaceValueTable;
+
+extern void *D_80090074[];
+extern PlaceValueTable D_8009009C;
+
+Gfx *func_151EADFC(Gfx *gfx, s32 x, s32 y, s32 value) {
+    s32 i;
+    s32 digit;
+    s32 started;
+    s32 image;
+    PlaceValueTable places;
+
+    places = D_8009009C;
+
+    x <<= 2; y <<= 2;
+    if (value >= 10000000) {
+        value = 9999999;
+    }
+    started = 0;
+    if (value < 0) {
+        value = 0;
+    }
+
+    for (i = 6; i >= 0; i--) {
+        digit = value / places.v[i];
+        value = value % places.v[i];
+        if ((digit > 0) || started || (i == 0)) {
+            image = func_1510D0EC(D_80090074[digit], 0, 3, 0);
+            started = 1;
+            if (image != (s32)0x80000000) {
+                gDPSetTextureImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_32b, 1, image);
+                gDPSetTile(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_32b, 0, 0, G_TX_LOADTILE, 0, G_TX_CLAMP, 5, 0, G_TX_CLAMP, 5, 0);
+                gDPLoadSync(gfx++);
+                gDPLoadBlock(gfx++, G_TX_LOADTILE, 0, 0, 0x3FF, 0);
+                gDPPipeSync(gfx++);
+                gDPSetTile(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_32b, 8, 0, G_TX_RENDERTILE, 0, G_TX_CLAMP, 5, 0, G_TX_CLAMP, 5, 0);
+                gDPSetTileSize(gfx++, G_TX_RENDERTILE, 0, 0, 0x7C, 0x7C);
+                gfx = func_151E86E4(gfx, x, y, x + 0x80, y + 0x80, 0, 0, 0, 0x400, 0x400);
+            }
+            x += 0x60;
+        }
+    }
+
+    return gfx;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151EB06C.s")
 
