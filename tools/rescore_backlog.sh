@@ -90,7 +90,12 @@ PY
   if ! make -s "build/src/$tu.o" VERSION=us >/tmp/rescore_build.log 2>&1; then
     status=BUILD_FAIL; measured="-"
   else
-    measured=$(python3 ../tools/asm-differ/diff.py -o "$func" -R 2>/tmp/rescore_diff.log \
+    # --max-lines 4096 is NOT optional: the default 1024 also caps the diff at 1024*4 = 4096
+    # BYTES, and score_diff_lines() then stops counting at the last 50-instruction matching
+    # streak. Without it every function over 4096 B is scored on a prefix and the ranking can
+    # invert (a measured 123 was truly worse than a measured 594). No effect below the cap.
+    measured=$(python3 ../tools/asm-differ/diff.py -o "$func" -R --max-lines 4096 \
+               2>/tmp/rescore_diff.log \
                | grep -oE '(CURRENT|SCORE:?) *\(?[0-9]+\)?' | grep -oE '[0-9]+' | tail -1)
     if [ -z "$measured" ]; then status=NO_SCORE; measured="-"; else status=OK; fi
   fi
