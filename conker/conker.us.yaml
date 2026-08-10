@@ -982,7 +982,7 @@ segments:
       - [0x2367E0, rodata]
       - [0x23A490, rodata]
       - [0x23A4A0, rodata]
-      - [0x23A4C0, rodata]
+      - [0x23A4C0, .rodata, game_33990]
       - [0x23A4F0, .rodata, game/entrypoint] # jumptable 0x80095A30
       - [0x23A510, rodata]
       - [0x23A5D0, rodata]
@@ -1318,7 +1318,7 @@ segments:
       - [0x246130, rodata]
       - [0x246140, rodata]
       - [0x246380, rodata]
-      - [0x2463E0, rodata]
+      - [0x2463E0, .rodata, game_11F780]
       - [0x246410, rodata]
       - [0x246440, rodata]
       - [0x2464A0, rodata]
