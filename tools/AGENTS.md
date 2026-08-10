@@ -58,6 +58,17 @@ Two engines run in PARALLEL: the **orchestrator** (LLM agents match `GLOBAL_ASM`
   src) crack against old context and score ~30-80 in-project (won't port) — they refresh on re-import. `apply_
   wins` extract is now redefinition-aware (`_project_types()`): strips only project-header typedefs (Gfx/Mtx/
   s32, 461 names), KEEPS agent-local typed `struct_<hex>` (the type-sweep's) — else typed funcs fail to compile.
+- **asm-differ SILENTLY UNDER-SCORES ANY FUNCTION > 4096 BYTES (2026-08-10) — fixed in `iter_match.sh`.**
+  `diff.py --max-lines` defaults to 1024 and also caps the diff at `max_lines*4 = 4096` BYTES. Past that it emits a
+  `...` row; `score_diff_lines()` sees `lines_were_truncated`, rewinds to the end of the last 50-instruction
+  matching streak and STOPS SCORING. So the standard `diff.py -o <func> -R` reports a fraction of the real residue
+  on exactly the big targets the byte-strategy tells us to chase. MEASURED on game_1A89B0/func_1517BBAC
+  (5144 bytes = 1286 insns): default **791**, `--max-lines 4096` **40536**. A prior wave recorded that 791 as a
+  "plateau after 5 attempts" and planned around it; the function was in fact nowhere near matching, and the score
+  ranking of candidates *inverts* under the correct metric (a "123" scored 40381 while a "594" scored 38831).
+  `iter_match.sh` now always passes `--max-lines 4096`; functions <= 4096 bytes are unaffected (verified identical,
+  still 0 for the ones that match). When scoring by hand, pass it too. Re-check any recorded near-miss score for a
+  function over 4096 bytes before trusting it.
 - **TU-AWARE PERMUTER — `conker/permuter_tu.sh` (2026-08-10).** Fixes the "NON-PORTS" bullet above at the root.
   Stock decomp-permuter compiles an ISOLATED single-function source: `src/ast_util.py:extract_fn()` demotes every
   other function definition in base.c to a bare prototype, and IDO -O2 -g3 codegen is TU-dependent. `permuter_tu.sh`

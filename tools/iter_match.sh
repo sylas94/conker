@@ -26,7 +26,15 @@ if [ $? -ne 0 ] || [ ! -f "$obj" ]; then
   exit 0
 fi
 
-diff=$(python3 ../tools/asm-differ/diff.py -o "$func" 2>&1)
+# --max-lines is NOT cosmetic. It defaults to 1024, which also caps the diff at
+# max_lines*4 = 4096 BYTES; anything past that is replaced by a "..." row. score_diff_lines()
+# then sees lines_were_truncated, walks back to the end of the last 50-instruction matching
+# streak, and STOPS SCORING THERE. So for any function larger than 4096 bytes the default
+# command silently reports a small fraction of the real residue. Measured on
+# game_1A89B0/func_1517BBAC (5144 bytes): default 791, untruncated 40536 -- an apparent
+# "plateau at 791" that was really a function nowhere near matching. Functions <= 4096 bytes
+# are unaffected (verified: identical scores, still 0 for the ones that match).
+diff=$(python3 ../tools/asm-differ/diff.py -o "$func" --max-lines 4096 2>&1)
 score=$(echo "$diff" | grep -oE "CURRENT \(([0-9]+)\)" | grep -oE "[0-9]+" | head -1)
 echo "$diff"
 echo "SCORE: ${score:-unknown}"
