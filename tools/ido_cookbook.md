@@ -695,3 +695,98 @@ the buggy harness and should be re-tested before that TU is treated as unusable.
   `0x4F000000` bias + `0x80000000` OR sequence with the `andi 0x78` exception test. Seeing it
   means the destination is UNSIGNED; a signed destination gets a bare `cvt.w.s`+`mfc1`. Four in a
   row is normal, not a red flag.
+
+## Redundant-load forwarding, and reading the field itself (2026-08-11, func_1505A3A8: 1295 -> 20)
+
+**IDO's store-then-reload is defeated by CACHING, not caused by it.** When golden shows
+`swc1 X,off(r)` immediately followed by `lwc1 Y,off(r)` — storing a field and reloading the same
+address — the source reads the FIELD on both sides:
+```c
+obj->f = obj->f - x;        /* swc1 then lwc1: IDO stores and RELOADS */
+obj->f = cached - x;        /* IDO forwards the stored value; the reload VANISHES */
+```
+This is the normal idiom, not a quirk: **339 sites** across the matched corpus show that
+`swc1`/`lwc1` pair, and reading one of them (game_10CD70.c:201) confirms the plain re-read form.
+Corollary that finished the function: DELETING the cached local outright and reading the field in
+every subsequent test was worth a further 210 points (230 -> 20). When golden reloads a field you
+just stored, stop reaching for `volatile` or type-punning casts — write the field expression on
+both sides.
+
+## Which f32 parameter wins the callee-saved $f20: the SECOND-ASSIGNED one
+
+For a function taking two f32 params in a2/a3, IDO homes them into `$f20` (paying `sdc1`/`ldc1`)
+and `$f14`, and **the second-assigned of the two gets `$f20`**. Swapping the order of the two
+statements that first write them swaps the registers and every downstream row (measured 1295 ->
+1015 from that swap alone; reversing it costs +145 on the final base). Cheap first probe whenever
+a float-heavy diff is a uniform `$f20`/`$f14` or callee-saved-FP permutation.
+
+## Pointer cursor vs INDEX cursor — strength reduction, not constant folding (func_150428D4: -904)
+
+A brief handed to an agent claimed golden's `or v1,zero,zero` + `addu s2,s3,v1` was IDO failing to
+constant-fold a zero index, and that every honest `p = &str[i]` spelling folds it. **That framing
+is wrong and it is what kept the function stuck.** The `addu` is the induction-variable
+initialiser IDO's STRENGTH REDUCTION emits when the source walks an array with an INTEGER INDEX.
+uopt runs constant propagation first and strength reduction after, so `i = 0` survives as a real
+`move v1,zero` and the base pointer stays live into the preheader.
+Rewriting the cursor from `u8 *p` to `s32 i` (`str[i]`, `i += 2`, `i++`) produced the `addu`
+immediately along with `move s3,a0` / `addiu s2,s2,2` — **3857 -> 3278 in one edit**.
+RULE: when golden has `addu <ptr>,<base>,<reg>` feeding a pointer that is then incremented by a
+constant, and your C uses a pointer cursor, try an index cursor. It also explains golden's
+register economy — the base dies right after the `addu`, so IDO recycles its callee-saved register
+for the next variable, which is how golden used 7 callee-saved where the pointer form needs 9.
+Second lever on the same function, worth 325: `while ((c = str[i]) != 0)` instead of
+`c = str[i]; do { ... } while (c != 0);` is what makes IDO choose the branch-LIKELY guard and fill
+its delay slot from the target block.
+
+## MEASUREMENT TRAP: correct frame size, wrong stack offsets
+
+One level below the known frame-growth trap. An extra local can keep the frame size EXACTLY
+correct and still shift every stack-local offset: caching a global in a `u8 (*)[4]` local scored
+108 BETTER (2845) but moved the callee's out-params from sp+0x64/0x60/0x5c to sp+0x60/0x5c/0x58,
+with the frame still 0x80. `PERMUTER_TU_REQUIRE_FRAME` is blind to this because it only gates the
+frame. A source whose stack offsets are wrong can never reach zero, so this is a plateau to
+REFUSE, exactly like buying register wins by growing the frame. The harness wants an offset gate,
+not just a frame gate.
+
+## PERMUTER RE-SEED TRAP: pycparser re-splits joined lines
+
+decomp-permuter regenerates candidates through pycparser, which reflows the source. So if a
+line-reflow win got you from A to B, re-running `permuter_tu.sh setup` from the B source hands the
+permuter the *pre-win* base again — the join is undone in the round trip. Use `chain` from the
+output directory instead. That cost one wasted 900-iteration run.
+
+## TU permuter status — corrected (2026-08-11)
+
+* **game_83300 is USABLE.** Its recorded (b2) failure was entirely the `head -5`/SIGPIPE harness
+  bug (commit ad4f136). With the fix all five checks pass and the round-trip disassembly sha1
+  equals the makefile sha1 exactly (confirmed independently on two different functions in the TU).
+  Strike the old entry. The unlock was immediately load-bearing: permuter output is what produced
+  the insight that took func_1505A3A8 from 230 to 20.
+* **game_1B1600 genuinely fails (b2)** — but NOT for the recorded reason. A real, non-empty object
+  is produced; it differs from the makefile object by exactly two adjacent instruction swaps.
+  Mechanism: pycparser reflows the TU's one-line `{ Gfx *_g = ...; w0=...; w1=...; }` gbi macro
+  blocks onto seven lines, and the source-line scheduling law above then lets IDO swap
+  `ori`/`addiu` and two `sw`s. This is our own line-placement finding firing against the harness.
+  Hand-match only.
+* **game_EB340 and game_6E770 both PASS** all five checks. For both, check (e) reports that
+  isolated compilation DIFFERS from the in-TU build — the TU-aware harness is load-bearing there
+  and a stock single-function permuter would have optimised the wrong bytes.
+
+### selftest (d) has a latent FALSE-ALARM bug
+The negative control looks for `0x44`, and failing that flips the first standalone `1` to `2`. On
+a gbi-macro-dense TU the first standalone `1` is the `- 1` inside `((0x01 << (8)) - 1)`, turning a
+`& 0xFF` into `& 0xFE` — a semantic NO-OP whenever the masked constant is even. Proved by direct
+experiment on game_1B1600: perturbed and unperturbed objects are byte-identical (cf7e5711… both
+ways) because `0xda` is even. So a (d) failure on such a TU is NOT evidence the harness fails to
+measure the function. Fix: perturb a constant known to be live, or verify the perturbed object
+actually differs before declaring failure.
+
+### Corpus-level BAIL evidence — the strongest form there is
+func_150585F0 sits at 10 on two rows: a computed a3-bound float that golden stages in `$f14` while
+IDO puts it in `$f0`. Six independent spellings score EXACTLY 10, seven more are worse, and 3046
+frame-gated permuter iterations produced no output at all. Then the decisive check: across
+**630,452 lines of disassembly from 611 built objects, ZERO live-C functions stage a COMPUTED
+a3-bound float in `$f14`** (all 7 live-C `$f14`->a3 sites are incoming-parameter forwarding), while
+golden does it at 3 sites. That upgrades the claim from "we haven't found the spelling" to "no
+matched C in this tree has ever produced this pattern". When a residual is a single unusual
+register binding, grep the corpus for it before spending another run.

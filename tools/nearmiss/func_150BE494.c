@@ -1,3 +1,63 @@
+/*
+ * PARKED near-miss -- func_150BE494  (game_EB340.c, 956 B)
+ *
+ * BEST MEASURED: 575   (was 585)
+ *   cd conker && python3 ../tools/asm-differ/diff.py -o func_150BE494 -R --max-lines 4096
+ *   Identical with and without -R.  Frame 0x160 correct.  This file IS the 575 source.
+ *
+ * WHAT MOVED IT: exactly one source line.  `sp58.unk34 = 0x1E; sp58.unk36 = 0x14;` must sit on
+ * ONE line.  Found by decomp-permuter's perm_sameline pass and then reproduced by hand; the
+ * 585 and 575 sources are TOKEN-IDENTICAL (tr -s ' \t\n' normalises them to the same stream),
+ * so this is purely the -O2 -g3 source-line scheduling lever from tools/ido_cookbook.md.
+ * NOTE: the pycparser round trip inside decomp-permuter re-splits that line, so re-seeding the
+ * permuter from this file gives it a 585 base again -- chain from the output dir instead.
+ *
+ * RESIDUAL -- one instruction placement, no register is wrong:
+ *   golden  addiu s0,sp,0x60   (&sp58.unk08: the CSE used by the 12-byte struct copy AND by
+ *                               all three func_15153F18 calls)
+ *           addiu t6,sp,0x154
+ *           lw    at,0(t6)  /  li t0,4  /  li t9,3  /  sw at,0(s0) ...
+ *   ours    addiu t6,sp,0x154
+ *           lw    at,0(t6)
+ *           addiu s0,sp,0x60      <-- sunk two slots, into the load-delay slot
+ * That one shift cascades the li cascade by one slot and swaps `addiu a0,sp,0x58` / `move a1,s0`
+ * in the FIRST of the three calls only.  Blocks 1 and 2 (spE0, spA4) are byte-correct; they
+ * differ from block 3 only in that their copy destination is a single-use temp, so IDO is free
+ * to sink it -- which is what it also does to the CSE in block 3 and does not do in golden.
+ *
+ * MEASURED NEGATIVES (each built hard: `rm -f build/src/game_EB340.c.o build/src/game_EB340.c`,
+ * make hard-failed on error, object presence asserted, scored with AND without -R -- the two
+ * numbers were equal for every single variant below):
+ *    585  parked baseline
+ *    585  copy statement joined onto the previous call's source line
+ *    585  copy statement joined onto the next statement's source line
+ *    585  copy joined onto BOTH neighbours (one long line)
+ *    585  *(struct vec150BE494 *)&sp58.unk08 = sp154;
+ *    585  *(struct vec150BE494 *)&sp58.unk08 = *(struct vec150BE494 *)&sp154;
+ *    585  sp58.unk08 = *&sp154;
+ *    599  sp58.unk2C = 4; sp58.unk2E = 3;   joined onto one line
+ *    599  that join together with the explicit-address LHS
+ *   1496  the whole block-3 assignment run collapsed onto one line
+ *   1974  copy + unk2C + unk2E on one line
+ *   3615  copy statement moved after `sp58.unk2E = 3;`
+ *    924  named `struct vec150BE494 *pos` local declared FIRST   (frame 0x160 -> 0x168)
+ *   1160  same, declared LAST                                    (frame 0x160 -> 0x168)
+ *    873  Struct1504715C shrunk to 0x20 with no compensating local (frame -> 0x15C)
+ *
+ * FRAME FACT (keep -- it kills the obvious hypothesis): the local area 0x58..0x160 is EXACTLY
+ * packed by the eight declared locals (0xC+4+4+4+0x24+0x44+0x3C+0x4C = 0x108).  At -O2 -g3 IDO
+ * homes even a pointer local that lives entirely in a register, so a ninth local normally pushes
+ * the frame to 0x168 -- measured.  There is exactly ONE legal slot: shrink Struct1504715C to
+ * 0x20 and declare a 4-byte local between sp148 and sp124; it lands at 0x144 and the frame stays
+ * 0x160.  Tried with `pos = &sp58.unk08; *pos = sp154;` and with `pos` used only by the three
+ * calls: IDO copy-propagates `pos` away and both score EXACTLY 585.  So "golden has a hidden
+ * pointer variable" is dead as an explanation and does not need re-exploring.
+ *
+ * HARNESS: `./permuter_tu.sh selftest` PASSES for game_EB340 (a, b, b2, c, d all PASS; (e)
+ * reports that isolation differs from the in-TU build, i.e. the TU-aware harness is
+ * load-bearing here).  ~2000 iterations with PERMUTER_TU_REQUIRE_FRAME=352 found only the
+ * one-line join recorded above.
+ */
 #include <ultra64.h>
 #include "functions.h"
 #include "variables.h"
@@ -293,8 +353,7 @@ void func_150BE494(struct127 *arg0, u8 arg1, s32 arg2) {
     sp58.unk06 = 0x1A;
     sp58.unk30 = 3;
     sp58.unk32 = 3;
-    sp58.unk34 = 0x1E;
-    sp58.unk36 = 0x14;
+    sp58.unk34 = 0x1E; sp58.unk36 = 0x14;
     sp58.unk38 = 0x9B;
     sp58.unk3A = 0x64;
     sp58.unk44 = 0x10;

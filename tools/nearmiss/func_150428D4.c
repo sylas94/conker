@@ -1,3 +1,69 @@
+/*
+ * PARKED near-miss -- func_150428D4  (game_6E770.c, 876 B)
+ *
+ * BEST MEASURED: 2953   (was 3857 -- a 904-point structural step, not a register shuffle)
+ *   cd conker && python3 ../tools/asm-differ/diff.py -o func_150428D4 -R --max-lines 4096
+ *   Identical with and without -R.  Frame 0x80 correct AND every stack offset matches golden
+ *   (sp54/sp58/sp5C/sp60/sp64 out-params land where golden puts them).  This file IS that source.
+ *
+ * THE LEVER -- `or v1,zero,zero` + `addu s2,s3,v1` is NOT a defeated constant fold.
+ * It is IDO's STRENGTH REDUCTION.  Golden walks the string with an INTEGER INDEX (`str[i]`,
+ * `i += 2`, `i++`), not with a `u8 *p`.  uopt rewrites the index into the pointer
+ * `s2 = str + i` only AFTER constant propagation has run, so the `i = 0` survives as a real
+ * `move v1,zero`, and `str` stays live into the loop preheader -- which is why golden can
+ * colour it s3 and then RECYCLE s3 for `glyph` once str is dead, and therefore needs only
+ * SEVEN callee-saved registers.  Every attempt to defeat the fold at the source level failed
+ * (see the negatives); rewriting the cursor as an index made it appear immediately.
+ *   pointer cursor -> integer index                                     3857 -> 3278
+ *     (brings `move v1,zero`, `addu s2,s3,v1`, `move s3,a0`, `addiu s2,s2,2`,
+ *      and `lbu ..,0(s2)` for the `str[i] == 0xA` test, all matching)
+ *   `c = str[i]; do {...} while (c != 0);` -> `while ((c = str[i]) != 0)`  3278 -> 2953
+ *     (brings the guard's `beqzl` and its `lw t2,0(s1)` delay slot)
+ *
+ * RESIDUAL: we still use NINE callee-saved registers where golden uses SEVEN.  The two extras:
+ *   flag        -> s4   golden keeps it in t0 and SPILLS it to 0x68(sp) around func_150415E0
+ *   &D_80085994 -> s6   golden rematerialises `lui %hi(D_80085994)` twice inside the loop
+ * plus four smaller rows: an extra `beqz a0` (the while's own entry test, which golden does not
+ * emit), `addu s2,s3,v1` scheduled after the guard branch instead of before it, `move s3,v1`
+ * where golden has a SECOND `andi s3,v0,0xff`, and one `b`/`nop` pair.
+ *
+ * The second `andi` is load-bearing and is the thing to chase next.  In golden the post-call
+ * block is  andi v1,v0,0xff / li at,0x60 / andi s3,v0,0xff / bne / [delay: move t0,zero].
+ * That extra andi is what occupies the pre-branch slot, which is what pushes `flag = 0` into
+ * the bne delay slot.  We have one instruction fewer there, so `move s3,v1` takes the delay
+ * slot and IDO sinks `flag = 0` all the way back into the JAL delay slot -- and an assignment
+ * scheduled BEFORE the call is exactly what forces `flag` into a callee-saved register.
+ * Get the second andi and flag should fall back to t0 by itself.
+ *
+ * MEASURED NEGATIVES (each built hard: object AND asm-processor intermediate removed, make
+ * hard-failed on error, scored with AND without -R -- equal for every variant):
+ *   3857  parked baseline (u8 *p cursor)
+ *   3857  p = str + glyph;
+ *   4051  separate never-reassigned `s32 idx` used only for the cursor
+ *   4091  glyph declared u8, no explicit & 0xFF
+ *   3907  u8 index copy + s32 compare copy (chasing the double andi) on the pointer base
+ *   3197  the same split on top of the 2953 index base
+ *   3885  `p = &str[glyph];` hoisted above the `*arg2 += 0xC` block
+ *   3747  caching str[0] in the (dead at that point) sp60 slot -- permuter find, and WRONG:
+ *         golden reloads str[0] three times, so this is a local optimum in the wrong direction
+ *   4122  for (;;) { c = str[i]; if (c == 0) break; ... }
+ *   3278  index rewrite, `c = str[i]; do { ... } while (c != 0);`
+ *   3278  index rewrite, `} while ((c = str[i]) != 0);`
+ *   3147  index rewrite + a row pointer reloaded once per statement
+ *   2845  index rewrite + `u8 (*metrics)[4]` local caching D_80085994   <-- REJECTED, see below
+ *
+ * REJECTED (2845): caching D_80085994 in a local does kill the `lui/addiu` address hoist and
+ * scores 108 better, but the extra local consumes a stack home and shifts every func_150415E0
+ * out-param slot DOWN BY 4 (`addiu a1,sp,0x60` where golden has 0x64).  The frame size stays
+ * 0x80, so PERMUTER_TU_REQUIRE_FRAME cannot see it.  This is the frame-growth trap one level
+ * down: a source whose stack offsets are wrong can never reach zero.  Do not chase it, and
+ * gate future permuter runs on the out-param offsets, not just on the frame size.
+ *
+ * HARNESS: `./permuter_tu.sh selftest` PASSES for game_6E770 (a, b, b2, c, d all PASS; (e)
+ * reports isolation differs from the in-TU build, so the TU-aware harness is load-bearing).
+ * ~1700 iterations from this 2953 base with PERMUTER_TU_REQUIRE_FRAME=128 produced nothing
+ * that keeps the stack layout.
+ */
 #include <ultra64.h>
 #include "functions.h"
 #include "variables.h"
@@ -84,8 +150,8 @@ s32 func_15042C40(u8);
 void func_150415E0(s32, s32 *, s32 *, f32 *, s32 *, f32 *);
 
 void func_150428D4(u8 *str, s32 *arg1, s32 *arg2, s32 *arg3) {
-    u8 *p;
     u8 c;
+    s32 i;
     s32 glyph;
     s32 lineH;
     s32 maxW;
@@ -106,16 +172,14 @@ void func_150428D4(u8 *str, s32 *arg1, s32 *arg2, s32 *arg3) {
     *arg3 = 0;
     maxW = 0;
     lineH = 0;
-    glyph = 0;
+    i = 0;
     if (str[0] == 0) {
         *arg2 += 0xC;
     }
-    p = &str[glyph];
     if (str[0] != 0) {
-        c = *p;
-        do {
+        while ((c = str[i]) != 0) {
             if (c == 0xBC) {
-                p += 2;
+                i += 2;
             } else {
                 glyph = func_15042C40(c) & 0xFF;
                 flag = 0;
@@ -137,7 +201,7 @@ void func_150428D4(u8 *str, s32 *arg1, s32 *arg2, s32 *arg3) {
                         *arg3 = (s32)sp5C;
                     }
                 } else if (glyph < 0xA1) {
-                    if (p[0] == 0xA) {
+                    if (str[i] == 0xA) {
                         if (maxW < *arg1) {
                             maxW = *arg1;
                         }
@@ -151,7 +215,7 @@ void func_150428D4(u8 *str, s32 *arg1, s32 *arg2, s32 *arg3) {
                         flag = 1;
                     }
                 }
-                p++;
+                i++;
                 if (flag != 0) {
                     *arg1 += D_80085994[glyph][0] + D_80085994[glyph][2] - 1;
                     temp = D_80085994[glyph][1] + D_80085994[glyph][3];
@@ -160,8 +224,7 @@ void func_150428D4(u8 *str, s32 *arg1, s32 *arg2, s32 *arg3) {
                     }
                 }
             }
-            c = *p;
-        } while (c != 0);
+        }
     }
 
     if (*arg1 < maxW) {
