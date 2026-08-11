@@ -1475,6 +1475,7 @@ segments:
       - [0x24F050, rodata]
       - [0x24F370, rodata]
       - [0x24F3F0, rodata]
+      - [0x24F480, .rodata, game_1ED0F0] # float pool: D_800AA9C0 5000.0f + D_800AA9C4 0.1f
       - [0x24F490, rodata]
       - [0x24F550, rodata]
       - [0x24F5C0, rodata]

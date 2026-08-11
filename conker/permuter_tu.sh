@@ -112,8 +112,30 @@ src, func, out = sys.argv[1:4]
 lines = open(src, encoding="utf-8", errors="replace").read().split("\n")
 start = None
 pat = re.compile(r"^[A-Za-z_].*\b" + re.escape(func) + r"\s*\(")
+
+
+def is_definition(i):
+    """A DEFINITION reaches '{' before it reaches ';'.
+
+    The old test was `not line.endswith(';')`, which a MULTI-LINE FORWARD DECLARATION
+    passes -- its first line ends in a comma. Brace-matching then started at the
+    declaration, ran past it, and swallowed the NEXT function's body, so the permuter
+    randomised one function while scoring another. Nothing in the selftest catches
+    that: (a) still reassembles, (b)/(b2) compare the same source on both sides, and
+    (c) still reports the right base score. Found on game_1ED0F0's forward decl for
+    func_151C1D5C. Scan characters, not line endings.
+    """
+    for j in range(i, len(lines)):
+        for ch in lines[j]:
+            if ch == "{":
+                return True
+            if ch == ";":
+                return False
+    return False
+
+
 for i, ln in enumerate(lines):
-    if pat.match(ln) and not ln.rstrip().endswith(";"):
+    if pat.match(ln) and is_definition(i):
         start = i
         break
 if start is None:

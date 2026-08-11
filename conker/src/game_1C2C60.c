@@ -240,7 +240,119 @@ s32 func_15195FB0(ResourceEntry *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s
     return func_15195DD4(arg0->field_0x1C, arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15195FF0.s")
+typedef struct {
+    /* 0x0 */ u32 w0;
+    /* 0x4 */ u32 w1;
+} Cmd15195FF0;
+
+typedef struct Sub15195FF0 {
+    /* 0x00 */ char pad00[0x8];
+    /* 0x08 */ Cmd15195FF0 *unk08;
+    /* 0x0C */ u16 unk0C;
+    /* 0x0E */ u8 unk0E;
+    /* 0x0F */ u8 unk0F;
+    /* 0x10 */ struct Sub15195FF0 *unk10;
+} Sub15195FF0;
+
+typedef struct Struct15195FF0 {
+    /* 0x00 */ struct Struct15195FF0 *prev;
+    /* 0x04 */ struct Struct15195FF0 *next;
+    /* 0x08 */ s16 unk08;
+    /* 0x0A */ s16 unk0A;
+    /* 0x0C */ s16 unk0C;
+    /* 0x0E */ u16 unk0E;
+    /* 0x10 */ u16 unk10;
+    /* 0x12 */ s8 unk12;
+    /* 0x13 */ s8 unk13;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ char pad15[0x3];
+    /* 0x18 */ Sub15195FF0 *unk18;
+    /* 0x1C */ s16 unk1C[5];
+    /* 0x26 */ s16 unk26[5];
+    /* 0x30 */ u8 unk30[5];
+    /* 0x35 */ u8 unk35[5];
+} Struct15195FF0;
+
+void func_15195FF0(Cmd15195FF0 *arg0, Cmd15195FF0 *arg1) {
+    Struct15195FF0 *node;
+    u32 sp5C[8];
+    Sub15195FF0 *sub;
+    s32 uls;
+    s32 ult;
+    s32 w;
+    s32 h;
+    s32 x;
+    s32 y;
+    s32 i;
+    s32 k;
+    s32 idx;
+
+    node = (Struct15195FF0 *)D_800E08E8;
+    while (node != NULL) {
+        w = node->unk0A;
+        h = node->unk0C;
+        x = node->unk0E;
+        y = node->unk10;
+        uls = x / 8 + 2;
+        ult = y / 8 + 2;
+        if (uls >= w) {
+            uls = uls - w;
+        }
+        if (ult >= h) {
+            ult = ult - h;
+        }
+        for (i = 0; i < 8 && i < node->unk14; i++) {
+            sp5C[i] = 0xF2000000 | ((uls & 0xFFF) << 12) | (ult & 0xFFF);
+            uls /= 2;
+            ult /= 2;
+        }
+        w *= 8;
+        h *= 8;
+        if (D_800BEAC0 == 0) {
+            x += node->unk12 * D_800BE9E4;
+            y += node->unk13 * D_800BE9E4;
+        }
+        if (x < 0) {
+            x += w;
+        } else if (x >= w) {
+            x -= w;
+        }
+        if (y < 0) {
+            y += h;
+        } else if (y >= h) {
+            y -= h;
+        }
+        node->unk0E = x;
+        node->unk10 = y;
+        for (k = 0; k < 5 && node->unk1C[k] != -1; k++) {
+            idx = node->unk1C[k];
+            for (i = 0; i < node->unk30[k]; i++) {
+                arg0[idx].w0 = sp5C[i];
+                idx += 2;
+            }
+        }
+        for (k = 0; k < 5 && node->unk26[k] != -1; k++) {
+            idx = node->unk26[k];
+            for (i = 0; i < node->unk35[k]; i++) {
+                arg1[idx].w0 = sp5C[i];
+                idx += 2;
+            }
+        }
+        sub = node->unk18;
+        while (sub != NULL) {
+            idx = sub->unk0C;
+            for (i = 0; i < sub->unk0E; i++, idx += 2) {
+                sub->unk08[idx].w0 = sp5C[i];
+            }
+            if (sub->unk10 != NULL) {
+                sub = sub->unk10;
+            } else {
+                sub = NULL;
+            }
+        }
+        node = node->next;
+    }
+}
 
 void func_15196318(u8 *arg0, s32 arg1, s32 arg2) {
     if (arg0 != 0) {
