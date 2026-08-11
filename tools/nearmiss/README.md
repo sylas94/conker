@@ -1,5 +1,19 @@
 # Abandoned reconstructions
 
+> **Exception — `func_151C196C.c` is NOT abandoned and NOT unverified.** It is a confirmed
+> score-0 match (whole TU, both with and without `-R`) that is *blocked on another function*.
+> Its `5000.0f` literal makes IDO emit a private 16-byte `.rodata` pool, and the golden block
+> at `0x24F480` is `459C4000 3DCCCCCD 00000000 00000000` — `D_800AA9C0` (5000.0f, this
+> function) followed by `D_800AA9C4` (0.1f), which belongs to **`func_151C1D5C`**, the next
+> function in the same TU and still a `#pragma`. Migrating the block today would lay a
+> 16-byte section carrying only 5000.0f over the golden 16 bytes and zero the 0.1f, breaking
+> the ROM; *not* migrating it means the object will not link. Ship both together: once
+> `func_151C1D5C` is live C carrying its own 0.1f, IDO emits pool constants in first-use order
+> and reproduces the golden block exactly, at which point
+> `- [0x24F480, .rodata, game_1ED0F0]` becomes correct.
+> `func_151C1D5C` is 604 B / 151 instructions / 1 callee / 9 float ops and not hand-written,
+> so closing it unlocks **1,612 bytes**.
+
 72 functions, **72,680 bytes**, that are still `#pragma GLOBAL_ASM` stubs but
 already have a C reconstruction someone wrote and then dropped when the score plateaued.
 Recovered from a session scratchpad (a temporary directory) so they stop being one wipe away

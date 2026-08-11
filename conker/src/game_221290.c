@@ -190,7 +190,85 @@ s32 func_151F578C(AudCtx *arg0, s32 arg1, s32 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_221290/func_151F63C4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_221290/func_151F6970.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_221290/func_151F6B28.s")
+
+/* The de-interleave/rotation pass of the bitstream decoder.  The context is
+ * re-described locally: the shared AudCtx above only names the fields the
+ * already-decompiled functions need. */
+extern f32 D_800B067C[8];
+extern f32 D_800B069C[8];
+
+typedef struct {
+    /* 0x00 */ f32 unk00[8];
+    /* 0x20 */ f32 unk20[8];
+    /* 0x40 */ u8  pad40[0x8];
+} AudBlk151F6B28; /* size 0x48 */
+
+typedef struct {
+    /* 0x0000 */ u8  pad0000[0x3C98];
+    /* 0x3C98 */ s32 unk3C98[2][1];
+    /* 0x3CA0 */ s32 unk3CA0[2][1];
+    /* 0x3CA8 */ u8  pad3CA8[0x4F44 - 0x3CA8];
+    /* 0x4F44 */ AudBlk151F6B28 unk4F44[2][32];
+} AudState151F6B28;
+
+s32 func_151F6B28(AudState151F6B28 *arg0, s32 arg1, s32 arg2) {
+    s32 i;
+    f32 *p;
+    f32 v;
+    f32 u;
+
+    if (arg0->unk3C98[arg1][arg2] != 0) {
+        if (arg0->unk3CA0[arg1][arg2] == 2) {
+            return 1;
+        }
+    }
+
+    for (i = 1; i < 32; i++) {
+        p = arg0->unk4F44[arg2][i].unk20;
+
+        v = p[0];
+        u = p[-1];
+        p[-1] = u * D_800B069C[0] - D_800B067C[0] * v;
+        p[0] = v * D_800B069C[0] + D_800B067C[0] * u;
+
+        v = p[1];
+        u = p[-2];
+        p[-2] = u * D_800B069C[1] - D_800B067C[1] * v;
+        p[1] = v * D_800B069C[1] + D_800B067C[1] * u;
+
+        v = p[2];
+        u = p[-3];
+        p[-3] = u * D_800B069C[2] - D_800B067C[2] * v;
+        p[2] = v * D_800B069C[2] + D_800B067C[2] * u;
+
+        v = p[3];
+        u = p[-4];
+        p[-4] = u * D_800B069C[3] - D_800B067C[3] * v;
+        p[3] = v * D_800B069C[3] + D_800B067C[3] * u;
+
+        v = p[4];
+        u = p[-5];
+        p[-5] = u * D_800B069C[4] - D_800B067C[4] * v;
+        p[4] = v * D_800B069C[4] + D_800B067C[4] * u;
+
+        v = p[5];
+        u = p[-6];
+        p[-6] = u * D_800B069C[5] - D_800B067C[5] * v;
+        p[5] = v * D_800B069C[5] + D_800B067C[5] * u;
+
+        v = p[6];
+        u = p[-7];
+        p[-7] = u * D_800B069C[6] - D_800B067C[6] * v;
+        p[6] = v * D_800B069C[6] + D_800B067C[6] * u;
+
+        v = p[7];
+        u = p[-8];
+        p[-8] = u * D_800B069C[7] - D_800B067C[7] * v;
+        p[7] = v * D_800B069C[7] + D_800B067C[7] * u;
+    }
+
+    return 1;
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_221290/func_151F6FD0.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_221290/func_151F78B4.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_221290/func_151F7F60.s")
