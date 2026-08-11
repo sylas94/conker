@@ -143,6 +143,30 @@ before iterating.
 - When a near-identical SIBLING already matches, mirror its exact C structure (call order,
   arg casts, last-arg literals) — often a 1-try match.
 
+## A FAILED BUILD still scores 0 — always delete the object first
+`asm-differ` scores whatever object is on disk. If your edit does not compile, `make` fails but
+the PREVIOUS object is still there, and the differ happily reports the score it had before.
+Caught live: a macro whose parameters were named `(w0, w1)` got substituted into `_g->words.w0`,
+producing `cfe: Error: line 121: Syntax Error` — and the score still read 0 from the stale object.
+
+Before believing any score:
+
+    rm -f build/src/<tu>.c.o build/src/<tu>.c      # object AND asm-processor intermediate
+    make -s build/src/<tu>.c.o VERSION=us || exit  # hard-fail, do not continue
+    test -f build/src/<tu>.c.o || exit             # and an object was actually produced
+
+Related trap: IDO's `cc -c -o "<path with a space>"` **exits 0 while writing no object at all**,
+and the repo path contains a space. Any tooling that compiles outside `make` must use a
+space-free output path (see `conker/permuter_tu.sh`).
+
+### The strongest single check: compare the whole TU's .text
+Per-function scoring can miss collateral damage. This proves the match AND that nothing else in
+the file moved, in one step:
+
+    mips-linux-gnu-objcopy -O binary --only-section=.text build/src/<tu>.c.o    /tmp/mine.bin
+    mips-linux-gnu-objcopy -O binary --only-section=.text expected/build/src/<tu>.c.o /tmp/gold.bin
+    cmp -s /tmp/mine.bin /tmp/gold.bin && echo IDENTICAL
+
 ## Diagnosing a FALSE non-zero score
 - **A score for a function over 4096 bytes is measured on a PREFIX unless you pass
   `--max-lines`.** `diff.py --max-lines` defaults to 1024 and caps the diff at

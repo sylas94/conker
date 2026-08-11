@@ -29,39 +29,43 @@ extern s32 D_100291A0;
 extern void func_1501A39C(void);
 extern void func_1501CC3C(void);
 
-#define WGFX1501C880(a, b)              \
+/* Append one 8-byte command to the display list under construction and
+   advance the write head (D_800BE9D0). */
+#define PUTGFX1501C880(cmd, arg)        \
 {                                       \
     Gfx *_g = (Gfx *)D_800BE9D0;        \
     D_800BE9D0 += 8;                    \
-    _g->words.w0 = (u32)(a);            \
-    _g->words.w1 = (u32)(b);            \
+    _g->words.w0 = (u32)(cmd);          \
+    _g->words.w1 = (u32)(arg);          \
 }
 
 void func_1501C880(s32 arg0, s32 arg1) {
     s32 limit;
+    s32 *pool;
     s32 count;
 
     arg0 = arg0;
-    limit = (D_800BE9C8[1] - D_800BE9C8[0]) >> 3;
+    pool = D_800BE9C8;
+    limit = (pool[1] - pool[0]) >> 3;
     D_800BEAD4 = &D_800BEAD8[D_800BE9C0];
     D_800BEAD4->unk0 = 0;
-    count = (D_800BE9D0 - D_800BE9C8[D_800BE9C0]) >> 3;
+    count = (D_800BE9D0 - pool[D_800BE9C0]) >> 3;
     if ((count < 0) || (count > limit)) {
         func_1501A39C();
         D_800BE9D0 = D_800BE9D8[D_800BE9C0];
-        WGFX1501C880(0xE9000000, 0);
-        WGFX1501C880(0xDF000000, 0);
-        count = (D_800BE9D0 - D_800BE9C8[D_800BE9C0]) >> 3;
+        PUTGFX1501C880(0xE9000000, 0);
+        PUTGFX1501C880(0xDF000000, 0);
+        count = (D_800BE9D0 - pool[D_800BE9C0]) >> 3;
     }
 
     if ((count < 0) || (count > (limit - 400))) {
-        D_800BE9D0 = D_800BE9C8[D_800BE9C0] + ((limit - 400) << 3);
-        WGFX1501C880(0xE9000000, 0);
-        WGFX1501C880(0xDF000000, 0);
+        D_800BE9D0 = pool[D_800BE9C0] + ((limit - 400) << 3);
+        PUTGFX1501C880(0xE9000000, 0);
+        PUTGFX1501C880(0xDF000000, 0);
     }
 
-    D_800BEAD4->list.data_ptr = (u64 *)D_800BE9C8[D_800BE9C0];
-    D_800BEAD4->list.data_size = (D_800BE9D0 - D_800BE9C8[D_800BE9C0]) >> 3 << 3;
+    D_800BEAD4->list.data_ptr = (u64 *)pool[D_800BE9C0];
+    D_800BEAD4->list.data_size = ((D_800BE9D0 - pool[D_800BE9C0]) >> 3) << 3;
     func_1501CC3C();
 
     D_800BEAD4->list.type = 1;

@@ -3983,3 +3983,6 @@ func_1508F9F4	midband_w10	1113	NA
 func_15036570	midband_w10	7140	NA
 func_1500FA64	midband_w10	0	972
 func_151EDBDC	midband_w10	0	880
+func_1508C5B8	midband_w11	2505	1044
+func_150368C4	midband_w11	6300	940
+func_1501C880	permuter_w11	0	956
