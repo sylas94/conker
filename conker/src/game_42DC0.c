@@ -44,4 +44,65 @@ void func_15015920(s16 arg0) {
     func_10004074(data);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_42DC0/func_15015A38.s")
+typedef u8 Cell15015A38[224];
+
+typedef struct {
+    u8 width;
+    u8 height;
+    u8 unk2;
+    u8 unk3;
+} Glyph15015A38;
+
+extern Glyph15015A38 *D_80085994[];
+extern Cell15015A38 *D_80085990[];
+
+void func_15015A38(u8 *arg0, s32 arg1, s32 arg2) {
+    s32 i;
+    s32 n;
+    s32 row;
+    s32 pos;
+    s32 stride;
+    s32 flip;
+    s32 len;
+    s32 val;
+
+    D_80085994[arg2][arg1].width = arg0[0] + 1;
+    D_80085994[arg2][arg1].height = arg0[1] + 1;
+    D_80085994[arg2][arg1].unk2 = arg0[2];
+    D_80085994[arg2][arg1].unk3 = arg0[3];
+
+    stride = (D_80085994[arg2][arg1].width + 7) & 0xFFF8;
+    pos = 8;
+
+    for (i = 0; i < D_80085994[arg2][arg1].width; i++) {
+        D_80085990[arg2][arg1][i] = 0;
+    }
+
+    for (row = 1; row < D_80085994[arg2][arg1].height + 1; row++) {
+        if ((row & 1) == 0) {
+            flip = 0;
+        } else {
+            flip = 4;
+        }
+        for (i = 0; i < D_80085994[arg2][arg1].width; i++) {
+            if (i == 0) {
+                D_80085990[arg2][arg1][(i ^ flip) + row * stride] = 0;
+            } else {
+                len = (arg0[pos] & 0xF) + 1;
+                val = arg0[pos] & 0xF0;
+                pos++;
+                for (n = 0; n < len; n++) {
+                    D_80085990[arg2][arg1][((i + n) ^ flip) + row * stride] = val;
+                }
+                i += len - 1;
+            }
+        }
+        for (; i < stride; i++) {
+            D_80085990[arg2][arg1][(i ^ flip) + row * stride] = 0;
+        }
+    }
+
+    for (i = 0; i < stride; i++) {
+        D_80085990[arg2][arg1][i + row * stride] = 0;
+    }
+}

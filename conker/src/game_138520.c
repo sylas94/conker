@@ -108,8 +108,6 @@ Gfx *func_1510B7B4(Gfx *gfx, s32 idx) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510BF60.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510C4AC.s")
-
 typedef struct {
     /* 0x00 */ s16 tc0;
     /* 0x02 */ s16 tc1;
@@ -131,8 +129,60 @@ typedef struct {
 
 extern UvWobble *D_800D9E60[];
 extern Vtx *D_800B0E10[];
+extern Vtx *D_800B0E14;
+extern s32 D_800917B8;
 extern f32 sinf(f32);
 extern f32 cosf(f32);
+extern void *allocate_memory(s32, s32, s32, s32);
+s32 func_1510BF60(s32 dl, s32 segAddr, Vtx **outVtx, s32 skip);
+
+UvWobble *func_1510C4AC(s32 dl, s32 arg1, s32 arg2, s32 arg3) {
+    Vtx *vtx;
+    s32 count;
+    s32 i;
+    UvWobble *wob;
+
+    if (D_800D9E64 > 0) {
+        return NULL;
+    }
+
+    wob = allocate_memory(0x14, 1, 0, 0);
+    if (wob == NULL) {
+        return NULL;
+    }
+
+    D_800D9E60[D_800D9E64++] = wob;
+    wob->unk0C = arg1;
+    wob->unk00 = NULL;
+    wob->unk04 = NULL;
+    wob->unk0E = 0;
+    wob->unk10 = arg2;
+    wob->unk12 = arg3;
+
+    count = func_1510BF60(D_800B0E00[0], dl, &vtx, 0);
+    if (count != 0) {
+        wob->unk08 = count;
+        wob->unk0A = vtx - D_800B0E10[0];
+        wob->unk00 = allocate_memory(count * 4, 1, 0, 0);
+        for (i = 0; i < count; i++) {
+            wob->unk00[i].tc0 = vtx[i].v.tc[0];
+            wob->unk00[i].tc1 = vtx[i].v.tc[1];
+        }
+    }
+
+    count = func_1510BF60(D_800B0E04, D_800917B8, &vtx, 0);
+    if (count != 0) {
+        wob->unk09 = count;
+        wob->unk0B = vtx - D_800B0E14;
+        wob->unk04 = allocate_memory(count * 4, 1, 0, 0);
+        for (i = 0; i < count; i++) {
+            wob->unk04[i].tc0 = vtx[i].v.tc[0];
+            wob->unk04[i].tc1 = vtx[i].v.tc[1];
+        }
+    }
+
+    return wob;
+}
 
 void func_1510C8A8(void) {
     s32 i;

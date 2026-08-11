@@ -615,7 +615,118 @@ void func_15088824(Struct15088824 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_150888A8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15088A08.s")
+struct Struct15088A08 {
+    char pad0[0x8];
+    f32 unk8;
+    char padC[0xC];
+    s32 unk18;
+    s32 unk1C;
+    s32 unk20;
+    s16 unk24;
+    s8 unk26;
+    s8 unk27;
+    s8 unk28;
+    char pad29[2];
+    u8 unk2B;
+    u8 unk2C;
+    u8 unk2D;
+    u8 unk2E;
+    s8 unk2F;
+    s8 unk30;
+    s8 unk31;
+};
+
+extern u8 D_800D2390;
+extern s8 D_800E0BE7;
+extern u8 D_800BE616;
+extern s8 D_8008FD90;
+extern s16 D_800E0C10[];
+extern s32 D_800E0C18[];
+
+s32 func_15088A08(struct Struct15088A08 *arg0, f32 arg1) {
+    s32 dir;
+    s32 idx;
+    s32 lim;
+    s32 t;
+    s32 v;
+
+    dir = 0;
+    arg0->unk8 += arg1;
+    if (arg0->unk8 < 0.0f) {
+        arg0->unk8 += 1.0f;
+        arg0->unk2E = arg0->unk2D;
+        arg0->unk2D = arg0->unk2C;
+        arg0->unk2C = arg0->unk2B;
+        arg0->unk2B = func_150888A8(arg0->unk2D, arg0->unk2C, arg0->unk2F);
+        dir = -1;
+    } else if (arg0->unk8 >= 1.0f) {
+        arg0->unk8 -= 1.0f;
+        arg0->unk2B = arg0->unk2C;
+        arg0->unk2C = arg0->unk2D;
+        arg0->unk2D = arg0->unk2E;
+        arg0->unk2E = func_150888A8(arg0->unk2C, arg0->unk2D, arg0->unk2F);
+        dir = 1;
+        if (D_800D23A8 == 0) {
+            if (((u8 *)D_800D2350)[arg0->unk2C * 16 + 0xF] == 5) {
+                D_800D2390 = 1;
+            }
+            if (((u8 *)D_800D2350)[arg0->unk2C * 16 + 0xF] == 6) {
+                D_800D2390 = 2;
+            }
+        } else {
+            if (((u8 *)D_800D2350)[arg0->unk2C * 16 + 0xF] == 7) {
+                D_800D2390 = 1;
+            }
+            if (((u8 *)D_800D2350)[arg0->unk2C * 16 + 0xF] == 8) {
+                D_800D2390 = 2;
+            }
+            if (((u8 *)D_800D2350)[arg0->unk2C * 16 + 0xF] == 9) {
+                D_800D2390 = 3;
+            }
+        }
+    }
+
+    if (dir != 0) {
+        lim = D_800E0BE7;
+        idx = arg0->unk31;
+        arg0->unk24 += dir;
+        arg0->unk27 = arg0->unk24 / arg0->unk26;
+        if (D_800BE616 != 0) {
+            if (lim < arg0->unk27) {
+                arg0->unk27 = lim + 1;
+            }
+        }
+        if (arg0->unk28 < arg0->unk27) {
+            arg0->unk28 = arg0->unk27;
+            if ((idx < D_8008FD90) && (arg0->unk30 == 0) && (arg0->unk1C > 0)) {
+                if (lim >= arg0->unk28) {
+                    t = arg0->unk1C - arg0->unk18;
+                    if (t > 0x7D00) {
+                        t = 0x7D00;
+                    }
+                    if ((D_800E0C10[idx] <= 0) || (t < D_800E0C10[idx])) {
+                        D_800E0C10[idx] = t;
+                    }
+                    arg0->unk20 = t;
+                }
+                if (lim == arg0->unk28) {
+                    v = arg0->unk1C;
+                    if (v > 0x57E40) {
+                        v = 0x57E40;
+                    }
+                    D_800E0C18[idx] = v;
+                }
+            }
+            if (lim == arg0->unk28) {
+                arg0->unk18 = -arg0->unk1C;
+            } else if (arg0->unk28 < lim) {
+                arg0->unk18 = arg0->unk1C;
+            }
+        }
+    }
+
+    return dir;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15088D58.s")
 

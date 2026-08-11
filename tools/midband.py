@@ -66,6 +66,12 @@ for f, s in sub.items():
         continue
     if "jtbl_" in t:
         continue
+    # HAND-WRITTEN ASSEMBLY IS NOT DECOMPILABLE and it ranks FIRST under any tractability
+    # metric -- it has no jal (0 callees), often no stack frame, and few branches, which is
+    # exactly what "tractable" was measuring. func_150A3FC4 topped the first list this way and
+    # cost an agent a slot before it read the header. spimdisasm marks these explicitly.
+    if "Handwritten function" in t or "handwritten instruction" in t:
+        continue
     callees = JAL.findall(t)
     fr = FRAME.search(t)
     cand.append({

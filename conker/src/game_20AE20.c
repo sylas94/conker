@@ -273,7 +273,83 @@ void func_151E2284(void) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E2404.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E24F0.s")
+extern s8 D_800AB694[];
+extern s8 D_8008FE44[];
+extern s8 D_800E0BCE[];
+extern s8 D_800E0BEE;
+extern u8 D_800BE740;
+
+s32 func_151E24F0(s32 *arg0) {
+    s32 i;
+    s32 j;
+    s32 count;
+    s32 v;
+    s8 used[4];
+    s8 sel[4];
+    u8 mask;
+
+    if (arg0 == NULL) {
+        D_800E0BCE[0] = 0;
+        D_800E0BCE[1] = 0;
+    }
+
+    if (D_800AB694[D_8008FDD4->pad42 * 10] == 8) {
+        mask = 0;
+        count = 0;
+        if (D_800E0BEE != 0) {
+            for (i = 0; i < 4; i++) {
+                used[i] = 0;
+            }
+            for (i = 0; i < 4; i++) {
+                v = D_8008FE44[i];
+                if (v >= 0) {
+                    count++;
+                    used[v] = 1;
+                    mask |= 1 << v;
+                }
+            }
+            mask = D_800BE740 & ~mask;
+            if (count < 3) {
+                if (mask != 0) {
+                    for (i = 0; i < 4; i++) {
+                        sel[i] = 1;
+                        if (count == 1) {
+                            if ((D_800BE740 & (1 << i)) == 0) {
+                                sel[i] = 0;
+                            }
+                        }
+                    }
+                    j = 0;
+                    if (arg0 == NULL) {
+                        for (j = 16; j >= count * 2; j--) {
+                            D_8008FE44[j] = D_8008FE44[j - count];
+                            D_800E0C00[j] = D_800E0C00[j - count];
+                        }
+                        for (j = count, i = 0; (i < 4) && (j < count * 2); i++) {
+                            if ((used[i] == 0) && (sel[i] != 0)) {
+                                D_8008FE44[j] = i;
+                                D_800E0C00[j] = D_800E0C00[j - count];
+                                D_800E0BCE[j - count] = j;
+                                D_80087270[j] = 10;
+                                j++;
+                            }
+                        }
+                    } else {
+                        for (i = 0; (i < 4) && (j < count); i++) {
+                            if ((used[i] == 0) && (sel[i] != 0)) {
+                                arg0[j] = i;
+                                j++;
+                            }
+                        }
+                    }
+                    return count;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E2834.s")
 
