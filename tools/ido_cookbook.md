@@ -476,6 +476,73 @@ Golden computed both maxima before both minima, so the source reads
 instruction count. A trailing `addiu $sN,$sN,0x10` in golden is therefore never a plain dead
 increment — look for a real remaining use.
 
+## The loop-invariant ranking tie (2026-08-10) — a named BAIL signal
+
+Six functions were driven to their recorded near-miss scores and every one of them ended in
+the same shape: **9-11 rows, 100% register-only, zero structural rows.** This is now a
+recognised terminal state, not a sign you are close in a useful way.
+
+The mechanism. IDO hoists loop-invariant values into callee-saved registers and assigns them
+to slots in a fixed order, ranking candidates by a depth-weighted reference count. When two
+candidates tie, or rank within one of each other, which one gets `$s6` versus `$s7` is decided
+inside the compiler with **no source-level handle at all**. Worked examples:
+
+* `func_1502BAD0` @45 — four hoisted constants; golden takes them (0xFF, 1, 7, 2), we get
+  (0xFF, 7, 1, 2). Only the 1 and 7 swap, and that cascades into 7 branch-operand rows. Use
+  counts were verified IDENTICAL on both sides (1 → 4 uses, 7 → 3, 2 → 6, 0xFF → 2).
+* `func_1506AD30` @45 — the 0xC stride scores 21, the `&D_800D1580` base scores 20; they land
+  in each other's registers. Ten forms across two sessions moved nothing.
+* `func_150585F0` @10 — **two rows**, one scratch float register for a call argument bound to
+  `$a3`. 21 source forms all produced `$f0` where golden has `$f14`.
+* `func_150A09D0` @20 — two `addu`s in `jal` delay slots emitted (base, induction) where golden
+  has (induction, base). 11 pointer spellings all canonicalised the same way; the other 8
+  `addu`s in the same function already match.
+
+> **BAIL RULE.** If the residual is 100% register-only with zero inserts/deletes/reorders, and
+> two or more independent source spellings leave the score EXACTLY unchanged, stop. The
+> allocation is internal. Record the register map and move on — this is not a permuter job
+> either unless the permuter has a structural handle to pull.
+
+The cheap diagnostic: dump the golden and candidate register assignments side by side. If use
+counts match and only the register NAMES differ, there is nothing in the source to change.
+
+### What DID close one: the address-taken-local store barrier
+`func_15121490` @115 was the one function of the six that reached 0, and the lever generalises.
+
+Golden kept `arg0->unk31C` in a **cross-block CSE temp** (`$v1`) for the reads before a call,
+then copied it into the saved register for the stores after (`move s0,v1`). Three edits, only
+in combination, reproduce that:
+
+1. spell the guard as `state = arg0->unk31C->unk78;` — **not** `stats->unk78` — so IDO creates
+   the CSE temp in the pre-branch block at all;
+2. make `stats = arg0->unk31C;` the **first** statement of the merge block, so it CSEs against
+   that temp and emits `move s0,v1` rather than a fresh load;
+3. leave the later read as `stats->unk114`.
+
+The load-bearing rule underneath, worth remembering on its own:
+
+> **A store into an address-taken local aggregate kills IDO's available-expression set.**
+> Everything live across it gets reloaded.
+
+`stats = ...` had to precede the first store to `endPoint` for exactly this reason — placing it
+after cost 770. Spelling the later read as `arg0->unk31C->unk114` after that store also reloads
+(814/920), and hoisting it into a fresh float local fixes the read but costs +8 of frame
+(1315/3349). When a value you expect to be CSE'd is being reloaded, look for a store to an
+address-taken local between the two uses before you touch anything else.
+
+### When the permuter cannot be used at all
+`conker/permuter_tu.sh selftest` must pass before its output means anything. Two TUs failed it
+in different ways, both fatal:
+* **game_83300** — check (b2), the pycparser round trip, produced a disassembly whose sha1 is
+  `da39a3ee...0709`, i.e. **the empty string**: the function vanishes entirely from the
+  round-tripped source, so the permuter would be optimising nothing.
+* **game_1B1600** — (b2) fails AND the (d) negative control fails (a deliberately perturbed
+  source scored 630, identical to the baseline 630). A negative control that passes for free
+  means the harness is not measuring the function.
+
+Both TUs are dense in block-scoped `{ Gfx *_g = ...; }` gbi macro expansions, which pycparser
+regenerates in a form IDO compiles differently. On such TUs, hand-match or bail.
+
 ### L0 correction: flag-sweeping a TU whose .text is injected asm is meaningless
 The all-pragma flag sweep only works while the TU still contains genuine compiled C. For a TU
 that is *entirely* GLOBAL_ASM, every flag setting produces the same injected bytes and the

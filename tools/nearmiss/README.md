@@ -23,6 +23,25 @@ original snapshot filename.
   do-while, `&local`-to-force-a-reload -- **before** shipping anything derived from them.
   A score of 0 is necessary, not sufficient.
 * **A definition here does not mean the function is close.** It means somebody started.
+* **DESTRUCTIVE: many of these are whole-TU snapshots taken from an OLDER tree, and copying
+  one over `conker/src/<tu>.c` can DELETE functions that have been matched since.** Real case:
+  `func_1502BAD0.c` predates the match of its sibling `func_1502C974`, so installing it
+  wholesale silently reverts that function to a stub. Apply only the hunk for your target,
+  forward-declaring anything it needs, and before you build, diff the function lists:
+
+      git show HEAD:conker/src/<tu>.c | grep -oE '^[A-Za-z_].*\bfunc_[0-9A-Fa-f]{8}\s*\(' \
+        | grep -oE 'func_[0-9A-Fa-f]{8}' | sort -u > /tmp/before
+      grep -oE '^[A-Za-z_].*\bfunc_[0-9A-Fa-f]{8}\s*\(' conker/src/<tu>.c \
+        | grep -oE 'func_[0-9A-Fa-f]{8}' | sort -u > /tmp/after
+      comm -23 /tmp/before /tmp/after     # anything printed is a function you just destroyed
+
+  Always re-score EVERY sibling in the TU afterwards, not just your target.
+* **A score of 0 does not prove it links.** In an unlinked object `lui $at, %hi(X)` encodes as
+  `3C010000` whatever `X` is, so asm-differ cannot see a wrong `.rodata` reference — and `-R`
+  hides the reference rows outright. A reconstruction that inlines a float literal will emit a
+  private pool that `conker.ld` discards, scoring 0 and failing to link. Score with AND without
+  `-R`, and let the ROM gate be the arbiter. See `func_1510C8A8` (commit f8e68f6) for the fix
+  pattern: migrate the pool with a one-line `conker.us.yaml` edit rather than rewriting the C.
 
 ## Why they are worth keeping
 
