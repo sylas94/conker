@@ -573,3 +573,79 @@ that is *entirely* GLOBAL_ASM, every flag setting produces the same injected byt
 sweep "passes" for all of them. The correct form of the test there: put your C in, and check
 that **other, already-matched C functions in the same TU still score 0** against
 `expected/build/src/<tu>.c.o`. That is what proved game_BC510.c is tree-default `-O2 -g3`.
+
+## Register-tie levers that actually moved the score (wave 2026-08-11, game_13D350/18D770/1C2C60)
+
+Four independent findings from one wave, all measured both ways (applied, reverted, re-applied).
+They belong together because each one is a *handle* on an allocation the score says is untouchable.
+
+### 1. Float-literal spelling controls whether IDO POOLS a constant across statements
+`func_15114348` initialises an identity triad with `1.0f`/`0.0f`, then immediately calls
+`guRotateF(mtx, angle, 1, 0, 0)` needing the same numbers. Spelled `1.0f, 0.0f, 0.0f` IDO shares
+the initialiser's constants, keeps them live in FP registers and passes them with
+`mfc1 a2,$f2`/`mfc1 a3,$f20` — **diff 345**, with the whole FP allocation rotated on eight rows.
+Spelled `1.f, 0.f, 0.f` the pools split, `1.0f` dies after its last store, and IDO materialises
+the arguments as golden does (`lui a2,0x3f80` for the integer-register argument, a fresh
+`mtc1 zero,$f0` feeding both `mfc1 a3` and the stack slot) — **diff 0**.
+Try this BEFORE any structural surgery when the residual is an FP-temp rotation plus a couple of
+constant-materialisation rows. It costs one edit.
+
+### 2. `&arr[i]` and `arr + i` are NOT interchangeable with `arr[i].field`
+Both `&arr[i]` and `arr + i` emit `addu dst,index,base`. Only direct subscripting emits
+`addu dst,base,index`. Corollary measured on a global: `#define OBJ ((T*)&D_800DBEF4[arg0])` gave
+`addu v0,base,s1` at four of seven sites and `addu tN,s1,base` at the other three *from the same
+macro*; rewriting as `((T*)((u8*)D_800DBEF4 + arg0*0xA0))` made all seven base-first and took the
+score **30 → 0**. If a residual is nothing but swapped `addu` operands on `global[idx].field`,
+re-spell the address arithmetic — do not reach for the permuter.
+(This refines the existing "Globals & indexing" bullet: the pointer-local forms side with the
+*index-first* order, not with the subscript form they look like.)
+
+### 3. Naming an interpolation fraction aligns the whole FP file
+`func_15162B28` went **503 → 200** the moment `rise`/`fall` became named locals instead of inline
+sub-expressions — every single `$f` register then matched. This is the float analogue of the
+statement-split trick: a named local gives the value its own live range instead of letting it
+rotate through the FP temp pool.
+
+### 4. Stack homes are per USED local, in declaration order, lowest address first
+At `-O2 -g3` every named local gets a debug slot even when it lives entirely in a register. Among
+locals that are actually *referenced*, slots are handed out in **declaration order from the lowest
+address of the local area up**; never-referenced locals are appended after them (4-dummy probe:
+frame 0x28 → 0x38, used pointer stayed lowest regardless of where it was declared).
+So when a diff is all `s` marks plus a frame-size delta: count USED locals and reorder them.
+**Size matters, not just count** — in `func_15196748` golden needed 17–18 bytes of locals; 16 put
+the spilled temp at 0x24 instead of 0x20 and 20 pushed the frame to 0x40. The fix was adding a
+genuinely-used `s8` (+1 byte, no codegen change); an `s16` or `s32` perturbed allocation instead.
+
+### NEGATIVE result — the frame does not respond to the declaration list
+`func_150611E8` is the counter-example that bounds finding 4. Its golden creates 8 homed values,
+mine 12, and the count did **not** move when a local was deleted (`node`, twice), when two were
+deleted, or when locals moved between block scope and the top-level list — all left the frame at
+0x48. Only *adding* a fourth pointer local moved it (0x50). So frame size tracks
+**compiler-managed temp creation**, and there is no "declare N fewer locals" dial. Attack it from
+the CSE side (which repeated subexpressions get a temp), not the declaration list.
+
+### `beqzl`/`bnel`/`bc1fl` with the target's first instruction duplicated in the delay slot
+(i.e. branching to target+4) is IDO's fallback when the delay slot cannot be filled from the
+current block. Two residuals this wave were exactly one such duplication, and in both the
+duplication was **forced by the register allocation** — the register the target instruction
+defines was still live on the taken path. Never chase it directly; fix the allocation and the
+instruction appears for free. A diff that is one duplicated instruction is a register problem
+wearing a scheduling costume.
+
+### The unroll factor is set by the loop body AS WRITTEN, before LICM
+In `func_150611E8`, writing the array base expression twice in the body unrolls the loop **x2**
+(`andi v0,count,0x1`); assigning it to a pointer variable once at the top of the body unrolls
+**x4** (`andi v0,count,0x3`) and reproduces golden's whole two-preamble structure — worth ~3000
+diff points, and invisible unless you compare the `andi` mask against golden. Assigning the base
+*inside* the loop rather than hoisting it above is also what makes IDO re-derive it in both
+unrolled preambles and keep the argument on the stack instead of promoting it to a callee-saved
+register.
+
+### Two cheap sources of ground truth
+- **A commented-out sibling constructor is gold.** `func_1516295C`'s `//` block in game_18D770.c
+  handed over the exact field semantics of its payload struct for free. Grep the TU for
+  `// s32 func_` before reverse-engineering field meanings by hand.
+- **Float → u8/u16/u32 assignment** expands inline to the ~25-instruction `cfc1/ctc1 $31` +
+  `0x4F000000` bias + `0x80000000` OR sequence with the `andi 0x78` exception test. Seeing it
+  means the destination is UNSIGNED; a signed destination gets a bare `cvt.w.s`+`mfc1`. Four in a
+  row is normal, not a red flag.

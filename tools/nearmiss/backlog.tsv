@@ -71,3 +71,6 @@ func_100049E0	144	init_49E0.c	v2.c	2
 func_15007B3C	96	game_34F20.c	body_v1.c	1
 func_151EFF94	92	game_21D420.c	game_21D420.MATCHES_WITH_O2_NO_G3.c	-
 func_1509F850	56	game_CCD00.c	jtbl2_func_1509F850.c	-
+func_150611E8	1012	game_83300.c	-	4538
+func_15162B28	976	game_18D770.c	v1.c	1
+func_15196748	1028	game_1C2C60.c	v1.c	1
