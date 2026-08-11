@@ -291,7 +291,89 @@ s32 func_151140C4(struct131 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_13D350/func_15114188.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13D350/func_15114348.s")
+/* struct131 again, with the rotation/offset fields func_15114348 needs. */
+typedef struct {
+    /* 0x00 */ f32 unk0;
+    /* 0x04 */ f32 unk4;
+    /* 0x08 */ f32 unk8;
+    u8  padC[0x4];
+    /* 0x10 */ s16 unk10;
+    /* 0x12 */ s16 unk12;
+    /* 0x14 */ s16 unk14;
+    u8  pad16[0x44];
+    /* 0x5A */ s16 unk5A;
+    /* 0x5C */ s16 unk5C;
+    /* 0x5E */ s16 unk5E;
+    /* 0x60 */ f32 unk60;
+    /* 0x64 */ f32 unk64;
+    /* 0x68 */ f32 unk68;
+    u8  pad6C[0x34];
+} Struct15114348; /* size 0xA0 */
+
+void func_150A7960(f32 *m, f32 x, f32 y, f32 z, f32 *ox, f32 *oy, f32 *oz);
+
+#define OBJ15114348 ((Struct15114348 *)((u8 *)D_800DBEF4 + arg0 * 0xA0))
+
+void func_15114348(s32 arg0, f32 *arg1, f32 *arg2, f32 *arg3) {
+    f32 dx;
+    f32 dy;
+    f32 dz;
+    f32 ox;
+    f32 oy;
+    f32 oz;
+    f32 mtx[4][4];
+    f32 tmp[4][4];
+    f32 axes[3][3];
+
+    axes[0][0] = 1.0f;
+    axes[0][1] = 0.0f;
+    axes[0][2] = 0.0f;
+    axes[1][0] = 0.0f;
+    axes[1][1] = 1.0f;
+    axes[1][2] = 0.0f;
+    axes[2][0] = 0.0f;
+    axes[2][1] = 0.0f;
+    axes[2][2] = 1.0f;
+
+    dx = *arg1 - OBJ15114348->unk10;
+    dy = *arg2 - OBJ15114348->unk12;
+    dz = *arg3 - OBJ15114348->unk14;
+
+    if (OBJ15114348->unk0 != 0.0f) {
+        /* Spelled 1.f/0.f, not 1.0f/0.0f: IDO pools float literals by spelling, and the
+           original source keeps these axis constants out of the identity-matrix pool
+           above (sharing them costs 345 in diff). */
+        guRotateF(mtx, OBJ15114348->unk0, 1.f, 0.f, 0.f);
+        func_150A7960(&mtx[0][0], axes[1][0], axes[1][1], axes[1][2], &axes[1][0], &axes[1][1], &axes[1][2]);
+        func_150A7960(&mtx[0][0], axes[2][0], axes[2][1], axes[2][2], &axes[2][0], &axes[2][1], &axes[2][2]);
+    }
+    if (OBJ15114348->unk8 != 0.0f) {
+        guRotateF(mtx, OBJ15114348->unk8, axes[2][0], axes[2][1], axes[2][2]);
+        func_150A7960(&mtx[0][0], axes[1][0], axes[1][1], axes[1][2], &axes[1][0], &axes[1][1], &axes[1][2]);
+        func_150A7960(&mtx[0][0], axes[0][0], axes[0][1], axes[0][2], &axes[0][0], &axes[0][1], &axes[0][2]);
+    }
+    if (OBJ15114348->unk4 != 0.0f) {
+        guRotateF(mtx, OBJ15114348->unk4, axes[1][0], axes[1][1], axes[1][2]);
+        func_150A7960(&mtx[0][0], axes[0][0], axes[0][1], axes[0][2], &axes[0][0], &axes[0][1], &axes[0][2]);
+        func_150A7960(&mtx[0][0], axes[2][0], axes[2][1], axes[2][2], &axes[2][0], &axes[2][1], &axes[2][2]);
+    }
+
+    guRotateF(mtx, OBJ15114348->unk60, axes[0][0], axes[0][1], axes[0][2]);
+    guRotateF(tmp, OBJ15114348->unk68, axes[2][0], axes[2][1], axes[2][2]);
+    func_150A7A48(mtx, tmp, mtx);
+    guRotateF(tmp, OBJ15114348->unk64, axes[1][0], axes[1][1], axes[1][2]);
+    func_150A7A48(mtx, tmp, mtx);
+
+    func_150A7960(&mtx[0][0], dx, dy, dz, &ox, &oy, &oz);
+
+    ox = OBJ15114348->unk5A + (ox - dx);
+    oy = OBJ15114348->unk5C + (oy - dy);
+    oz = OBJ15114348->unk5E + (oz - dz);
+
+    *arg1 += ox;
+    *arg2 += oy;
+    *arg3 += oz;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_13D350/func_1511473C.s")
 
