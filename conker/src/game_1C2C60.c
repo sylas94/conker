@@ -394,7 +394,161 @@ void func_151963B4(void *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15196438.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15196748.s")
+typedef struct {
+    /* 0x00 */ f32 x;
+    /* 0x04 */ f32 y;
+    /* 0x08 */ f32 z;
+} Vec15196748;
+
+typedef struct {
+    /* 0x00 */ Vec15196748 pos;
+    /* 0x0C */ f32 unkC;
+    /* 0x10 */ f32 unk10;
+    /* 0x14 */ f32 unk14;
+    /* 0x18 */ f32 unk18;
+    /* 0x1C */ s16 unk1C;
+    /* 0x1E */ s8 unk1E;
+    /* 0x1F */ u8 unk1F;
+    /* 0x20 */ u8 unk20;
+    /* 0x21 */ u8 unk21;
+    /* 0x22 */ u8 pad22[0x2];
+} Particle15196748;
+
+typedef struct {
+    /* 0x00 */ u8 pad0[0x6];
+    /* 0x06 */ u8 unk6;
+    /* 0x07 */ u8 pad7[0x40 - 0x7];
+    /* 0x40 */ f32 unk40;
+    /* 0x44 */ u8 pad44[0x52 - 0x44];
+    /* 0x52 */ u8 unk52;
+    /* 0x53 */ u8 pad53[0x58 - 0x53];
+    /* 0x58 */ f32 unk58;
+    /* 0x5C */ u8 pad5C[0x61 - 0x5C];
+    /* 0x61 */ s8 unk61;
+    /* 0x62 */ u8 pad62[0x64 - 0x62];
+    /* 0x64 */ s8 unk64;
+    /* 0x65 */ u8 pad65[0x68 - 0x65];
+    /* 0x68 */ s8 unk68;
+    /* 0x69 */ u8 pad69[0x6A - 0x69];
+    /* 0x6A */ u8 unk6A;
+    /* 0x6B */ u8 pad6B[0x8C - 0x6B];
+    /* 0x8C */ u8 unk8C;
+    /* 0x8D */ u8 unk8D;
+    /* 0x8E */ u8 unk8E;
+    /* 0x8F */ u8 unk8F;
+} Desc15196748;
+
+typedef struct {
+    /* 0x00 */ u8 pad0[0x25];
+    /* 0x25 */ u8 unk25;
+    /* 0x26 */ u8 pad26[0x2C - 0x26];
+    /* 0x2C */ s8 unk2C;
+    /* 0x2D */ s8 unk2D;
+    /* 0x2E */ s8 unk2E;
+    /* 0x2F */ u8 pad2F[0x54 - 0x2F];
+    /* 0x54 */ Vec15196748 unk54;
+    /* 0x60 */ u8 pad60[0x94 - 0x60];
+    /* 0x94 */ Particle15196748 *unk94;
+    /* 0x98 */ Desc15196748 *unk98;
+} Emitter15196748;
+
+extern void (*D_8008F894[])(void *);
+extern void (*D_8008F89C[])(void *);
+extern s32 (*D_8008F880[])(void *);
+void func_15198110(void *, s32);
+
+s32 func_15196748(Emitter15196748 *arg0) {
+    Desc15196748 *desc;
+    Particle15196748 *arr;
+    s32 i;
+    s16 n;
+    u8 scale;
+    s8 life;
+    u8 flags;
+    u8 descFlags;
+
+    desc = arg0->unk98;
+    arr = arg0->unk94;
+    if (arg0->unk2C < 2 && (desc->unk6 & 1)) {
+        return 0;
+    }
+    i = arg0->unk2E;
+    while (i != arg0->unk2D) {
+        i--;
+        if (i < 0) {
+            i = arg0->unk25 - 1;
+        }
+        arr[i].unk10 += desc->unk40 * D_800BE9A4;
+        arr[i].pos.x += arr[i].unkC * D_800BE9A4;
+        arr[i].pos.y += arr[i].unk10 * D_800BE9A4;
+        arr[i].pos.z += arr[i].unk14 * D_800BE9A4;
+        arr[i].unk1F = 255;
+        life = arr[i].unk1E;
+        if (life > 0) {
+            arr[i].unk1E = life - D_800BE9E4;
+        } else {
+            arr[i].unk1C -= desc->unk52 * D_800BE9E4;
+        }
+        if (arr[i].unk1C < desc->unk6A) {
+            if (arr[i].unk21 == 0) {
+                func_15198110(arg0, i);
+            }
+        }
+        arr[i].unk18 += desc->unk58 * D_800BE9A4;
+        if (arr[i].unk1C < 0) {
+            desc->unk6 &= ~2;
+            while (i != arg0->unk2D) {
+                arg0->unk2D = arg0->unk2D + 1;
+                if (arg0->unk2D == arg0->unk25) {
+                    arg0->unk2D = 0;
+                }
+                arg0->unk2C = arg0->unk2C - 1;
+            }
+            arr[arg0->unk2D].unk1C = 0;
+        }
+    }
+    i = arg0->unk2D;
+    descFlags = desc->unk6;
+    flags = descFlags;
+    if (flags & 2) {
+        flags = 0;
+        n = desc->unk8C;
+        do {
+            arr[i].unk1F = flags; i++; flags += desc->unk8D; if (i == arg0->unk25) { i = 0; } n--;
+        } while (n != 0 && i != arg0->unk2E);
+        flags = desc->unk6;
+    }
+    if (flags & 4) {
+        scale = 0;
+        n = desc->unk8E;
+        i = arg0->unk2E - 1;
+        if (i < 0) {
+            i = arg0->unk25 - 1;
+        }
+        do {
+            arr[i].unk1F = (arr[i].unk1F * scale) >> 8; i--; scale += desc->unk8F; if (i < 0) { i = arg0->unk25 - 1; } n--;
+        } while (n != 0 && i != arg0->unk2E);
+    }
+    if (desc->unk64 != -1) {
+        D_8008F894[desc->unk64](arg0);
+    }
+    if (desc->unk68 != -1) {
+        D_8008F89C[desc->unk68](arg0);
+    }
+    if (desc->unk61 != -1) {
+        if (D_8008F880[desc->unk61](arg0) == 0) {
+            return 0;
+        }
+    }
+    if (arg0->unk2C > 0) {
+        arg0->unk54 = arr[arg0->unk2D].pos;
+    } else {
+        arg0->unk54.x = 0.0f;
+        arg0->unk54.y = 0.0f;
+        arg0->unk54.z = 0.0f;
+    }
+    return 1;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1C2C60/func_15196B4C.s")
 
