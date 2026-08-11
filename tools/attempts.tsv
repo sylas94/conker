@@ -3976,3 +3976,6 @@ func_151BDD8C	midband_w7	766	NA
 func_1501C880	midband_w7	110	NA
 func_15125DB4	midband_w7	2170	NA
 func_151438D8	midband_w7	20	NA
+func_151C1D5C	permuter_w9	0	604
+func_15195FF0	permuter_w9	0	808
+func_151C196C	permuter_w9	0	1008
