@@ -55,6 +55,11 @@ JAL   = re.compile(r'\bjal\s+(\w+)')
 FRAME = re.compile(r'addiu\s+\$sp,\s*\$sp,\s*-(0x[0-9A-Fa-f]+|\d+)')
 FLT   = re.compile(r'^\s*/\*.*?\*/\s+\w+\.[sd]\b', re.M)
 LWC   = re.compile(r'\b(lwc1|ldc1)\s+\$f\d+,\s*%lo\(')
+# Instructions IDO cannot emit at -mips2 -o32. Their presence proves the function is
+# hand-written assembly regardless of whether spimdisasm labelled it.
+MIPS3 = re.compile(r'\*/\s+(dmtc1|dmfc1|dadd|daddu|daddi|daddiu|dsub|dsubu|dsll|dsll32|'
+                   r'dsrl|dsrl32|dsra|dsra32|dmult|dmultu|ddiv|ddivu|ld|sd|ldl|ldr|sdl|sdr|'
+                   r'lld|scd)\b')
 
 cand = []
 for f, s in sub.items():
@@ -71,6 +76,13 @@ for f, s in sub.items():
     # exactly what "tractable" was measuring. func_150A3FC4 topped the first list this way and
     # cost an agent a slot before it read the header. spimdisasm marks these explicitly.
     if "Handwritten function" in t or "handwritten instruction" in t:
+        continue
+    # ...but that comment is NOT always present. func_150A5378 carries no marker at all and is
+    # still undecompilable: it contains 11 `dmtc1`, a 64-bit MIPS III move that IDO simply
+    # cannot emit at -mips2 -o32. Detecting the ISA level is a far more reliable test than a
+    # comment, so reject anything using an instruction outside the project's target ISA.
+    # (ldc1/sdc1 are MIPS II and legitimate -- do not add them.)
+    if MIPS3.search(t):
         continue
     callees = JAL.findall(t)
     fr = FRAME.search(t)
