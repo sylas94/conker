@@ -38,6 +38,10 @@ for fn in sorted(os.listdir(SRC)):
 # a brace; a mere call is `\bfunc_(` mid-expression. Requiring a preceding type token and a
 # following `{` before the next `;` separates them reliably enough for ranking.
 DEF = re.compile(r'^[A-Za-z_][\w \t\*]*?\b(func_[0-9A-Fa-f]{8})\s*\([^;]*?\)\s*\{', re.M | re.S)
+# NB for anyone writing an asm scanner alongside this: spimdisasm INDENTS branch labels
+# ("  .L15015AFC:"). An anchored ^\.L matches nothing, so every function reads as branch-free
+# and any "regions" metric built on it silently becomes the constant 1. Use ^\s*\.L.
+# Verified against game_42DC0/func_15015A38: 7 labels, 9 branches, scored as 1 region.
 ANY = re.compile(r'\b(func_[0-9A-Fa-f]{8})\b')
 
 # A "score" in a filename is only believable next to a score-ish word. Bare digits are usually
