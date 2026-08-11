@@ -54,12 +54,32 @@ LBL   = re.compile(r'^\s*\.L[0-9A-Fa-f]{8}:', re.M)
 JAL   = re.compile(r'\bjal\s+(\w+)')
 FRAME = re.compile(r'addiu\s+\$sp,\s*\$sp,\s*-(0x[0-9A-Fa-f]+|\d+)')
 FLT   = re.compile(r'^\s*/\*.*?\*/\s+\w+\.[sd]\b', re.M)
-LWC   = re.compile(r'\b(lwc1|ldc1)\s+\$f\d+,\s*%lo\(')
+LWC   = re.compile(r'\b(lwc1|ldc1)\s+\$f\d+,\s*%lo\((\w+)\)')
 # Instructions IDO cannot emit at -mips2 -o32. Their presence proves the function is
 # hand-written assembly regardless of whether spimdisasm labelled it.
 MIPS3 = re.compile(r'\*/\s+(dmtc1|dmfc1|dadd|daddu|daddi|daddiu|dsub|dsubu|dsll|dsll32|'
                    r'dsrl|dsrl32|dsra|dsra32|dmult|dmultu|ddiv|ddivu|ld|sd|ldl|ldr|sdl|sdr|'
                    r'lld|scd)\b')
+
+# --- which symbols are actually COMPILER LITERAL POOLS? ---------------------------------
+# `lwc1 $fN, %lo(SYM)` is how IDO loads BOTH its own constant pool AND an ordinary float
+# global, so the instruction alone cannot tell them apart -- func_151EDBDC was flagged [POOL]
+# on that basis and needed no migration at all, because D_8008FE1C/D_8008FE20 are real globals
+# sitting in a 42-glabel hand-authored block. The discriminator is the DATA: a compiler pool is
+# a block holding exactly one glabel whose payload is .float/.double.
+DATA = os.path.join(CK, "asm/data")
+GL = re.compile(r'^glabel\s+(\S+)', re.M)
+FLT_DATA = re.compile(r'^\s*/\*.*?\*/\s*\.(float|double)\b', re.M)
+OTHER_DATA = re.compile(r'^\s*/\*.*?\*/\s*\.(word|byte|short|asciz|ascii|incbin)\b', re.M)
+pool_syms = set()
+if os.path.isdir(DATA):
+    for fn in os.listdir(DATA):
+        if not fn.endswith(".rodata.s"):
+            continue
+        txt = open(os.path.join(DATA, fn), errors="replace").read()
+        syms = GL.findall(txt)
+        if len(syms) == 1 and FLT_DATA.search(txt) and not OTHER_DATA.search(txt):
+            pool_syms.add(syms[0])
 
 cand = []
 for f, s in sub.items():
@@ -92,7 +112,8 @@ for f, s in sub.items():
         "callees": len(set(callees)), "calls": len(callees),
         "frame": int(fr.group(1), 0) if fr else 0,
         "flt": len(FLT.findall(t)),
-        "pool": bool(LWC.search(t)),   # may need a rodata migration to ship
+        # only a single-glabel float block counts; a real global needs no migration
+        "pool": any(m.group(2) in pool_syms for m in LWC.finditer(t)),
     })
 
 # tractability: penalise prototypes to get right, float density, branchiness, frame size

@@ -672,7 +672,73 @@ void func_151EDB58(GameStruct151EDB58 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151EDBDC.s")
+extern Mtx D_80089470;
+extern Mtx D_800E0C38;
+extern Gfx D_80090110;
+extern Gfx D_80090128;
+extern s16 D_800E0C30;
+extern u8 D_507;
+extern u8 D_508;
+extern void func_1503F4B0(s32);
+
+Gfx *func_151EDBDC(Gfx *gfx, GameStruct151ED90C *obj, f32 x, f32 y, f32 scale) {
+    u8 *tex;
+    Gfx *start;
+    s32 image;
+    s32 i;
+
+    start = gfx;
+    if (D_8008FE1C != 1.0f) {
+        x *= D_8008FE1C;
+        y *= D_8008FE20;
+        scale *= D_8008FE1C;
+    }
+
+    guMtxIdentF(obj->unk28[D_800BE9C0]);
+    obj->unk28[D_800BE9C0][3][0] = x;
+    obj->unk28[D_800BE9C0][3][1] = y;
+    obj->unk28[D_800BE9C0][3][2] = -100.0f;
+    obj->unk28[D_800BE9C0][0][0] = scale;
+    obj->unk28[D_800BE9C0][1][1] = scale;
+    obj->unk28[D_800BE9C0][2][2] = scale;
+    func_1503F4B0(obj->unk24);
+
+    gSPMatrix(gfx++, &D_80089470, G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+    gSPMatrix(gfx++, &D_800E0C38, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+    gSPDisplayList(gfx++, &D_80090110);
+    gDPSetCombine(gfx++, 0x12FE25, 0xFFFFFBFD);
+    gSPLoadGeometryMode(gfx++, 0);
+    gSPSetGeometryMode(gfx++, G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
+    gDPSetPrimColor(gfx++, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF);
+    gDPSetEnvColor(gfx++, 0xFF, 0xFF, 0xFF, D_800E0C30);
+    gDPSetFogColor(gfx++, 0, 0, 0, 0xFF);
+    gSPSegment(gfx++, 3, *(s32 *)(obj->unk24 + (D_800BE9C0 * 4) + 0x3E8));
+    gSPSegment(gfx++, 1, obj->unk1C);
+
+    if ((s32)obj == D_80090058) {
+        obj->unk15--;
+        if (obj->unk15 == 0) {
+            obj->unk15 = (func_150ADA20() & 0x7F) + 0xF;
+        }
+        if (obj->unk15 < 7) {
+            tex = &D_507;
+        } else {
+            tex = &D_508;
+        }
+        image = func_1510D0EC(tex, 0, 3, 0);
+        if (image == (s32)0x80000000) {
+            return start;
+        }
+        gSPSegment(gfx++, 6, image);
+        gSPSegment(gfx++, 7, image);
+    }
+
+    for (i = 0; i < obj->unk14; i++) {
+        gSPDisplayList(gfx++, obj->unk4[i]);
+    }
+    gSPDisplayList(gfx++, &D_80090128);
+    return gfx;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151EDF4C.s")
 
