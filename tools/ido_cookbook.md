@@ -641,6 +641,52 @@ diff points, and invisible unless you compare the `andi` mask against golden. As
 unrolled preambles and keep the argument on the stack instead of promoting it to a callee-saved
 register.
 
+## Source LINE placement is a scheduling lever under `-g3` (wave 2026-08-11, func_15196748)
+
+**Two sources with byte-identical token streams, differing only in newlines, compile to
+different `.text`.** This is not a curiosity — it is what closed `func_15196748` (505 → 0).
+
+Proof, measured: take the function's source, join a `do { ... }` body's statements onto one
+line, change nothing else. Token-normalised (`tr -s ' \t\n' ' '`) the two files are `cmp`-identical.
+The objects are not:
+
+```
+- 11b8: 26310001 addiu s1,s1,1        <- separate lines
+- 11bc: 00047400 sll   t6,a0,0x10
++ 11b8: 00047400 sll   t6,a0,0x10     <- one line
++ 11bc: 26310001 addiu s1,s1,1
+```
+
+asm-differ scored the two 180 and 120. At `-O2 -g3` IDO attributes instructions to source lines
+and will not freely reorder across a line boundary; putting statements on the SAME line lets the
+scheduler swap them. So:
+
+> When a residual is a small number of **adjacent swapped instructions** inside one statement
+> group, and no register is wrong, do not look for a semantic lever — **reflow the source**.
+> One line per statement vs. several statements per line is a real, free knob.
+
+`func_15196748`'s last three rows were exactly this: two loops each needed its body on one line
+(each worth 60), and the `arr[i].unk1F = 255;` store needed to move one statement later. That
+last one is an ordinary statement reorder, but note it only paid off *combined* with the reflow —
+individually the reflows scored 120/120 and the reorder 120; together, 0.
+
+**Corollary for the permuter:** its outputs are pycparser-regenerated, so they are reflowed
+wholesale. An "improvement" whose diff looks like pure reformatting is therefore REAL, not noise
+— check it with a token-normalised `cmp` and then score it, rather than dismissing it. Conversely,
+when you hand-copy a permuter win into tidy house style you can lose it; re-score after tidying.
+
+### Harness trap: `permuter_tu.sh selftest` check (b2) could fail for a TU that is fine
+`selftest` used to pipe the round-trip compile into `head -5`. `compile.sh` runs `set -e`, so on a
+TU that emits more than five `cfe:` warnings — game_18D770 emits ~50 — `head` closed the pipe, the
+compiler took SIGPIPE, and compile.sh died *before writing the object*. The empty object
+disassembled to the sha1 of the empty string, `da39a3ee...0709`, and (b2) reported "round trip
+changes codegen". **game_18D770 was disqualified this way and is in fact a perfectly good permuter
+target** (all five checks pass now; the round-trip sha1 equals the makefile sha1 exactly).
+Fixed in `conker/permuter_tu.sh` by redirecting to a log. If you see the empty-string sha1
+`da39a3ee5e6b4b0d3255bfef95601890afd80709` anywhere, it means *no object was produced* — it is
+never evidence about the source. **The `game_83300` (b2) failure recorded above was diagnosed with
+the buggy harness and should be re-tested before that TU is treated as unusable.**
+
 ### Two cheap sources of ground truth
 - **A commented-out sibling constructor is gold.** `func_1516295C`'s `//` block in game_18D770.c
   handed over the exact field semantics of its payload struct for free. Grep the TU for

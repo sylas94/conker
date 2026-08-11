@@ -1,3 +1,27 @@
+/*
+ * SHIPPED -- func_15196748 is MATCHED and LIVE in conker/src/game_1C2C60.c.
+ * Score 0 with and without -R; whole-TU .text compare against
+ * expected/build/src/game_1C2C60.c.o is byte-identical.  This file is kept only as the
+ * record of how it was closed; do NOT re-work it, and prefer src/ as the source of truth.
+ *
+ * It was closed from the parked 505 by three changes, in this order:
+ *   1. `descFlags` -- split `flags = desc->unk6;` into its own statement
+ *      (`descFlags = desc->unk6; flags = descFlags;`) so the descriptor flag word gets its
+ *      own live range instead of sharing `flags` with the alpha ramp.        505 -> 180.
+ *      Load-bearing: deleting `descFlags` puts the score straight back to 505.
+ *      Where it is declared makes no difference (first or last: both 180).
+ *   2. Both `do { ... }` loop bodies reflowed onto ONE SOURCE LINE each.     180 -> 60.
+ *      This is not cosmetic -- see "Source LINE placement is a scheduling lever under -g3"
+ *      in tools/ido_cookbook.md.  Each loop alone scores 120; both together 60.
+ *   3. `arr[i].unk1F = 255;` moved after `arr[i].pos.z += ...`.             60 -> 0.
+ *      (Moving it one further, after `life = arr[i].unk1E;`, also scores 0.)
+ *      On its own, without change 2, this is worth nothing (120).
+ *
+ * Measured negative: giving `descFlags` both flag tests -- i.e. using it for
+ * `if (descFlags & 2)` and `if (descFlags & 4)` and keeping `flags` purely as the ramp --
+ * scores 595, WORSE than the 505 baseline.  Golden really does reuse the one variable.
+ */
+
 #include <ultra64.h>
 #define func_151422C0 func_151422C0_header
 #include "functions.h"

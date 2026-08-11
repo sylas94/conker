@@ -338,7 +338,17 @@ open(out, "w", encoding="utf-8").write(ast_util.to_c(ast))
 print("    round-trip source written")
 PY
   if [ -s "$dir/.roundtrip.c" ]; then
-    "$dir/compile.sh" "$dir/.roundtrip.c" -o "$dir/.roundtrip.o" 2>&1 | head -5
+    # NEVER pipe this compile into head.  compile.sh runs `set -e`, so on a TU that emits
+    # more than a few cfe warnings (game_18D770 emits ~50), head closes the pipe, the
+    # compiler takes SIGPIPE, and compile.sh dies BEFORE writing the object.  The empty
+    # object then disassembles to the sha1 of the empty string (da39a3ee...0709) and (b2)
+    # reports "round trip changes codegen" for a TU whose round trip is in fact perfect.
+    # That false negative is what disqualified game_18D770 (and is worth re-testing on the
+    # other TUs recorded as (b2) failures).  Redirect to a log; show only real errors.
+    rm -f "$dir/.roundtrip.o"
+    "$dir/compile.sh" "$dir/.roundtrip.c" -o "$dir/.roundtrip.o" > "$dir/.roundtrip.log" 2>&1 \
+      || echo "    round-trip compile FAILED (see $dir/.roundtrip.log)"
+    grep -v -E '^cfe: (Warning|Info)|^ *-+\^|^ ' "$dir/.roundtrip.log" | head -5
     local rt; rt=$("$dir/objdump_fn.sh" "$dir/.roundtrip.o" 2>/dev/null | sha1sum | cut -d' ' -f1)
     echo "    roundtrip $FUNC disasm sha1 = $rt"
     if [ "$rt" = "$r" ] && [ -n "$rt" ]; then

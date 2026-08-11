@@ -1,3 +1,107 @@
+/*
+ * PARKED NEAR-MISS -- func_15162B28  (game_18D770.c, 976 B, 250 instructions)
+ *
+ * BEST MEASURED SCORE: 10   (was 205 when this file was parked)
+ * Measured with:  cd conker && python3 ../tools/asm-differ/diff.py -o func_15162B28 \
+ *                     -R --max-lines 4096      -- and again WITHOUT -R; both give 10.
+ * Frame size is already correct (56 bytes, == golden).  Instruction COUNT is already
+ * correct: golden 250, mine 250, with ZERO inserts / deletes / reorders.
+ *
+ * ------------------------------------------------------------------ THE RESIDUAL
+ * TWO rows, and they are the SAME row twice: the local `old` is allocated to $a2
+ * where golden puts it in $v1.
+ *
+ *   golden                                mine
+ *   lbu  v1,60(a0)      old = ...         lbu  a2,60(a0)
+ *   beq  a1,v1,+0x374   old != cur        beq  a1,a2,+0x374
+ *
+ * Everything else now agrees, including the two allocations that were wrong when this
+ * file was parked: `cur` is in $a1 (correct) and `cb` is in $v1 (correct).
+ * Golden COALESCES `old` into $v1 -- the same register it later gives `cb`
+ * (`lb v1,40(v0)` in the beql delay slot) -- because `old` is dead at the switch.
+ * Mine declines that coalesce and takes a fresh $a2 instead.
+ *
+ * The duplicated-delay-slot knock-on described in the original park note is GONE:
+ * it was a symptom of the register allocation, exactly as the cookbook predicts, and
+ * it disappeared for free once `cur` landed in $a1.
+ *
+ * ------------------------------------------------------ WHAT ACTUALLY MOVED THE SCORE
+ * Two levers, both plain C, both in the body below:
+ *
+ *  1. `f32 rise` declared INSIDE the `else if (p->unkC < p->unk14)` block instead of
+ *     at the top of the function.            205 -> 45.  This is the single biggest
+ *     lever on this function.  Scoping `fall` the same way is a NO-OP (see negatives),
+ *     so this is not "block-scope floats" in general -- it is specifically `rise`.
+ *  2. Seeding `cur` first and copying it into `old`
+ *         cur = p->unk24;
+ *         old = cur;
+ *     instead of `old = p->unk24;`.          40 -> 15.
+ *     Combined with the `old != cur` operand order:  15 -> 10.
+ *
+ * NOTE the operand order flips its sign as the seed changes -- it is not a fixed
+ * preference.  With `old = p->unk24;` the better order is `cur != old` (40 vs 45);
+ * with the staged `cur`/`old` seed the better order is `old != cur` (10 vs 15).
+ * Re-measure it after ANY other change rather than assuming.
+ *
+ * ------------------------------------------------------------- MEASURED NEGATIVES
+ * Every line below was built, compiled and scored with asm-differ (both with and
+ * without -R, which always agreed).  Do not re-explore these by hand.
+ *
+ *   205  parked baseline: `rise` at top level, `old != cur`
+ *   205  scope `fall` into its block but NOT `rise`      (isolates `rise` as the lever)
+ *    45  scope `rise`, keep `old != cur`
+ *    45  scope BOTH `rise` and `fall`, `old != cur`
+ *    45  switch on p->unk24 instead of `cur`, on the 10-base
+ *    40  scope `rise`, `cur != old`                      (the pre-staging plateau)
+ *    40  ... + `cb` declared first
+ *    40  ... + `cur` declared before `old`
+ *    40  ... + switch on p->unk24 instead of `cur`
+ *    40  ... + `cur = ...; if (...)` on one source line
+ *    40  ... + every switch case on one source line
+ *    40  ... + scope `fall` too
+ *    40  ... + `1.f` instead of `1.0f`   (float-literal spelling lever: no effect here)
+ *    40  ... + no `cur` local at all (test/switch straight off p->unk24)
+ *    40  ... + declaration initialisers (`Sub15162B28 *p = &arg0->unk18;` etc.)
+ *    40  ... + `p` initialised in its declaration only
+ *    40  ... + `old` initialised from arg0->unk18.unk24
+ *    40  ... + `old` declared s32
+ *    43  ... + `old` and `cur` both s32 / both u32
+ *    53  ... + `cur` declared s32   (and both-s32 on the 40 base)
+ *    58  `p` declared first / `old` adjacent to `cb` / `old` declared last
+ *   133  `fall` computed via a named intermediate, symmetric with `rise`
+ *   395  staging through `cb` (`cb = p->unk24; old = cb;`) either operand order
+ *  2398  drop the `p` local, spell every access as `arg0->unk18.<field>`
+ *    15  staged `cur`/`old` + `cur != old`  (and: on one line / chained
+ *         `old = cur = p->unk24;` / cases one-lined / curtest one-lined / `old` s32 /
+ *         `old` u32 -- all exactly 15)
+ *    18  staged + `cb` declared s32
+ *    10  staged + `old != cur`   <-- THE BODY BELOW, and also: seed on one line,
+ *         chained assignment, cases one-lined, curtest one-lined, `cb` declared first,
+ *         `cur` declared first, `fall` scoped, declaration initialisers -- nine
+ *         independent spellings, ALL exactly 10.
+ *
+ * ------------------------------------------------------------------ PERMUTER STATUS
+ * conker/permuter_tu.sh selftest PASSES on game_18D770 (all five checks).  Note that
+ * it used to FAIL check (b2) here; that was a harness bug (a `| head -5` SIGPIPE-killing
+ * the round-trip compile on this warning-dense TU), fixed in permuter_tu.sh.  This TU is
+ * a legitimate permuter target.
+ *
+ * The permuter was run in four stages (base 200 -> 40 -> 10), ~7,500 iterations total
+ * with --stack-diffs and PERMUTER_TU_REQUIRE_FRAME=56.  It found lever 2 on its own.
+ * From the 10-scoring base it ran 2,557 further iterations with NO improvement.
+ * Its only sub-10 candidates were fakes and are NOT reproduced here:
+ *   score 35  `cur = (new_var = p->unk24);`   -- new_var written, never read (dead local)
+ *   score 33  `s8 *new_var = &p->unk26;` used for case 1 only -- an asymmetric forcer
+ *
+ * ------------------------------------------------------------------------- VERDICT
+ * This is the cookbook's register-colouring wall in its purest form: 2 rows, 100%
+ * register-only, 0 structural, and nine independent source spellings that leave the
+ * score EXACTLY unchanged.  The remaining question is narrow and well posed --
+ * "what makes IDO coalesce `old` into `cb`'s register instead of taking a fresh $a2?"
+ * -- so this is worth one more attempt by someone with a new idea about IDO's
+ * coalescing order, but it is NOT worth another undirected permuter run.
+ */
+
 #include <ultra64.h>
 #include "functions.h"
 #include "variables.h"
@@ -1067,17 +1171,19 @@ extern void (*D_8008B364[])(void);
 s32 func_15162B28(Struct15162B28 *arg0) {
     u8 old;
     Sub15162B28 *p;
-    f32 rise;
     f32 fall;
     u8 cur;
     s8 cb;
 
     p = &arg0->unk18;
-    old = p->unk24;
+    cur = p->unk24;
+    old = cur;
     if (p->unkC < p->unk10) {
         arg0->unk14->unk2F = p->unk4;
         p->unk24 = 0;
     } else if (p->unkC < p->unk14) {
+        f32 rise;
+
         rise = (p->unkC - p->unk10) * p->unk20;
         arg0->unk14->unk2F = p->unk4 + p->unk8 * rise;
         p->unk24 = 1;
