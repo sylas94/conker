@@ -1,358 +1,160 @@
-# func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (was 4333), 2026-08-12
+# func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 172** (was 517, was 4333)
 
 `tools/nearmiss/func_151CA6A0.c` is the WHOLE TU with this function live (pragma removed).
 Drop it over `conker/src/game_1F4650.c` to resume. The repo copy of the TU is UNTOUCHED
-(pragma still in place) — verified with `git status --short -- conker/`.
+(pragma still in place) — verified with `git status --short -- conker/src/game_1F4650.c`
+(prints nothing).
 
-**517 is a real, bounded score**, cross-checked in the real repo build:
-`tools/buildlock.sh` + `make -s build/src/game_1F4650.c.o VERSION=us` +
-`diff.py -o func_151CA6A0 -R --max-lines 4096` prints `CURRENT (517)`, and the same without
-`-R`. `readelf -sW` gives size=1068 so asm-differ bounds the symbol. Instruction count is
-**267 = golden's 267**. Frame 248 = golden; stack-offset multiset matches golden (100
-displacements). 43 differing rows remain, 39 of them register-only.
+## WAVE 2026-08-12 — 517 → 172, and the register allocation now matches golden EXACTLY
 
-## Correction to the previous revision of this file
+**172 / 267 instructions / frame 248 / 1068 bytes.** Everything from the prologue to
+instruction 195 is byte-identical to golden, *including every register name*, and everything
+from instruction 218 to the epilogue is byte-identical. The entire residual is **16 rows in
+one basic block** — the fifth (3.0f) descriptor block — and it is a pure SCHEDULING
+permutation: the instruction multiset, the register assignment and every stack offset are
+already golden's.
 
-It claimed the function was "parked at 2917". **It was not.** The file on disk was the 4333
-baseline; 2917 was a measured table row (`s32 arg1` + `u8 kind = arg1;`) that was never
-written into the parked file and was in any case structurally wrong. This revision parks the
-C that actually produces the score in the heading.
+### The two edits, and what they mean
 
-## 4333 → 517 in four steps, all honest C
-
-| step | edit | score | insns (gold 267) |
-|---|---|---|---|
-| baseline | as parked last wave | 4333 | 269 |
-| **1** | `if (arg1 != 0)` → **`if (arg1)`** (×4) | **2596** | 267 |
-| **2** | move `spA0.unk44 = *(u8*)(arg0+0x23D);` **above** the two `spA0.unk14` mask statements | **652** | 267 |
-| **3** | split `spA0.unk14 = (spA0.unk14 & ~0x6) \| 0x4;` into `&= ~0x6;` + `\|= 0x4;` | **582** | 267 |
-| **4** | lift the loop-counter init out of the `for`: `i = 0;` **before** `sp44.unk24 = 0.0f;`, loop becomes `for (; i != 12; i++)` | **517** | 267 |
-| (rejected) | hoist `sp44.unk24 = 0.0f;` above `spA0.unk30 = 8;` instead | 577 | 267 — see "refused" |
-| (rejected) | permuter's `if ((short) arg1)` | 562 | **269** — see "camouflage" |
-
-### Step 4 — the loop-counter init, and why it is progress and not a nudge
-
-Golden's object says, unambiguously, which of the two comes first:
-
-```
-GOLD  38b0: move s0,zero          MINE @582  38b0: swc1 $f2,0x68(sp)
-      38b4: swc1 $f2,0x68(sp)                38b4: move s0,zero
-```
-
-With `for (i = 0; i != 12; i++)` IDO puts the last `sp44` store first. Writing the
-initialisation as its own statement *ahead of that store* — `i = 0;` … `sp44.unk24 = 0.0f;`
-… `for (; i != 12; i++)` — makes IDO emit `move s0,zero` first, **exactly matching golden**,
-and removes both of the displaced rows around the loop entry (the `b`/`swc1` pair). 65 points,
-no instruction added, and the source now agrees with the evidence in the object rather than
-being tuned against it. Placing `i = 0;` further up (two blocks earlier, or at the top of the
-function) is inert or much worse (1956), so it is specifically *ahead of the final store*.
-
-### Step 1 — THE u8-PARAMETER LAW, SOLVED, AND IT IS A SPELLING AFTER ALL
-
-The previous note concluded the discriminator was *quantitative* ("number of uses / blocks
-the range spans"), i.e. not reachable from source. That was half right — it IS a count, but a
-count of a **spelling**, and it is therefore completely reachable from source:
-
-> **an implicit truth test binds a `u8` parameter to a callee-saved register in the prologue;
-> two or more explicit `!= 0` comparisons do not.**
-> (The exact threshold is established by the 2^4 sweep below.)
+Both are the same discovery: **the four quadrant blocks are written with one uniform idiom.**
+The function builds the same 0x58-byte descriptor four times, once per corner, poking a 2-bit
+alignment field in `spA0.unk14` with a different code each time. The parked file used to spell
+those four blocks three different ways. Golden spells them **one** way:
 
 ```c
-if (arg1)        -> prologue: andi s0,a1,0xff        (golden)
-if (arg1 != 0)   -> prologue: andi t6,a1,0xff ; move a1,t6  ... later: move s0,a1
-if (arg1 == 0)   -> 5858, worse still
+spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x6;   spA0.unk0 =  25.0f;  spA0.unk4 =  25.0f;
+spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x4;   spA0.unk0 = -25.0f;  spA0.unk4 =  25.0f;
+spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x0;   spA0.unk0 = -25.0f;  spA0.unk4 = -25.0f;
+spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x2;   spA0.unk0 =  25.0f;  spA0.unk4 = -25.0f;
 ```
 
-With `if (arg1)` the **prologue is byte-identical to golden**, including the callee-save
-order golden uses (`sw s0` first, then `ra`, then `s1`, because `s0` is defined at
-instruction 5):
+| step | edit | score | rows |
+|---|---|---|---|
+| base (last wave) | blocks 1,2 split; block 3 `&= ~0x6` only; block 4 combined | 517 | 39 `r` + 2 `<` + 2 `>` |
+| **1** | block 3 gains `spA0.unk14 \|= 0x0;` | **477** | block 3 becomes byte-identical |
+| **2** | block 4 split from `= (x & ~6) \| 2` into `&= ~6; \|= 2;` | **172** | **every register in the function now matches** |
+
+Step 1 emits **no instruction** (267 before and after) but consumes one IDO temp-register web,
+which is exactly the "forcers are temp-register rotation counters" law seen from the useful
+side. Step 2 emits no extra instruction either. Together they moved the whole t-register
+rotation onto golden's and collapsed all 39 register rows plus the two block-3/4 blocks.
+
+### HONESTY FLAG on `spA0.unk14 |= 0x0;` — read this before shipping
+
+A statement that emits zero instructions and only shifts register allocation is, in isolation,
+exactly the banned "no-op mask chain". The argument *for* it here is that it is not an isolated
+invention: it is the `k = 0` member of a four-way family whose other three members (`k` = 6, 4,
+2) are each independently forced by the binary, in four copy-pasted blocks that are otherwise
+identical token for token. Copy-paste-and-edit-the-constant is the obvious origin of four such
+blocks, and editing `0x6` to `0x0` rather than deleting the line is what produces it.
+**That is an argument, not proof.** It is recorded here rather than decided, because the
+function is at 172 and the question is not yet live. If a later wave reaches 0, the call has
+to be made explicitly.
+
+Measured, so nobody re-explores it: `|= 0x0` is **inert everywhere except block 3**. Inserting
+it before block 1's `&= ~0x6` (n8), or at any of the six positions inside block 5 (n0–n5), or
+after block 5's `unk14`/`unk30`/`unk34` (n6, n7), is **byte-identical** to the base. It is
+load-bearing only in the one place where golden's registers demand it.
+
+## The residual at 172 — 16 rows, one block, pure scheduling
+
+Instructions 193–217, the block that rebuilds the descriptor for the twelve-particle ring.
+Same 25 instructions, same registers, different order:
 
 ```
-3500: addiu sp,sp,-0xf8      3510: andi  s0,a1,0xff
-3504: lui   at,0x41c8        3514: sw    ra,0x2c(sp)
-3508: sw    s0,0x24(sp)      3518: sw    s1,0x28(sp)
-350c: mtc1  at,$f0           351c: sw    a0,0xf8(sp)   3520: sw a1,0xfc(sp)
+       GOLD                              MINE
+ 193   lui at,0x4040                     lui at,0x4040          <- identical
+ 194   mtc1 at,$f0                       mtc1 at,$f0
+ 195   mtc1 zero,$f2                     mtc1 zero,$f2
+ 196   li v1,1                           lw t8,248(sp)
+ 197   lw t8,248(sp)                     li t1,153
+ 198   li t1,153                         sb t1,176(sp)
+ 199   swc1 $f2,160(sp)                  swc1 $f0,172(sp)
+ 200   swc1 $f2,164(sp)                  swc1 $f0,168(sp)
+ 201   swc1 $f0,172(sp)                  swc1 $f2,160(sp)
+ 202   swc1 $f0,168(sp)                  swc1 $f2,164(sp)
+ 203   sb   t1,176(sp)                   lbu t6,573(t8)
+ ...
+ 211   sllv t2,t0,t9                     li v1,1
 ```
 
-Worth **1737 points on its own, and it also corrected the instruction count** (269 → 267):
-the in-place form costs `andi tN` + `move aM,tN` + `move s0,a1` = 3 instructions where
-golden spends 1.
+Two facts:
+* golden emits the five opening stores in **exact source order** (160, 164, 172, 168, 176);
+  mine emits the three *constant groups* in **reverse** order (`sb`, then the 3.0f pair, then
+  the 0.0f pair) while preserving source order *within* each group;
+* golden hoists `li v1,1` (the comparison constant of `if (D_80082FA0 == 1)`) to the head of
+  the block; mine emits it at its use, 15 instructions later.
 
-**Why it is worth so much more than 2 instructions.** The extra `andi t6,…` consumes one
-IDO temp register, which **rotated every t-register in the whole body by +1**
-(`lui t7,%hi(D_80082FA0)` → `lui t8`, `lw t6,0xf8(sp)` → `lw t7`, `li t9,0x5d` → `li t0`, …).
-132 of the 4333's rows were that rotation. This is the "forcers are temp-register rotation
-counters" law seen from the other side: an *unwanted* extra mask rotates the pool just as a
-deleted one does.
-
-Ruled out around it, all measured: `register u8`, `unsigned char`, K&R old-style definition
-(`func(arg0, arg1) void *arg0; u8 arg1; {`), K&R + `register`, ternary into `temp_type`,
-ternary inlined at the call sites, `temp_type` declared first/last, `register s32 temp_type`.
-All byte-identical to their base.
-
-#### The law, sharpened by an exhaustive 2^4 sweep
-
-The four tests were then swept over **all 16 combinations** of `if (arg1)` vs
-`if (arg1 != 0)` (`t` = truth test, `N` = `!= 0`, positions 1..4):
-
-| combination | score | insns (gold 267) |
-|---|---|---|
-| `tttt` `Nttt` `tNtt` `ttNt` `tttN` | **582** | **267** |
-| `NNtt` | 910 | 269 |
-| `NtNt` | 930 | 269 |
-| `NttN` | 947 | 270 |
-| `NNtN` / `NtNN` / `NNNt` | 1090 / 1110 / 1120 | 268 |
-| `NNNN` | 1794 | 269 |
-| `tNNt` / `tNtN` / `ttNN` / `tNNN` | 3974 / 3984 / 3984 / 4024 | 269 / 269 / 269 / 268 |
-
-**The threshold is at TWO.** All five variants with at most one `!= 0` are byte-identical
-to each other; every variant with two or more costs the in-place normalisation. So the rule
-is not positional and not "where the first use is":
-
-> IDO keeps a `u8` parameter in its incoming argument register — normalising in place with
-> `andi tN,aM,0xff` + `move aM,tN`, plus a later `move sN,aM` — as soon as **two or more** of
-> its uses are explicit `x != 0` comparisons. Zero or one such comparison and the parameter
-> is bound straight into a callee-saved register in the prologue (`andi sN,aM,0xff`).
-
-That single extra `andi` is a temp-register-pool consumer, so the penalty is never 2
-instructions — it is 2 instructions *plus* a rotation of every t-register in the function.
-
-### Step 2 — statement order (AXIS 1), found by exhaustive sweep
-
-Golden's schedule loads `spA0.unk44`'s source **before** the `unk14` read-modify-write pair:
-
-```
-lbu t8,0x23d(t1)   <- unk44's load
-andi t2,t6,0xfff9  /  sh  /  ori t4,t2,0x6  /  sh      <- the two unk14 masks
-swc1 $f0,0xa0(sp)  /  swc1 $f0,0xa4(sp)
-beqz s0,L          /  sb t8,0xe4(sp)                   <- unk44's store in the delay slot
-```
-
-so `spA0.unk44 = …;` belongs **before** `spA0.unk14 &= ~0x6;`, not after the two float
-stores. Worth **1944 points** (2596 → 652).
-
-### Step 3 — split the combined mask, and it costs nothing
-
-`spA0.unk14 = (spA0.unk14 & ~0x6) | 0x4;` → `spA0.unk14 &= ~0x6; spA0.unk14 |= 0x4;`
-(the spelling the neighbouring pair in the same function already uses). **No instruction is
-added** — IDO forwards the stored value — and it is what makes golden's
-`lhu v0,0xb4(sp)` reload register appear: before the split mine reloaded into a t-register at
-all three later call sites, after it all three read `v0` exactly like golden. 70 points.
-
-## REFUSED: the 577, and why refusing it was right
-
-Hoisting `sp44.unk24 = 0.0f;` above `spA0.unk30 = 8;` scored 577 — five better than the 582 it
-was compared against — and was **refused**, because golden's own schedule shows that store
-sitting immediately *after* the loop-counter init, and the 577 moved it 20 instructions
-earlier. Step 4 then reached **517** by attacking the same transposition from the correct
-side: leave the store where golden has it and move the *counter init* ahead of it. The
-refused plateau and the real fix were the same row; taking the 5 points would have hidden it.
-
-## CAMOUFLAGE, REJECTED: the permuter's 562
-
-See the Permuter section: `if ((short) arg1)` scores lower while emitting **269** instructions
-against golden's 267. A score that improves while the instruction count moves away from
-golden's is not progress. Gate on the count first.
-
-## Residual at 517 — 43 differing rows, and what they are
-
-Marker census from asm-differ's own dump: **39 `r` (register-only), 2 `<`, 2 `>`**.
-
-* **The 39 `r` rows are one t-register divergence that begins at `0x3728`** (`andi t7,v0,0xfff9`
-  golden vs `andi t5,v0,…` mine) — **everything before that address is byte-identical**. The
-  offset is not a uniform rotation (gold `t1,t8,t6` vs mine `t7,t1,t8`) and it widens at each
-  of the 3rd/4th call blocks, so it is a *global allocation* difference flipped by something
-  downstream, not a positional counter.
-* **The 2+2 rows are exactly two displaced instructions in the second descriptor block**:
-  golden hoists `li v1,1` (the `1` of `if (D_80082FA0 == 1)`) to just after `mtc1 zero,$f2`,
-  where mine emits it at its use; and golden defers `sb tN,0xb0(sp)` (`spA0.unk10 = 0x99`)
-  until after the four `swc1`s, where mine emits it straight after its `li`.
-* Also register-coloured but really an order difference: golden emits the four block-2 float
-  stores in source order (`0xa0,0xa4,0xac,0xa8`); mine emits the `3.0f` pair first. Reordering
-  them in the source does **not** change the emitted order (measured, exhaustively).
-* `.rodata`/`.data` need no attention: only `.text` differs.
-
-## Sweeps performed this wave — report the flat ones too
-
-All with a private whole-TU scorer that compiles the candidate with the repo's exact pipeline
-into a private temp dir and runs the REAL asm-differ against `expected/` through a private
-`build/` + `expected/` pair (so it needs no buildlock and is parallel-safe). Calibrated: it
-reproduces `0` for both TUs with the pragma in, `165` for the parked func_1512B730, and
-`582` here — the last cross-checked against `make` + asm-differ in the real tree.
+**This block's emitted order is completely insensitive to the source.** Everything below was
+swept this wave against the 172 base and every single variant is byte-identical:
 
 | sweep | size | result |
 |---|---|---|
-| parameter binding / declaration spellings | 15 | **`if (arg1)` wins**; 8 of the rest byte-identical to base |
-| **block 1 (28 stmts): EVERY statement moved to EVERY position + every adjacent line join** | 750 | 652 is the floor; **30 variants tie at 652 byte-identical** |
-| block 1 re-swept from 582 | 750 | **flat — 582 is the floor** |
-| **block 2 (13 units): every unit to every position + joins** (brace-aware, the two `if/else`s are single units) | 141 | **flat — 582 is the floor.** Reordering the four float stores in the source does NOT change their emitted order |
-| call / NULL-test / mask / loop spellings | 15 | only the mask split helps; `if (temp_v0)`, `if (temp_v0 != 0)`, embedded assignment, `memcpy` cast, `& 0xFFF9`, `i < 12` all byte-identical |
-| loop head (`while`, `do`, split init, join with previous line), `spA0.unk10` moved outside the block, float literal `0.f`/`3.f` respellings, local declaration order ×3 | 17 | **flat at 582**; every float respelling *costs* an instruction (the 0.0f CSE is currently correct) |
-| **block 0 (the opening `sp44` block, 8 units): every unit to every position + joins** | 63 | **flat — 582 is the floor** |
-| **loop body (3 units): every unit to every position + joins** | 6 | **flat — 582 is the floor**; every move costs 1–4 instructions |
-| **all four `if (arg1)` tests: all 2^4 truth-vs-`!=0` combinations** | 16 | see the law above |
+| block 5, brace-aware: **every unit to every position** (14 units incl. both `if/else`s) + **all 120 permutations of the five opening stores** | 273 | **122 tie at 172**, none changes the emitted store order |
+| adjacent line **joins**, runs of 2/3/4/5, at every position in block 5 | 16 | flat at 172 |
+| literal spellings `0.f`, `3.f`, `0` (int), chained `a = b = k`, copy `unk8 = unkC`, `0x99`→`153` | 9 | flat at 172 (`0.f` and `0` *cost* an instruction: 268) |
+| `if (D_80082FA0 != 1)` with the arms swapped | 1 | 382 |
+| `\|= 0x0` inserted at 9 further positions | 9 | flat at 172 |
+| declaration order of `temp_v0`/`temp_type`/`i` (all 6), `int`/`u32`/`register` `i`, `register temp_type`, `register`/`u8 *` `temp_v0` | 12 | flat at 172 |
+| loop forms: `while`, `do/while`, `i < 12` | 3 | flat at 172 |
+| `if (temp_v0)`, `memcpy` cast form | 2 | flat at 172 |
+| block-3 mask spellings `= x & ~6`, `&= 0xFFF9`, chained store, stores-before-mask | 4 | flat |
+| `0x50 \| (1 << …)` | 1 | flat |
+| `spA0.unk10 = 0x99` moved after `unk34` | 1 | 672 |
+| `sp44.unk28` / the `if` block hoisted above the spA0 stores | 1 | 1363 |
+| `spA0.unk14` split from `\| 0x50` | 1 | 1332 |
+| `s16 i` | 1 | 797 / **269 instructions** |
 
-| loop-counter placement + `temp_v0` typing (`s32`, `u8 *`) | 7 | **`i = 0;` ahead of the last store wins (517)**; `s32`/`u8 *` for `temp_v0` byte-identical |
-| **block 1, block 2 and the spelling set ALL RE-SWEPT from the 517 base** | 906 | **flat — 517 is the floor of every one of them** |
+## The frame, re-read under the declaration-list law
 
-**Every straight-line region of this function has been swept exhaustively for statement order
-and adjacent line joins — block 0 (63), block 1 (750), block 2 (141), the loop body (6) — and
-all four are flat, both at 582 and again at 517.** AXIS 1 and AXIS 2 are spent here; report
-that as evidence, not as a gap.
-
-## Permuter
-
-`./permuter_tu.sh setup game_1F4650 func_151CA6A0 <this file> <dir>` → **SELFTEST PASS**
-(all five checks; (e) reports isolation DIFFERS, so the TU-aware harness is load-bearing).
-`frame` reports golden 248 = base 248 and the stack-offset multiset already matches golden,
-so both gates are usable:
+Frame 248, and it is fully explained — **no unexplained words in this function.**
 
 ```
-PERMUTER_TU_REQUIRE_FRAME=248 PERMUTER_TU_REQUIRE_OFFSETS=1 ./permuter_tu.sh run <dir> -j4
+locals area ends at framesize:  spA0  160..247 (0x58 = 88)   <- declared first
+                                sp44   68..159 (0x5C = 92)
+                                temp_v0@64  temp_type@60  i@56
+base (outgoing args + saved regs + compiler temps) = 52
+framesize = roundup8(52 + sum(sizeof(local))) = roundup8(52 + 192) = roundup8(244) = 248
 ```
 
-Permuter metric reads **577** for this base (asm-differ 582); the +5 offset between the two
-scorers is constant and was seen on func_1512B730 too (350/355, 160/165). Do not read a
-permuter number as an asm-differ number.
+Calibrated directly: adding 1 unused scalar keeps 248 (the round-up absorbs it), adding 2 gives
+256, 4 gives 264, 8 gives 280, 16 gives 312 — all exactly `roundup8(52 + L)`. **Unreferenced
+locals are NOT dropped by IDO**; they occupy their home like any other. So the declaration list
+is right, and there is no room for a cached `D_80082FA0` or any other extra local.
 
-**Run result: ~1,860 iterations at -j4 → seven `output-577-*` TIES and three "wins".
-ALL THREE WINS ARE REJECTED.** Every one of them is a single inserted CAST — the randomizer's
-`add_cast` pass — and nothing else. (Method: strip *all* parentheses and whitespace before
-diffing the output against `base.c`, otherwise pycparser's re-parenthesisation buries the one
-real token.)
+## Still true from the previous revision (do not re-explore)
 
-| output | permuter score | insns (gold **267**) | the entire change | why rejected |
-|---|---|---|---|---|
-| `output-557-1` | 557 | **269** | `if ((short) arg1)` on test 1 | emits a redundant `sll`/`sra` sign-extension pair and tests `beqz t5` instead of golden's `beqz s0` |
-| `output-477-1` | 477 | **269** | `if ((unsigned short) temp_v0 != 0)` | **semantically wrong** — truncates a *pointer* to 16 bits before the NULL test |
-| `output-527-1` | 527 | 267 | `1 << (long long)(…)` on a `spA0.unk14` shift count | correct length, but see below |
+* `if (arg1)` not `if (arg1 != 0)` — the u8-parameter law, threshold at TWO explicit `!= 0`
+  comparisons; worth 1737 and it fixes the instruction count (269 → 267).
+* `spA0.unk44 = *(u8*)(arg0+0x23D);` must be **above** the `unk14` mask pair (1944 points).
+* the loop-counter init `i = 0;` lifted out of the `for` and placed **immediately ahead of**
+  `sp44.unk24 = 0.0f;` (65 points; golden's `move s0,zero` precedes `swc1 $f2,0x68(sp)`).
+* `func_1515548C(descriptor*, u8 kind, 0, 0, size, u8, s32)`; caller does
+  `memcpy((u8*)ret + 0x70, &payload, size)`. Keep `temp_type` `s32` (call site does
+  `andi a1,v0,0xff`).
+* `spA0.unk14` is **u16** (golden reloads with `lhu`), not the `s16` the sibling files declare.
+* `D_800AAE88..98` are real globals in `asm/data/24F740.rodata.s` — **no rodata migration.**
+* **The sibling `func_151CAB78` contains byte-identical text.** Anchor every edit between
+  `void func_151CA6A0(` and `void func_151CAACC(`. Every generator used this wave does.
 
-The `(long long)` one deserves the detail because its length is right, which is exactly when
-a bad candidate is dangerous. Applied to the **second** `spA0.unk14 = (1 << (…+0xB)) | 0x50;`
-by hand it scores **467** (applied to the first: 832; to both: 842). Marker census against the
-parked 517:
+## REFUSED this wave
 
-```
-517  (parked)        r 39   '<' 2   '>' 2
-467  ((long long))   r 32   '<' 2   '>' 2
-```
-
-**It fixes nothing.** The two displaced instructions — golden's hoisted `li v1,1` and deferred
-`sb tN,0xb0(sp)` — are byte-for-byte the same defect in both; the 50 points are entirely
-register-name noise. A gratuitous `(long long)` on a shift count is not something anyone wrote
-in 1999, and it is camouflage over the blocker rather than progress toward it. **REFUSED**,
-on the same grounds as the 577.
-
-**Lesson for this function: gate every permuter output on the instruction count (267) AND on
-the non-register row census before reading its score.** On this function the permuter's metric
-rewards adding instructions, and its `add_cast` pass will hand you three different casts that
-all "win".
+Nothing needed refusing: no variant beat 172, so no trade between score and plausibility came
+up. The previous wave's refusals stand — the permuter's `if ((short) arg1)` (562 at 269
+instructions), `(unsigned short)` on a pointer NULL test (semantically wrong), and the
+gratuitous `(long long)` shift-count cast (467, but the same two displaced instructions and
+pure register noise). Note that the `(long long)` cast's 467 has now been beaten *and
+explained* by step 1 above: it was doing the same register rotation, badly.
 
 ## Next move for whoever picks this up
 
-The cheap statement-order gradient is spent — all four straight-line regions swept
-exhaustively, twice, all flat. What is left is:
-
-1. **Two displaced instructions in the second descriptor block** (`li v1,1` hoisted by golden,
-   `sb …,0xb0(sp)` deferred by golden). These are worth far more than the register rows and
-   they are the only structural evidence left. Step 4 shows the productive method: read
-   golden's object for an ORDER it insists on, then find the source form that makes IDO agree,
-   rather than searching for a lower number.
-2. **The 39-row register divergence** that begins where the objects are still byte-identical.
-   Fix (1) first — on this function every structural fix so far has collapsed a block of
-   register rows with it (the mask split alone moved all three later reloads onto golden's
-   `v0`).
-
-Axes NOT yet tried, in the order I would try them: the *shape* of block 2 (whether
-`spA0.unk10`/`unk14`/`unk30`/`unk34` are re-assigned there at all versus a second descriptor
-being built, or whether `sp44`'s per-instance fields come from a helper); and whether the
-four call sites are a loop or a macro in the original rather than four written-out copies.
-
-## WAVE 2026-08-12 — 517 re-verified; the two defects proved INDEPENDENT
-
-**517 reproduced** by an independent private whole-TU scorer (repo pipeline into a private
-`build/` + `expected/` pair, then the real asm-differ): `SCORE 517 INSNS 267 FRAME 248 BYTES
-1068`. Control: the repo copy with the `#pragma` still in scores `0 / 267 / 248 / 1068`, so
-golden is 267 instructions and we already match the count, the frame and every stack offset.
-
-### The residual, re-derived (addresses stripped, registers compared)
-
-Only **130 diff lines**. Everything from the prologue through the SECOND descriptor block is
-byte-identical, and everything after the loop head is byte-identical. What is left:
-
-1. **The fifth (3.0f) descriptor block is scheduled differently.** Golden:
-   `lui at,0x4040 / mtc1 $f0 / mtc1 zero,$f2 / li v1,1 / lw t8,0xf8(sp) / li t1,153 /
-   swc1 $f2,0xa0 / swc1 $f2,0xa4 / swc1 $f0,0xac / swc1 $f0,0xa8 / sb t1,0xb0 / lbu …`
-   i.e. the five stores come out in EXACT SOURCE ORDER and `li v1,1` is the 4th instruction.
-   Ours emits `sb 0xb0` FIRST, then the 3.0f pair, then the 0.0f pair, and puts `li v1,1`
-   nineteen instructions later, immediately before its `bne`.
-2. **A register-allocation divergence that starts at the THIRD descriptor block**
-   (`andi t7,v0,0xfff9` golden vs `andi t5,v0,0xfff9` ours at 0x3728) and widens through the
-   fourth. Blocks one and two are byte-identical including registers, and block three's
-   *instruction sequence* is identical — only the colours differ. After block two's last
-   temp (`t4`) our allocator continues with the next register in IDO's rotation (`t5`);
-   golden jumps to `t7`, i.e. golden is two positions further along.
-
-### The finding that matters most: (1) and (2) are INDEPENDENT
-
-The previous note guessed that fixing the block-5 order would collapse the register rows.
-**It does not.** Variant `g8` (move `spA0.unk10 = 0x99;` below `spA0.unk34 = 0x44;`) DOES
-change the block-5 schedule — the `sb 0xb0(sp)` moves to the end of the store group, which is
-golden's position — and block three's `andi` is still `t5`, byte-for-byte unchanged. So the
-two defects have to be attacked separately, and the register divergence is NOT downstream of
-the schedule.
-
-### Sweeps performed this wave — every one FLAT at 517
-
-Scored with the private scorer above; each row also reports the emitted store order (`ORD`)
-and the index of `li v1,1` in the fifth block (`V1`; golden = 4).
-
-| sweep | size | result |
-|---|---|---|
-| **ALL 120 permutations** of the five stores that open the fifth block (`unk0`, `unk4`, `unkC`, `unk8`, `unk10`) | 120 | **every one scores 517** and **not one** reproduces golden's `0xa0,0xa4,0xac,0xa8,0xb0`. The emitted order is invariant at the GROUP level — always `[sb 0xb0][3.0f pair][0.0f pair]` — while WITHIN each constant's pair it does follow source order. Golden's group order is the other way round. |
-| block-5 group moves (floats last, `unk10` first/last, `unk14` first, `sp44.unk28` first, `spA0.unk30/34` first) | 9 | 517 at best; `unk10` after `unk34` = 712 (moves the `sb` to golden's slot but leaves the float groups reversed); floats last 1140; `unk14` first 1170; `sp44.unk28` first 1077 |
-| chained/copied float assignments (`unk4 = unk0 = 0.0f`, `unk8 = unkC = 3.0f`, `unk8 = unkC;`, `unk4 = unk0;`) | 5 | all **byte-identical** to base |
-| both `if (D_80082FA0 == 1)` written as **ternaries**, either one, or both | 3 | all **byte-identical** to base |
-| `1 == D_80082FA0` instead of `D_80082FA0 == 1` | 1 | 537 (worse) |
-| `spA0.unk14` mask spellings: split vs combined for each of the four blocks, `& 0xFFF9`, `= x & ~6`, `\| 0x0`, `0x50 \| (1 << …)`, `(u32)1 <<`, split `\|= 0x50` | 12 | 517 at best (block 4 split, block 3 as `= x & ~6`, `&= 0xFFF9`, `\| 0x0`, floats-before-mask all identical); block 2 combined 587; block 1 combined **1383 and 265 instructions** (two SHORT); both combined 1413/265; `unk14` split from `\| 0x50` 1437/268 |
-| `sp44.unk1C` before/after the ifs, `sp44.unk24`/`i = 0;` hoisted, `sp44.unk28` after the ifs | 5 | 577–1403, all worse |
-
-`V1` was **19 in every single one of the ~150 variants compiled this wave**; golden's is 4.
-No source-level lever found so far moves it.
-
-### What this leaves
-
-* The fifth block's ucode order is not reachable from statement order: IDO emits the store
-  group by CONSTANT, newest constant first, and orders the two constants the same way no
-  matter how the source is written. Whatever golden did, it is not a permutation of these
-  five assignments. Candidates not yet tried: a different set of statements in that block
-  (e.g. `spA0.unk8`/`unkC` not written there at all and carried from an earlier block), or
-  the 0.0f coming from a value rather than a literal.
-* The register divergence needs its own attack. It begins where the two objects are still
-  byte-identical, so nothing in blocks 0–2 can be blamed; the change must be in how many
-  ucode temps the third/fourth blocks and the loop consume.
-
-## Reusable facts about game_1F4650.c (for func_151CB110 / func_151CAD28 / func_151C82D0)
-
-* `func_1515548C(descriptor*, u8 kind, 0, 0, size, u8, s32)` returns a node or NULL; the
-  caller then `memcpy((u8*)ret + 0x70, &payload, size)`. `+0x70` is the payload slot for
-  every user of this API in the tree (`game_FC5F0`, `game_113D60`, `game_1F4650`).
-  The 2nd argument is `u8`: the call site ends `andi a1,v0,0xff`, so keep `temp_type` `s32`.
-* The 0x58-byte descriptor is `struct_150CF680` in `src/game_FC5F0.c`. Field `unk14` is
-  **u16**, not the `s16` those files declare (golden reloads it with `lhu`).
-  `unk14 = (1 << (obj->[0x23D] + 0xB)) | 0x50` is the layer/priority mask; bits 1..2 are a
-  2-value alignment field poked with `x &= ~6; x |= k;` — **write it as two statements**, not
-  as `x = (x & ~6) | k`.
-* Payload local is 0x5C bytes and sits immediately below the descriptor. func_151CA6A0-only
-  fields: `+0x18` f32 radius (-62 / -50), `+0x1C` f32, `+0x20` f32 (1/62 = D_800AAE90 or
-  1/50 = D_800AAE94), `+0x24` f32 angle (stepped by D_800AAE98 = pi/6, 12 times = a full
-  circle), `+0x28` f32 = D_800AAE8C (99999).
-* `D_800AAE88..D_800AAE98` are REAL GLOBALS (`asm/data/24F740.rodata.s`) — `extern f32`,
-  no rodata migration needed.
-* IDO local layout: locals are allocated **descending in declaration order** (first declared
-  gets the highest address). A scalar added at the END of the declaration list does not
-  disturb the struct locals; added at the FRONT it shifts everything by 4.
-* **The sibling `func_151CAB78` contains a byte-identical `if (arg1 != 0) { temp_type = 4; }`
-  block.** A whole-file regex over that text rewrites two functions. Anchor every edit
-  between `void func_151CA6A0(` and `void func_151CAACC(` — this trap was hit once this wave
-  and caught by an assertion.
+The block-5 schedule is not reachable from statement order, line joins, literal spelling or
+declaration order — 300+ variants, all byte-identical. What is left is a structural question
+about that block: golden's scheduler had a different *pre-scheduling* order for three
+independent things (the 0.0f store pair, the 3.0f store pair, and `sb 0x99`), and something
+must make IDO generate them in a different sequence. Untried ideas, in the order I would try
+them: whether `spA0.unk0/unk4` and `unk8/unkC` are array members (`f32 pos[2]; f32 size[2];`)
+rather than four scalars — array subscripting produces different ucode for the same stores;
+whether `sp44` is built by a helper the four call sites share; and the permuter seeded here
+(the base is now excellent: correct count, frame, offsets and registers) with a hard gate on
+`INSNS == 267` **and** on the residual staying inside block 5.

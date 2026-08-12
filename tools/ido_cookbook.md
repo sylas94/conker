@@ -1215,3 +1215,57 @@ a byte-perfect score obtained with `unknownN` locals is a fake match, because th
 ("there are two more locals here") is unevidenced even when the bytes agree.
 Route to resolving it: follow-the-pointer (does a consumer copy more out of an aggregate than you
 have modelled?) before inventing a scalar.
+
+## Home vs temp is ROLE-based, not declaration-order-based (refines the frame law)
+
+The frame law says every declared auto gets a home in declaration order. This wave pinned down
+which *values* end up in homes versus compiler temps, and it is not what declaration order alone
+would predict.
+
+Measured across 8 declaration orders on func_151B65D4: `stepAngle` ALWAYS takes its own declared
+home, wherever that home happens to be (move it to 128 and the slot moves to 128). `count` and
+`stepRadius` ALWAYS take compiler temps, no matter where they are declared. Golden wants `count`
+in the home at 88 and the other two in temps at 80/72 — and **declaring `count` last does not do
+it** (1406).
+
+So IDO's home-vs-temp choice is driven by the value's ROLE (how and where it is used), not by
+where you declare it. Declaration order controls WHERE a home sits; it does not control WHICH
+values get one. When your residual is "the right slots exist but the wrong values are in them",
+the declaration list is not the lever.
+
+## A no-op edit that changes codegen is a RED FLAG, not a lever — even when it is uniform
+
+func_151CA6A0 went 477 -> 172 on `spA0.unk14 |= 0x0;`, a statement that emits **no instruction**
+and yet re-aligned the whole register allocation. That is a banned no-op mask by the letter of the
+fake-match policy.
+
+The defence offered was structural and is worth recording because it is the strongest form this
+argument takes: the function pokes an alignment field in four blocks as `(x & ~6) | k` for
+k = 6, 4, 0, 2, and three of those four are independently forced by the binary — so the k=0 member
+"should" be spelled uniformly with its siblings. That is a real argument. It is still **not proof**,
+because `| 0` is exactly the term a forcer would take, and the uniform-family claim is inferred
+from three siblings rather than demonstrated for the fourth.
+
+Handling: the function is PARKED at 172, the reliance is written into its NOTES, and nothing ships
+until either an honest spelling of the k=0 case reproduces the codegen or the function reaches 0
+without it. **Do not let "it is uniform with its siblings" become a licence to ship a no-op.** If
+the uniform family is real, the k=0 block should be expressible as the same `(x & ~6) | k` shape
+its siblings use — that is the thing to try, not `|= 0x0`.
+
+## A private parallel-safe scorer (and why it must be cross-checked, not substituted)
+
+Useful pattern when a wave needs hundreds of builds: a project dir that SYMLINKS
+`conker/{include,asm,expected,diff_settings.py,src/libultra/*}` but owns its own `src/` and
+`build/`, compiles with the repo's exact pipeline (`asm_processor.py -O2 -g3` | `ido cc -c -32
+<CFLAGS> -O2 -g3 -mips2 -o32` | `asm_processor --post-process`), and runs the REAL asm-differ with
+`-o <func> -R --max-lines 4096 -f build/src/<tu>.c.o`. It never touches `conker/build`, so it needs
+no buildlock and several can run in parallel — this wave ran a 6-way sweep and 400 permutations
+that way.
+
+The discipline that makes it safe, and it is not optional: **calibrate against the real repo build
+before trusting a single number, and cross-check every result that matters back through
+`make` + buildlock.** This wave did both — controls with the pragma IN scored 0/0 on both TUs, the
+parked baselines reproduced exactly (1398 and 517), and the final 172 was re-measured under the
+repo's own `make`. A private scorer that is never reconciled with the shared tool is how a pipeline
+starts producing numbers nobody else can reproduce; that failure mode has already been seen here
+once.

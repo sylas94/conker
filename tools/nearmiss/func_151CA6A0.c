@@ -514,6 +514,7 @@ void func_151CA6A0(void *arg0, u8 arg1) {
     }
 
     spA0.unk14 &= ~0x6;
+    spA0.unk14 |= 0x0;
     spA0.unk0 = -25.0f;
     spA0.unk4 = -25.0f;
     if (arg1) {
@@ -526,7 +527,8 @@ void func_151CA6A0(void *arg0, u8 arg1) {
         memcpy((u8 *)temp_v0 + 0x70, &sp44, 0x58);
     }
 
-    spA0.unk14 = (spA0.unk14 & ~0x6) | 0x2;
+    spA0.unk14 &= ~0x6;
+    spA0.unk14 |= 0x2;
     spA0.unk0 = 25.0f;
     spA0.unk4 = -25.0f;
     if (arg1) {
