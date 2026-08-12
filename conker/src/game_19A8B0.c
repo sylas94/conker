@@ -315,7 +315,73 @@ void func_1516D99C(
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516E778.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516E8CC.s")
+extern u8 D_800A6E00[];
+extern u8 D_800A6E0C[][3];
+
+s32 func_1516E8CC(struct Obj1516D4E8 *arg0) {
+    struct Obj1516D4E8 *vp;
+    s32 temp_v1;
+    s32 idx;
+    s32 temp;
+    s32 i;
+    f32 frac;
+    f32 inv;
+
+    vp = arg0;
+    temp_v1 = arg0->unk1F;
+    if (arg0->unk24 != 0) {
+        if (temp_v1 != 0xFF) {
+            temp_v1 += D_800BE9E4 << 5;
+            if (temp_v1 >= 0x100) {
+                temp_v1 = 0xFF;
+            }
+            vp->unk1F = temp_v1;
+        }
+    } else {
+        if (temp_v1 != 0) {
+            temp_v1 -= D_800BE9E4 << 4;
+            if (temp_v1 < 0) {
+                temp_v1 = 0;
+            }
+            vp->unk1F = temp_v1;
+        }
+    }
+
+    if ((arg0->unk24 == 0) && (temp_v1 == 0)) {
+        return 1;
+    }
+
+    temp = arg0->unk14;
+    idx = arg0->unk24;
+    temp += D_800BE9E4 * 10;
+    arg0->unk16 = temp;
+    arg0->unk14 = temp;
+
+    if (arg0->unk24 == 0) {
+        idx += arg0->unk1F >> 5;
+    } else {
+        idx = idx + 8;
+    }
+
+    for (i = vp->unk26; i < vp->unk26 + 8; i++) {
+        if (idx >= D_800A6E00[i]) {
+            frac = (f32)(idx - D_800A6E00[i]) / (f32)(D_800A6E00[i - 1] - D_800A6E00[i]);
+            inv = 1.0f - frac;
+            arg0->unk1C = D_800A6E0C[i][0] * inv + D_800A6E0C[i - 1][0] * frac;
+            arg0->unk1D = D_800A6E0C[i][1] * inv + D_800A6E0C[i - 1][1] * frac;
+            arg0->unk1E = D_800A6E0C[i][2] * inv + D_800A6E0C[i - 1][2] * frac;
+            break;
+        }
+    }
+    return 0;
+}
+
+/* The ROM has 8 bytes of `jr ra; nop` between func_1516E8CC and func_1516ECAC.
+ * splat has no symbol for them so they fold into func_1516E8CC's size; they are an
+ * empty leaf function, the same shape game_981E0.c func_1507304C and
+ * game_1A5440.c func_15178750_pad already reconstruct. */
+static void func_1516ECA4_pad(void) {
+}
 
 s32 func_1516ECAC(Obj1516FadeState *arg0) {
     s32 temp_v0;
