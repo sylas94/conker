@@ -165,9 +165,9 @@ s32 func_1512B730(struct108 *arg0, f32 *arg1, s32 arg2) {
     s32 temp;
 
     ret = 0;
+    k0 = REC.unk0[0].unk0;
     temp_f0 = (f32)REC.unk0[0].unk4 + 1.0f;
     temp_f2 = (f32)REC.unk0[1].unk4 + 1.0f;
-    k0 = REC.unk0[0].unk0;
     k1 = REC.unk0[1].unk0;
     k2 = REC.unk0[2].unk0;
     k3 = REC.unk0[3].unk0;

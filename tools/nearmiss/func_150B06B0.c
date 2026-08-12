@@ -152,13 +152,10 @@ void func_150B06B0(struct127 *arg0, struct127 *arg1, u8 arg2, s32 arg3) {
         sp3C.unk02 = 0x78;
         sp3C.unk04 = -0x1E;
         sp3C.unk06 = 0x10;
-        sp3C.unk30 = 3;
-        sp3C.unk32 = 2;
-        sp3C.unk34 = 0x14;
-        sp3C.unk36 = 0x14;
+        sp3C.unk30 = 3; sp3C.unk32 = 2;
+        sp3C.unk36 = sp3C.unk34 = 0x14;
         sp3C.unk38 = 0x9B;
-        sp3C.unk3A = 0x64;
-        sp3C.unk44 = 0x10;
+        sp3C.unk3A = 0x64; sp3C.unk44 = 0x10;
         sp3C.unk46 = 0xF;
         sp3C.unk48 = 0;
         sp3C.unk40 = 0.5f;

@@ -958,3 +958,82 @@ Mitigations, both cheap, now standard in the wave brief:
    like `score.sh`.
 2. Print the script's `sha1sum` and full body in the SAME shell invocation that executes it, so
    every number is produced by code that was visible at the moment it ran.
+
+## Statement ORDER of independent loads is a register lever — a different axis from spelling
+
+The single most useful correction this week. Two parked NOTES files concluded "no source handle
+left; loop-invariant ranking tie" after trying many respellings — but **neither had reordered
+independent statements**. Respelling a statement and moving a statement are different axes, and
+only the first had been searched.
+
+On func_1512B730, hoisting one integer load above two float loads was worth **190 points**
+(355 -> 165) and cut wrong-register rows from 51 to 13. An exhaustive sweep of all **720**
+orderings of the six opening loads gives the law in closed form: the only thing that matters is
+that k0's load issues FIRST; all 10 orderings with k0 first score 160 and nothing scores lower.
+
+RULE: when the residual is "the register webs are swapped and no spelling moves them", sweep the
+ORDER of the independent loads before declaring a tie. It is a small, finite, cheap search.
+
+## Line joins pay at the ADJACENT-PAIR granularity, not the block
+
+IDO attaches a line number to every instruction and its list scheduler groups by them, so joining
+two adjacent statements onto ONE line merges two scheduling groups. Worth 10 points each, twice,
+on func_150B06B0 (580 -> 560). Why it stayed hidden through two prior waves is the instructive
+part:
+
+* one wave tested joining the WHOLE tail block — much worse (34 -> 51 rows)
+* the next tested SPLITTING every statement — all 24 variants exactly inert
+
+Both are the wrong granularity. Run a greedy climb over single adjacent PAIRS (join every
+remaining pair, keep the best, repeat). ~20 builds. It is not universal — the same climb on
+func_1512B730 left all 25 candidates byte-identical — but it is cheap enough to always try.
+
+## Reading a permuter run by its log tail will mislead you
+
+The 350 -> 160 find on func_1512B730 scrolled past about 1,000 iterations before the run ended;
+the tail showed only "score = 350" and looked like a flat plateau. **The win was already on disk.**
+Always list the output-* directories rather than trusting the tail.
+
+Related, and it cost a result: permuter_tu.sh chain does an rm -rf of output-*. Copy any output
+you care about BEFORE chaining.
+
+And the permuter **cannot inherit a line join** — it regenerates C from a pycparser AST which
+re-splits joined lines, so it can rediscover a join but never carry one through setup or chain.
+Re-apply joins by hand afterwards; a greedy hand climb finds them far more cheaply than the
+randomizer does.
+
+## A one-instruction-short candidate makes its whole TU look regressed
+
+A per-symbol whole-TU check flagged six functions as regressed. Five were pure address shift — the
+candidate was 4 bytes short, so everything after it moved and the objdump TEXT differed while the
+instruction stream was byte-identical. The sixth was the last function in the TU and differed only
+in trailing 16-byte alignment padding (two pad nops vs one; .text 8448 bytes either way). Both
+effects are the same shortfall and both vanish when the function matches.
+
+Compare instruction streams with ADDRESSES STRIPPED, or build with the pragma in place as the
+control, before believing a candidate broke its siblings.
+
+## Do not park the lowest score if it was bought with implausible source
+
+Two scores below the parked one were deliberately refused this wave: a 558 and a 574/575 family on
+func_150B06B0 that got there by writing struct fields OUT OF NUMERIC ORDER to buy one-point
+stack-offset alignment noise, while leaving all nine 60-point reordering penalties intact. Parked
+instead was the 560 form — two line joins and a chained assignment, none of which changes a token
+and all of which a human plausibly writes.
+
+Score 0 is necessary, not sufficient; a lower score bought with implausible source is not progress
+toward the real blocker, it is camouflage over it.
+
+### func_150B06B0 — a publishable BAIL (2026-08-11)
+Identical 236-instruction multiset with golden; every opcode, register, immediate and stack offset
+correct. Pure list-scheduler priority tie on destination-vs-source address materialisation in a
+struct copy. Exhausted: ~9,000 permuter iterations under exact frame (320) and stack-offset (103
+displacements) gates; all 23 adjacent transpositions; all 120 pairwise swaps; the complete 462-move
+relocation neighbourhood; a 570-variant move+swap re-run; all 22 pairwise line joins; all 24 line
+splits (inert); 23 rotations of the copy (1480-4881, so the copy must be first). **Ten** copy
+spellings are byte-identical. The one construct that would evaluate the destination in its own
+right — a memcpy/bcopy CALL, idiomatic since the same TU calls memcpy — is dead: IDO emits a real
+call (2000). Field-by-field is 3750 because golden's copy goes through $at, the assembler's
+struct-assignment expansion, which field assignments cannot produce.
+
+Revisit only with a new idea about operand ordering, not with more search.

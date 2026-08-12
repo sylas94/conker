@@ -320,7 +320,6 @@ extern u8 D_800A6E0C[][3];
 
 s32 func_1516E8CC(struct Obj1516D4E8 *arg0) {
     struct Obj1516D4E8 *vp;
-    s32 temp_v0;
     s32 temp_v1;
     s32 idx;
     s32 temp;
@@ -330,15 +329,13 @@ s32 func_1516E8CC(struct Obj1516D4E8 *arg0) {
 
     vp = arg0;
     temp_v1 = arg0->unk1F;
-    temp_v0 = arg0->unk24;
-    if (temp_v0 != 0) {
+    if (arg0->unk24 != 0) {
         if (temp_v1 != 0xFF) {
             temp_v1 += D_800BE9E4 << 5;
             if (temp_v1 >= 0x100) {
                 temp_v1 = 0xFF;
             }
-            arg0->unk1F = temp_v1;
-            temp_v0 = ((volatile struct Obj1516D4E8 *)arg0)->unk24;
+            vp->unk1F = temp_v1;
         }
     } else {
         if (temp_v1 != 0) {
@@ -346,12 +343,11 @@ s32 func_1516E8CC(struct Obj1516D4E8 *arg0) {
             if (temp_v1 < 0) {
                 temp_v1 = 0;
             }
-            arg0->unk1F = temp_v1;
-            temp_v0 = ((volatile struct Obj1516D4E8 *)arg0)->unk24;
+            vp->unk1F = temp_v1;
         }
     }
 
-    if ((temp_v0 == 0) && (temp_v1 == 0)) {
+    if ((arg0->unk24 == 0) && (temp_v1 == 0)) {
         return 1;
     }
 
@@ -361,7 +357,7 @@ s32 func_1516E8CC(struct Obj1516D4E8 *arg0) {
     arg0->unk16 = temp;
     arg0->unk14 = temp;
 
-    if (temp_v0 == 0) {
+    if (arg0->unk24 == 0) {
         idx += arg0->unk1F >> 5;
     } else {
         idx = idx + 8;
@@ -378,6 +374,13 @@ s32 func_1516E8CC(struct Obj1516D4E8 *arg0) {
         }
     }
     return 0;
+}
+
+/* The ROM has 8 bytes of `jr ra; nop` between func_1516E8CC and func_1516ECAC.
+ * splat has no symbol for them so they fold into func_1516E8CC's size; they are an
+ * empty leaf function, the same shape game_981E0.c func_1507304C and
+ * game_1A5440.c func_15178750_pad already reconstruct. */
+static void func_1516ECA4_pad(void) {
 }
 
 s32 func_1516ECAC(Obj1516FadeState *arg0) {

@@ -1,90 +1,89 @@
-# func_1516E8CC — 992 B, game_19A8B0.c — parked at 4 differing instruction rows / 248
+# func_1516E8CC — 992 B, game_19A8B0.c — **CLOSED 2026-08-11** (score 0, ROM byte-perfect)
 
-`func_1516E8CC.c` is the WHOLE TU (`conker/src/game_19A8B0.c`) with the pragma removed
-and the reconstruction live. Drop it in place to resume.
+`func_1516E8CC.c` is the WHOLE TU as shipped live in `conker/src/game_19A8B0.c`.
+Kept here only as the record of how the last four rows fell.
 
-## What it is
-A particle colour-ramp updater, one of the `D_8008CBA0[]` behaviour handlers
-(`s32 (*)(struct Obj1516D4E8 *)`). It fades `unk1F` (alpha) up or down by `dt<<5` / `dt<<4`,
-advances `unk14`/`unk16` by `dt*10`, builds a ramp index, then walks 8 keys of
-`D_800A6E00[]` and lerps the RGB triple `D_800A6E0C[i-1] .. D_800A6E0C[i]` into
-`unk1C/1D/1E`.
+## Verification actually run
 
-`func_1516ECAC`, immediately below it in the same TU, is an already-matched near-twin of the
-first third and was the template for the fade block (including the
-`((volatile Obj *)arg0)->field` reload idiom).
+* `python3 ../tools/asm-differ/diff.py -o func_1516E8CC -R --max-lines 4096` → `CURRENT (0)`
+* same without `-R` → `CURRENT (0)`
+* whole-TU compare: `.text IDENTICAL (14224 bytes)`, `.rodata IDENTICAL`, `.data IDENTICAL`
+* `#pragma GLOBAL_ASM(".../func_1516E8CC.s")` gone, definition live at line 321
+* **full ROM**: `make VERSION=us` → `build/conker.us.bin` sha1
+  `842e3d348e3c8ae0039e2ab367ad492f9b5266d8` = `conker.us.sha1`. An A/B (HEAD version of
+  the TU vs mine) produced the *same* ROM bytes both ways, so the change is ROM-neutral
+  and the match is confirmed end to end.
+* the function no longer contains a single `volatile` — the two casts the parked version
+  borrowed from `func_1516ECAC` were **removed**, not added to.
 
-## Residual (isolated objdump, mine vs expected/)
+## The two residuals and what actually closed them
 
+### 1. `move a2,a1` vs a fresh `lbu a2,0x24(a0)` — **delete the temp, not add one**
+
+Golden reloads `arg0->unk24` at the end of each fade branch and then CSEs the later
+`idx = arg0->unk24` against that reload (`move a2,a1`). The parked version forced the
+reloads with `((volatile Obj *)arg0)->unk24`, and a volatile read is never a CSE source,
+so the later read became a real load.
+
+Two independent facts closed it:
+
+* **A store through a DIFFERENT pointer variable kills load availability; a store through
+  the same one does not.** `vp->unk1F = temp_v1;` (with `vp = arg0;`) makes IDO re-issue
+  the `arg0->unk24` load, exactly like the volatile did — but non-volatile, so the value
+  stays available afterwards. Crucially the *register* is still `a0`: IDO's alias analysis
+  keeps `vp` and `arg0` distinct while copy-propagation happily emits `sb v1,0x1f(a0)`.
+  (Same split already visible in the loop: source says `vp->unk26` for init and bound,
+  golden emits `lbu a1,0x26(a0)` for one and `lbu t3,0x26(v0)` for the other.)
+* **Do not name the value.** With `vp->unk1F` in place, keeping `s32 temp_v0` for the
+  first test rotated the whole allocation a1↔a2 (`move a1,a2` / `addu a1,a2,t3`,
+  22 rows, score 125). Deleting `temp_v0` and writing the four reads as plain
+  `arg0->unk24` — letting IDO do the CSE and the rematerialisation itself — is what put
+  the value in `a1` and produced `move a2,a1`. Measured ladder:
+
+  | variant | score | rows |
+  |---|---|---|
+  | parked baseline (volatile reads) | 405 | 4 |
+  | + `} else {` wrapping the tail | 405 | 4 (inert — a null site) |
+  | `vp->unk1F` store, explicit `temp_v0` reload statements | 1385 | reload hoisted above the store |
+  | `vp->unk1F` store, `temp_v0` for the first test only | 125 | 22 (a1↔a2 rotation) |
+  | **`vp->unk1F` store, no `temp_v0` at all** | **0** | **0** |
+
+  Writing the reload as its own statement (`temp_v0 = arg0->unk24;` after the store) also
+  loses: the scheduler hoists that load into the branch-likely delay slot and evicts
+  golden's duplicated `sb`. An *implicit* reload (a plain read at the join) is not
+  schedulable that way.
+
+### 2. The trailing dead `jr ra; nop` — it is a SEPARATE EMPTY FUNCTION
+
+Not an epilogue. Proven three ways:
+
+* the only two live-C functions in the tree that "end" with `jr ra; nop; jr ra; nop`
+  (`init_1AAE0 __n_resetPerfChanState`, `init_1E480 n_alSynDelete`) are both in `-g`
+  TUs — that shape is not reachable at `-O2 -g3`, so the corpus note in the previous
+  revision of this file was misleading;
+* of the 14 splat-cut functions in the ROM that end that way, `game_2DF70/func_15001A08`
+  has splat's own `glabel D_15001B08` sitting on those 8 bytes, and
+  `game_981E0/func_15072F10` ends `lw ra / lw s0 / addiu sp,0x50 / jr ra / nop` and *then*
+  a bare `jr ra; nop` with no frame teardown — which cannot be that function's epilogue;
+* the tree already reconstructs exactly this: `game_981E0.c func_1507304C`,
+  `game_1A5440.c static void func_15178750_pad(void) {}`.
+
+So the fix is one empty leaf function placed between `func_1516E8CC` and `func_1516ECAC`:
+
+```c
+static void func_1516ECA4_pad(void) {
+}
 ```
-row  36:  golden  move  a2,a1          mine  lbu  a2,0x24(a0)
-row  47:  golden  addu  a2,a1,t3       mine  addu a2,a2,t3      (follows from row 36)
-row 245:  golden  jr    ra             mine  (absent)
-row 246:  golden  nop                  mine  (absent)
-```
-244 of 248 rows are byte-identical, registers included. Instruction count 246 vs 248.
-asm-differ whole-object score 405 (`-o func_1516E8CC -R --max-lines 4096`); that number is
-dominated by the 2-instruction shift cascading through the rest of the object, it is NOT
-405 wrong instructions. `-s`/`-ss`/`-sss` all FALSE-ZERO here because golden has three
-`jr ra` and the candidate has two — do not trust a stop-at-ret score on this function.
 
-### Residual 1 — `move a2,a1` vs a fresh `lbu`
-Golden's `idx` is seeded by a read of `arg0->unk24` that CSEs against the value already in
-`a1`, so IDO emits a register copy. The candidate emits a real load because the two reloads
-inside the fade branches are written `((volatile struct Obj1516D4E8 *)arg0)->unk24` and a
-volatile read kills availability for the later plain read.
-A non-volatile mechanism that still forces those two reloads would close this row. Ruled out:
-* plain `arg0->unk24` (no volatile anywhere) — the reloads vanish entirely, and the
-  `bnezl`+duplicated `sb` becomes `bnez`+`nop`: opcode-diff 12.
-* `vp->unk24` (read through the second pointer local) — opcode-diff 13/14, extra `move`s.
-* volatile *store* `((volatile Obj *)arg0)->unk1F = temp_v1` — reload appears but the
-  `sb` leaves the branch-likely delay slot: opcode-diff 14.
-* byte-pointer store `*((u8 *)arg0 + 0x1F) = temp_v1` — IDO still disambiguates: no reload.
-* `idx = temp_v0;` (copy instead of re-read) — IDO copy-propagates it away, `idx` then
-  reuses `v1` instead of `a2` and the whole loop allocation rotates: opcode-diff 5.
-* `idx = temp_v0;` + testing `if (idx == 0)` instead of `temp_v0` — identical to the above.
+Consequence worth knowing: our object then reports `func_1516E8CC` with `.size` 984 while
+`expected/` reports 992 (splat folded the orphan 8 bytes into the preceding symbol).
+asm-differ still scores 0 because it diffs the whole object, but a *bounded per-function*
+isolator would show two "missing" rows forever. The whole-TU `.text` compare is the
+certification here.
 
-Measured rule from this: **IDO disambiguates two accesses off the SAME pointer variable by
-constant offset (store `0x1F`, load `0x24` → no reload), but NOT across two different
-pointer variables.** That is the whole reason `vp` exists.
+## Levers from the old file that stayed load-bearing
 
-### Residual 2 — the trailing dead `jr ra; nop`
-Golden ends `move v0,zero / jr ra / nop / jr ra / nop`. Corpus check: this doubled epilogue
-does occur in live-C output (`init_1AAE0.c __n_resetPerfChanState`, a straight-line `void`
-function), so it is reachable, but no source shape tried here produced it:
-`break` + trailing `return 0` (current, best), `return 0` inside the loop + trailing
-`return 0` (opcode-diff 7, and the body's exit degrades from `b` to an inline `jr ra`).
-
-## Levers that DID move it (in order of size)
-1. `for (i = vp->unk26; i < vp->unk26 + 8; i++)` — using the second pointer for the loop
-   INIT as well as the bound. This single token change took the diff from 127 differing rows
-   to 4: it produced golden's `move v1,a1` index/cursor split, the `move v0,a0` pointer copy,
-   and aligned every remaining register. Reading the init through `arg0` and only the bound
-   through `vp` was worth ~120 rows less.
-2. A named pointer local `struct Obj1516D4E8 *vp = arg0;` (assigned first, so it takes `v0`).
-   Without it IDO hoists `arg0->unk26 + 8` out of the loop entirely — golden reloads it every
-   iteration, which is only possible if the load and the body's `sb`s go through different
-   pointer variables. `volatile` on `vp` also works but costs a duplicate load at the entry
-   guard (opcode-diff 7 vs 6).
-3. Assignment order `temp_v1 = arg0->unk1F;` BEFORE `temp_v0 = arg0->unk24;` — swaps the two
-   into golden's `v1`/`a1`. Rows 1-35 go from all-wrong to exact. (The load order in the asm
-   is the other way round; that is scheduling, not source order.)
-4. `idx += arg0->unk1F >> 5;` as a compound RMW, not `idx = temp_v0 + (...)`. Compound gives
-   accumulator-first `addu a2,a1,t3`; the full assignment gives `addu dst,shift,temp_v0`.
-   Both spellings of the full-assignment operand order produced the same wrong order, so the
-   compound form is the only handle.
-5. `if (temp_v0 == 0) {shift} else {+= 8}` — the branch sense follows the source exactly
-   (`if (X == 0)` → `bnez` to the else body). The inverted spelling emits `beqz`.
-6. Interpolation term order `cur*inv + prev*frac`, NOT `prev*frac + cur*inv`. IDO evaluates
-   the operands of `+` right-to-left, so the term written SECOND is emitted first.
-7. `break` in the loop body, not `return 0` (shared `b`-to-tail epilogue).
-
-## Free / inert here
-Declaration order of `idx` vs `temp` — exactly 0 change (a null site).
-`idx = idx + 8` vs `idx += 8` — 0 change.
-`temp` local for the `unk3F0`-style read — 0 change.
-
-## Semantics worth keeping
-`u8` table entries feeding a float expression compile through IDO's **unsigned**
-int→float path (`mtc1; cvt.s.w; bgez; add.s 0x4F800000`) with no cast in the source —
-that came out for free and matches golden, so do not "fix" it with an `(s32)` cast.
+`for (i = vp->unk26; i < vp->unk26 + 8; i++)`; `temp_v1 = arg0->unk1F;` written before the
+`unk24` read; the compound `idx += arg0->unk1F >> 5;`; `if (temp_v0 == 0) {shift} else
+{+= 8}` branch sense; interpolation term order `cur*inv + prev*frac`; `break` not `return`.
+`u8` table entries feeding a float expression keep IDO's unsigned int→float path — no cast.
