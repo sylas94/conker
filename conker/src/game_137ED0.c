@@ -36,11 +36,86 @@ typedef struct {
     f32 field_0x80;
 } OscillatorState;
 
+typedef struct {
+    u8  pad00[0x8];
+    f32 unk8;
+    u8  pad0C[0x30];
+    s32 unk3C;
+    u8  pad40[0x28];
+    f32 unk68;
+    u8  pad6C[0x10];
+    s32 unk7C;
+    s32 unk80;
+    s32 unk84;
+    u8  pad88[0x20];
+    f32 unkA8;
+    u8  padAC[0x5C];
+    f32 unk108;
+} ClockActor;
+
+extern u32 D_800BE3E4;
+
 void func_1510AA20(s32 arg0) {
     func_15179008(0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_137ED0/func_1510AA44.s")
+void func_1510AA44(ClockActor *arg0) {
+    s32 oldMin;
+    s32 min;
+    s32 sec;
+    f32 angle;
+
+    oldMin = arg0->unk3C / 3600 % 60;
+    if (arg0->unk84 == 0) {
+        if (D_800BE3E4 != 0) {
+            arg0->unk84 = 1;
+            arg0->unk3C = D_800BE3E4 * 180 % 43200;
+            arg0->unk3C = arg0->unk3C * 60;
+            oldMin = arg0->unk3C / 3600 % 60;
+        }
+    }
+    if (oldMin < 0) {
+        oldMin += 60;
+    }
+    arg0->unk3C = arg0->unk3C + D_800BE9E4;
+    if (arg0->unk3C >= 2592000) {
+        arg0->unk3C = arg0->unk3C - 2592000;
+    }
+    sec = arg0->unk3C / 60;
+    min = sec / 60;
+    angle = (f32) (sec / 300) * 2.5f;
+    if (angle > 360.0f) {
+        arg0->unk3C = arg0->unk3C - 2592000;
+    }
+    min = min % 60;
+    if (min < 0) {
+        min += 60;
+    }
+    if (oldMin != min) {
+        if (oldMin / 15 != min / 15) {
+            if ((min / 15 & 3) == 0) {
+                arg0->unk7C = (s32) (angle / 30.0f);
+                if (arg0->unk7C == 0) {
+                    arg0->unk7C = 12;
+                }
+            } else {
+                arg0->unk7C = 1;
+            }
+            arg0->unk80 = -1;
+        }
+    }
+    if (arg0->unk7C != 0) {
+        if (arg0->unk80 != sec) {
+            arg0->unk80 = sec;
+            arg0->unk7C = arg0->unk7C - 1;
+            func_15114D24((s32) arg0, 0x4CC, 0x7FFF, 0xC8, 0x3E8, 0xC);
+        }
+    }
+    arg0->unk68 = 5.0f;
+    arg0->unk108 = 5.0f;
+    arg0->unk8 = -((f32) min * 6.0f);
+    arg0->unkA8 = -angle;
+}
 
 void func_1510ADD8(OscillatorState *arg0) {
     f32 temp;
