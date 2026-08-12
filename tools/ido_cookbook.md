@@ -909,3 +909,52 @@ Instructive near-miss kept: a separate `u16 sid` carrier per switch arm scores 2
 allocation almost exactly right (3 register-only rows, `flags` lands in golden's `$t0`) but fails
 because IDO MEMORY-HOMES a `u16` local (`sh`/`lhu`) where golden spills a 32-bit compiler temp
 (`sw`/`lw`).
+
+## Is your score bounded? CHECK THE SYMBOL SIZE — do not assume either way
+
+Two agents independently concluded that asm-differ "cannot bound a GLOBAL_ASM-sourced golden
+symbol because asm-processor emits no `.size`", and therefore that their scores were inflated by
+downstream shift. **Both were wrong about their own functions**, and the mistake cut in the
+dangerous direction: it invites you to dismiss a real score as noise and substitute a hand-rolled
+comparator.
+
+Measured across every expected object:
+
+    FUNC symbols total: 10185   with size=0: 4773
+
+So it is neither "always broken" nor "always fine" — **47% of FUNC symbols carry no size, and the
+rest do.** A GLOBAL_ASM stub is *not* automatically one of the unsized ones: all four wave-16
+targets are stubbed and all four carry an exactly-correct size (944, 1068, 992, 992).
+
+One command decides it, per function:
+```sh
+mips-linux-gnu-readelf -sW expected/build/src/<tu>.c.o | awk '$8=="<func>"{print $3}'
+```
+* nonzero, and equal to the byte count you expect → asm-differ bounds the function; the score is a
+  real per-function number, even if your body length differs from golden.
+* `0` → unbounded: diff.py runs to the end of `.text`, so a length difference contaminates the
+  score with every following function. Only then is an objdump isolator warranted.
+
+Corollary: when a length-differing candidate's score looks absurdly large, check the size before
+theorising. And if you do write an isolator, keep asm-differ as a cross-check rather than
+replacing it — a private comparator that disagrees with the tool everyone else uses is a fine way
+to generate numbers nobody can reproduce.
+
+### The stop-at-return scoring modes have a separate, real failure
+`-s` / `-ss` / `-sss` stop at a `jr ra`. When golden has three `jr ra` and the candidate two (a
+missing duplicated epilogue), a stop-at-return score compares unequal spans and can read FALSE
+ZERO. That trap is genuine and is independent of the `.size` question — do not use the `-s` family
+to certify a function whose return count differs from golden.
+
+## Concurrent agents can overwrite each other's MEASUREMENT scripts
+
+An agent reported its scratchpad `score.sh` being silently replaced between tool calls — twice,
+once with an objdump comparator it never wrote — while a second agent ran concurrently. The likely
+cause is a scratchpad path collision, not anything exotic, but the consequence is the same and it
+is severe: **an agent whose measurement script is swapped underneath it reports fabricated
+scores.**
+Mitigations, both cheap, now standard in the wave brief:
+1. Namespace scratchpad files under a per-agent directory with a unique token, never a bare name
+   like `score.sh`.
+2. Print the script's `sha1sum` and full body in the SAME shell invocation that executes it, so
+   every number is produced by code that was visible at the moment it ran.
