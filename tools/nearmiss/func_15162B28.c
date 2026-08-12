@@ -80,6 +80,58 @@
  *         `cur` declared first, `fall` scoped, declaration initialisers -- nine
  *         independent spellings, ALL exactly 10.
  *
+ * =================== WAVE 2026-08-11: THE DELETE-THE-LOCAL LAW WAS TRIED AND FAILS HERE ===
+ * The brief for this wave was "delete the cached local `old` and read `p->unk24` at each use",
+ * generalising the lever that took func_1505A3A8 from 230 to 20.  That literal form is
+ * IMPOSSIBLE here -- `old` holds the value of p->unk24 from BEFORE the if-chain overwrites it,
+ * so there is no field left to re-read.  The honest version of "delete the local" on this
+ * function is to MERGE `old` into `cb`: golden puts both in $v1, so a single s32 local serving
+ * as the pre-state and then as the callback index is exactly the source shape golden's
+ * register map implies.
+ *
+ * IT REPRODUCES GOLDEN'S ONE-REGISTER SHAPE AND STILL MISSES.  With the merge, IDO does give
+ * the merged variable ONE register for both roles (which the two-local form never does) -- but
+ * it picks the wrong one, and now `cb` loses $v1 as well, so the diff gets WIDER:
+ *      merged, `s32 cb`, direct seed        80   (merged var -> $a1, cur -> $a0)
+ *      merged, `s32 cb`, staged cur seed    55   (merged var -> $a2, cur -> $a1)
+ *   vs parked two-local form                10   (old -> $a2, cur -> $a1, cb -> $v1  <- correct)
+ * So the two-local form is already correct on THREE of the four allocations and the merge
+ * trades one wrong register for six.  Recorded so nobody re-derives it.
+ *
+ * MEASURED NEGATIVES ADDED THIS WAVE (all built hard, scored with and without -R, equal):
+ *      80  merge old into `s32 cb`, `cur != cb`         (also 80 with `cb != cur` -- plain
+ *          `beq` really is canonicalised here, unlike the 15-vs-10 flip on the two-local base)
+ *      80  ... + `cb` seeded from arg0->unk18.unk24 before `p`
+ *      80  ... + `cb` seeded from arg0->unk18.unk24 after `p`
+ *      80  ... + three declaration orders (cb first / cb second / cb last)
+ *      55  merge + staged `cur = p->unk24; cb = cur;`
+ *     293  merge into `s8 cb`  (u8 field -> s8 local needs sll/sra; 3 spellings all 293)
+ *    1248  merge into `s8 cb` + staged seed
+ *      58  merge + no `cur` local at all (test and switch straight off p->unk24)
+ *      35  two locals + no `cur` local (test and switch straight off p->unk24)
+ *      15  `s32 old` on the 10-base            (was only ever measured on the 15/40 bases)
+ *    1190  `s16 old`
+ *      18  `s32 cb` on the 10-base
+ *      10  `s16 cb`                            <-- another exact-10 spelling
+ *      10  `1.f` instead of `1.0f`             <-- another exact-10 spelling
+ *      10  `cur`/`old` seeded from arg0->unk18.unk24 (p still assigned first)
+ *      10  ... and with old/cur assigned BEFORE `p`
+ *      45  `old = arg0->unk18.unk24;` unstaged, assigned before `p`
+ *      28  `old` declared last
+ *
+ * THAT IS THIRTEEN INDEPENDENT SPELLINGS AT EXACTLY 10, plus a whole new structural family
+ * (the merge) that is strictly worse.  Per the cookbook's BAIL RULE for the loop-invariant
+ * ranking tie -- residual 100% register-only, zero inserts/deletes/reorders, two or more
+ * spellings leaving the score EXACTLY unchanged -- this is the register-colouring wall and it
+ * is now very well evidenced.  DO NOT spend another wave on spellings.
+ *
+ * The one thing that would justify re-opening it: a model of IDO's colouring ORDER.  The
+ * observed map is p->$v0, cb->$v1, cur->$a1, old->$a2, i.e. $v1 goes to the SHORTEST-lived web
+ * (cb, confined to the switch) and the long-lived webs take $a-registers; golden instead gives
+ * $v1 to a long-lived web (old) and recycles it for cb.  The merge experiment above is the
+ * decisive datum: merging made the combined web long-lived and it immediately took an
+ * $a-register, which is why "make old and cb one variable" cannot be the answer by itself.
+ *
  * ------------------------------------------------------------------ PERMUTER STATUS
  * conker/permuter_tu.sh selftest PASSES on game_18D770 (all five checks).  Note that
  * it used to FAIL check (b2) here; that was a harness bug (a `| head -5` SIGPIPE-killing

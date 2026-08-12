@@ -781,6 +781,68 @@ ways) because `0xda` is even. So a (d) failure on such a TU is NOT evidence the 
 measure the function. Fix: perturb a constant known to be live, or verify the perturbed object
 actually differs before declaring failure.
 
+## `u8 x = f();` is NOT `s32 x = f() & 0xFF;` — the mask can be REMATERIALISED (2026-08-11)
+
+When golden masks the same source register **twice** —
+`andi v1,v0,0xff ; li at,0x60 ; andi s3,v0,0xff ; bne v1,at,… ; [delay]` — that second `andi`
+is not a scheduling accident and no amount of statement shuffling will produce it from
+`s32 glyph = f(c) & 0xFF;`. That spelling makes ONE masked value and copies it (`move s3,v1`).
+Declaring the variable **`u8`** and dropping the explicit mask (`u8 glyph = f(c);`) makes the
+mask *be* the assignment, so when the variable also needs a callee-saved home across a later
+call IDO **rematerialises the `andi`** instead of emitting a copy — golden's exact instruction.
+
+Found by corpus mining, not by guessing: across 841 objects there are 66 sites with two
+`andi rX,rY,0xff` off one source register, and only two send the second to a callee-saved
+register. One of them, `game_131F30.c func_151050B0` @0x940, is the pattern exactly
+(`andi v1,v0,0xff` … `andi s1,v0,0xff`), and its C is a **u8 variable assigned an int
+expression and then live across a `jal`**.
+
+> Whenever the diff shows `move sN,vM` where golden has `andi sN,v0,0xff` (or any other cheap
+> recomputation), the variable's declared type is the lever — narrow the type, delete the
+> explicit mask.
+
+### Corollary: a DISPLACED instruction scores worse than a MISSING one
+Adopting `u8 glyph` in func_150428D4 took the score **2953 → 3003** while making the object
+strictly closer: the s32 form has no `andi s3,v0,0xff` at all, the u8 form has it and merely
+sits in the `bne` delay slot instead of before the branch. asm-differ charged 50 points for the
+displacement and gave the missing instruction a free pass. Count `ins`/`del`/`chg`/register-only
+rows separately (they went 8/8/5/93 → 8/8/6/92) and check whether the golden instruction
+*exists* in your output before believing a regression.
+
+## Grep the tree for a symbol's REAL type before inventing one
+
+`func_150428D4` carried a hand-invented `extern u8 (*D_80085994)[4];` with `[glyph][0..3]`
+subscripts. The real declaration was already sitting in an **already-matched** TU
+(`src/game_42DC0.c`): `typedef struct { u8 width; u8 height; u8 unk2; u8 unk3; } Glyph15015A38;`
+and `extern Glyph15015A38 *D_80085994[];` — an array of pointers, one table per font. Adopting
+it is byte-identical (score-neutral both ways) and it *names the arithmetic*: the near-miss's
+mystery expression is `advance = width + unk2 - 1`, `lineheight = height + unk3`.
+Cost: one `grep -rn D_xxxxxxxx src/ include/`. Do it before writing any access expression.
+
+### NEGATIVE, measured: a global's ADDRESS hoist is not reachable from the access spelling
+IDO LICM-hoisting `lui %hi(sym); addiu %lo(sym)` into a loop preheader (eating a callee-saved
+register) where golden rematerialises `lui %hi; lw %lo(sym)` per use is a **cost-model** decision.
+Six independent spellings of the same accesses — 2-D pointer-to-array subscript, flat `(u8*)`
+cast with `[i*4+k]`, struct-pointer cast, the real array-of-pointers `D[0][i].field`,
+`(*D)[i].field`, and `(D[0]+i)->field` — produced byte-identical output every time. Corpus:
+879 sites rematerialise a global pointer and 180 hoist its address into a callee-saved register,
+so **both behaviours are normal matched-C output**. Do not spend builds on the spelling; and
+note you cannot buy it back by caching the pointer in a local either — any new local shifts
+every stack-local offset (see the MEASUREMENT TRAP section).
+
+## Merging two locals that golden shares a register for usually BACKFIRES
+
+Tempting inference: golden puts `old` and `cb` in the same `$v1`, therefore they are one
+variable in the source. Measured on `func_15162B28`: merging them does give the merged variable
+a single register for both roles (which the two-local form never does), but the combined web is
+now **long-lived**, so IDO hands it an `$a`-register and `$v1` — which the short-lived `cb` web
+had correctly — goes unused. Score 10 → 55/80 across eight merge spellings.
+
+> `$v1` (after `$v0`) goes to the SHORTEST-lived web; long-lived webs get `$a`/`$s` registers.
+> If golden colours a long-lived value `$v1` and recycles it, that is graph-colouring *reuse*,
+> not evidence of one variable — and merging the variables destroys the short web that earned
+> the register.
+
 ### Corpus-level BAIL evidence — the strongest form there is
 func_150585F0 sits at 10 on two rows: a computed a3-bound float that golden stages in `$f14` while
 IDO puts it in `$f0`. Six independent spellings score EXACTLY 10, seven more are worse, and 3046
@@ -790,3 +852,60 @@ a3-bound float in `$f14`** (all 7 live-C `$f14`->a3 sites are incoming-parameter
 golden does it at 3 sites. That upgrades the claim from "we haven't found the spelling" to "no
 matched C in this tree has ever produced this pattern". When a residual is a single unusual
 register binding, grep the corpus for it before spending another run.
+
+## PERMUTER OUTPUT CAN BE SEMANTICALLY WRONG, NOT MERELY FAKE (2026-08-11, func_15060778)
+
+The most important safety finding to date about the permuter workflow. `weight_overrides` zeroes
+the passes that emit banned CONSTRUCTS — it does **not** stop the randomizer's variable-reuse and
+statement-motion passes from breaking SEMANTICS. Across ~1,420 gated iterations on one function,
+every output that beat its base was unusable, and **three of four were semantically incorrect**,
+not merely stylistically banned:
+
+* `id = arg2;` reuses a still-LIVE variable, silently changing a callee's third argument.
+* `(new_var = arg2)` assigned only on a path that always returns, then READ in the tail —
+  uninitialised.
+* `flags = 0;` moved out of an `if` branch into the `else` (where it is immediately overwritten),
+  leaving `flags` uninitialised on the original path.
+* `u8 *new_var = &arg->unk13F;` for a SINGLE use — a pure register forcer (the merely-banned one).
+
+**Read every permuter output for CORRECTNESS, not just for banned tokens. Scoring better is not
+evidence of equivalence.** A scan for `new_var`/`dummy_label` would have passed three of these.
+
+### Keep the honest half — it can beat the permuter's own packaged result
+Output-1955 shipped a real lever wrapped in a banned pointer split; the lever alone scored **1948**
+against the packaged output's **1960**. Same pattern took another function from 230 to 20. When an
+output mixes one honest change with one forcer, extract and generalise the honest half.
+
+## Gates gate the ANSWER, not the search
+
+`PERMUTER_TU_REQUIRE_FRAME` / `REQUIRE_OFFSETS` are only usable when the base already satisfies
+them. Where the frame or the offsets ARE the residual, an exact gate rejects the base and the
+permuter cannot start at all: on func_15060778 the golden 0x58 frame happens exactly when the last
+blocker is solved, so gating on 88 was unusable. Use `PERMUTER_TU_MAX_FRAME=<base frame>` there —
+which is what `frame` already recommends — to forbid buying wins by growing the frame without
+demanding the answer up front.
+
+## Break a conversion CSE by re-spelling ONE call site
+
+When a value is passed as argument 0 to several calls and IDO promotes it to a callee-saved
+register where golden spills it, the cause is IDO pooling all the conversions into one long-lived
+web. Give ONE call site a different-typed spelling of the same conversion — here `0xFFFF & id`
+instead of `(u16)id`, at the single callee whose parameter is `s32` where the others take `u16`.
+Golden's `sw a0,0x44(sp)` / `lw a0,0x44(sp)` spill pair appeared for the first time and only `$s0`
+was saved, exactly as golden does: **2878 -> 2103** on one token.
+Related trap re-measured: declaring the variable `u16` is NOT the shortcut it looks like — 6366
+with 97 register-only rows, because IDO re-emits the narrowing `andi` at every call site even for
+an already-`u16` variable, and the extra instruction rotates the whole t-register pool.
+
+## Corpus bail #2 — the narrowed-value-spilled-across-a-call pattern
+
+func_15060778's residual is golden holding a narrowed value in an argument register across a call
+and spilling it to a compiler-temp slot rather than promoting it to callee-saved. Across 569,790
+lines from 611 objects / **5,479 live-C functions, only 42 spill an argument register to a temp
+slot across a call at all, and in ZERO of them was the spilled value produced by a narrowing
+mask** — golden does it twice in this one function. Same class as the computed-`$f14` finding:
+"no matched C in this tree has ever produced this", not "we haven't found the spelling".
+Instructive near-miss kept: a separate `u16 sid` carrier per switch arm scores 2652 and gets the
+allocation almost exactly right (3 register-only rows, `flags` lands in golden's `$t0`) but fails
+because IDO MEMORY-HOMES a `u16` local (`sh`/`lhu`) where golden spills a 32-bit compiler temp
+(`sw`/`lw`).
