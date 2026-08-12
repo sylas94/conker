@@ -268,6 +268,70 @@ Axes NOT yet tried, in the order I would try them: the *shape* of block 2 (wheth
 being built, or whether `sp44`'s per-instance fields come from a helper); and whether the
 four call sites are a loop or a macro in the original rather than four written-out copies.
 
+## WAVE 2026-08-12 — 517 re-verified; the two defects proved INDEPENDENT
+
+**517 reproduced** by an independent private whole-TU scorer (repo pipeline into a private
+`build/` + `expected/` pair, then the real asm-differ): `SCORE 517 INSNS 267 FRAME 248 BYTES
+1068`. Control: the repo copy with the `#pragma` still in scores `0 / 267 / 248 / 1068`, so
+golden is 267 instructions and we already match the count, the frame and every stack offset.
+
+### The residual, re-derived (addresses stripped, registers compared)
+
+Only **130 diff lines**. Everything from the prologue through the SECOND descriptor block is
+byte-identical, and everything after the loop head is byte-identical. What is left:
+
+1. **The fifth (3.0f) descriptor block is scheduled differently.** Golden:
+   `lui at,0x4040 / mtc1 $f0 / mtc1 zero,$f2 / li v1,1 / lw t8,0xf8(sp) / li t1,153 /
+   swc1 $f2,0xa0 / swc1 $f2,0xa4 / swc1 $f0,0xac / swc1 $f0,0xa8 / sb t1,0xb0 / lbu …`
+   i.e. the five stores come out in EXACT SOURCE ORDER and `li v1,1` is the 4th instruction.
+   Ours emits `sb 0xb0` FIRST, then the 3.0f pair, then the 0.0f pair, and puts `li v1,1`
+   nineteen instructions later, immediately before its `bne`.
+2. **A register-allocation divergence that starts at the THIRD descriptor block**
+   (`andi t7,v0,0xfff9` golden vs `andi t5,v0,0xfff9` ours at 0x3728) and widens through the
+   fourth. Blocks one and two are byte-identical including registers, and block three's
+   *instruction sequence* is identical — only the colours differ. After block two's last
+   temp (`t4`) our allocator continues with the next register in IDO's rotation (`t5`);
+   golden jumps to `t7`, i.e. golden is two positions further along.
+
+### The finding that matters most: (1) and (2) are INDEPENDENT
+
+The previous note guessed that fixing the block-5 order would collapse the register rows.
+**It does not.** Variant `g8` (move `spA0.unk10 = 0x99;` below `spA0.unk34 = 0x44;`) DOES
+change the block-5 schedule — the `sb 0xb0(sp)` moves to the end of the store group, which is
+golden's position — and block three's `andi` is still `t5`, byte-for-byte unchanged. So the
+two defects have to be attacked separately, and the register divergence is NOT downstream of
+the schedule.
+
+### Sweeps performed this wave — every one FLAT at 517
+
+Scored with the private scorer above; each row also reports the emitted store order (`ORD`)
+and the index of `li v1,1` in the fifth block (`V1`; golden = 4).
+
+| sweep | size | result |
+|---|---|---|
+| **ALL 120 permutations** of the five stores that open the fifth block (`unk0`, `unk4`, `unkC`, `unk8`, `unk10`) | 120 | **every one scores 517** and **not one** reproduces golden's `0xa0,0xa4,0xac,0xa8,0xb0`. The emitted order is invariant at the GROUP level — always `[sb 0xb0][3.0f pair][0.0f pair]` — while WITHIN each constant's pair it does follow source order. Golden's group order is the other way round. |
+| block-5 group moves (floats last, `unk10` first/last, `unk14` first, `sp44.unk28` first, `spA0.unk30/34` first) | 9 | 517 at best; `unk10` after `unk34` = 712 (moves the `sb` to golden's slot but leaves the float groups reversed); floats last 1140; `unk14` first 1170; `sp44.unk28` first 1077 |
+| chained/copied float assignments (`unk4 = unk0 = 0.0f`, `unk8 = unkC = 3.0f`, `unk8 = unkC;`, `unk4 = unk0;`) | 5 | all **byte-identical** to base |
+| both `if (D_80082FA0 == 1)` written as **ternaries**, either one, or both | 3 | all **byte-identical** to base |
+| `1 == D_80082FA0` instead of `D_80082FA0 == 1` | 1 | 537 (worse) |
+| `spA0.unk14` mask spellings: split vs combined for each of the four blocks, `& 0xFFF9`, `= x & ~6`, `\| 0x0`, `0x50 \| (1 << …)`, `(u32)1 <<`, split `\|= 0x50` | 12 | 517 at best (block 4 split, block 3 as `= x & ~6`, `&= 0xFFF9`, `\| 0x0`, floats-before-mask all identical); block 2 combined 587; block 1 combined **1383 and 265 instructions** (two SHORT); both combined 1413/265; `unk14` split from `\| 0x50` 1437/268 |
+| `sp44.unk1C` before/after the ifs, `sp44.unk24`/`i = 0;` hoisted, `sp44.unk28` after the ifs | 5 | 577–1403, all worse |
+
+`V1` was **19 in every single one of the ~150 variants compiled this wave**; golden's is 4.
+No source-level lever found so far moves it.
+
+### What this leaves
+
+* The fifth block's ucode order is not reachable from statement order: IDO emits the store
+  group by CONSTANT, newest constant first, and orders the two constants the same way no
+  matter how the source is written. Whatever golden did, it is not a permutation of these
+  five assignments. Candidates not yet tried: a different set of statements in that block
+  (e.g. `spA0.unk8`/`unkC` not written there at all and carried from an earlier block), or
+  the 0.0f coming from a value rather than a literal.
+* The register divergence needs its own attack. It begins where the two objects are still
+  byte-identical, so nothing in blocks 0–2 can be blamed; the change must be in how many
+  ucode temps the third/fourth blocks and the loop consume.
+
 ## Reusable facts about game_1F4650.c (for func_151CB110 / func_151CAD28 / func_151C82D0)
 
 * `func_1515548C(descriptor*, u8 kind, 0, 0, size, u8, s32)` returns a node or NULL; the

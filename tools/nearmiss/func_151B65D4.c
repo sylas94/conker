@@ -1,82 +1,133 @@
 /*
- * NEAR MISS: func_151B65D4  (game_1E37D0.c)  -- score 1533, 848/852 bytes
+ * NEAR MISS: func_151B65D4  (game_1E37D0.c)  -- asm-differ 1398 (was 1533)
  *
- * asm-differ in this repo diffs the WHOLE object in -o mode, so 1533 is a
- * whole-TU number inflated by downstream displacement. The bounded per-symbol
- * instruction diff is the honest picture:
+ * mine 212 instructions / 848 B   vs   golden 213 / 852 B.
+ * The whole-TU 1398 is inflated by downstream displacement; the bounded
+ * per-symbol picture is 32 differing rows out of 1933 in the -o dump
+ * (`<`=5 `>`=4 `r`=10 `|`=9 `s`=3 `i`=1), ALL of them inside a single
+ * ~14-instruction window of the setup block between `lw at,8(t2)` and
+ * `swc1 ...,0x48(sp)`.  Prologue, early-out, the whole do-while body, the
+ * angle-wrap loop, the ring-buffer counters and the epilogue are identical.
  *
- *     mine 212 instructions / 848 B   vs   golden 213 / 852 B
+ * ============================================================
+ * THE BIG RESULT THIS WAVE: IDO's frame layout is now SOLVED.
+ * ============================================================
+ * The previous revision's premise ("golden's declared-local area is 8 bytes
+ * taller, with a dead 16-byte hole") was right about the symptom and wrong
+ * about the mechanism -- it treated the aggregate block, the 'pad' and the
+ * a2/t1 stores as three separate regions.  They are one region.  Calibrated
+ * on the ALREADY-MATCHED sibling func_151B6320 in this same TU:
  *
- * Everything from `.L151B67B8` (the do-while body) to the epilogue is already
- * BYTE-IDENTICAL: the trail-element write, the 16384/32768 angle-wrap while
- * loop, the whole ring-buffer counter block (unk2C/2D/2E/25) and the
- * accumulator tail. So is the entire prologue and the three-way early-out.
+ *   RULE.  EVERY declared auto gets a stack home, whether or not it ends up
+ *   in a register.  The home area is exactly sum(sizeof(local)) bytes, it
+ *   ENDS at framesize, and locals are laid out TOP-DOWN in DECLARATION
+ *   ORDER.  Register-allocated locals simply never touch their home, which
+ *   is what produces the "dead holes" in golden .s files.  Below the home
+ *   area sits the compiler-temp area; below that the saved registers.
  *
- * RESIDUAL: stack-slot layout in the setup block only.
+ *       framesize = 72 + temp_area + sum(sizeof(local))     [this function]
+ *       (72 = 16 outgoing-arg bytes + 0x10..0x3F fp saves + 0x40..0x47 ra)
  *
- *   golden sp offsets: 72 80 88 | 132 136 140 | 160 164 168 | 176 180 184 (frame 184)
- *   mine   sp offsets: 72 84 92 | 132 136 140 | 144 148 152 | 168 172 176 (frame 176)
+ *   Verified on func_151B6320 (frame 144, locals 64..143): top_dummy@140,
+ *   header@116..139, pad_dummy@112, payload@68..111, temp_v0@64 -- exactly
+ *   80 bytes, exactly the declaration order, no slack anywhere.  That is
+ *   also the explanation for that function's `top_dummy`/`pad_dummy`.
  *
- *   golden: stepRadius@72 stepAngle@80 count@88 ; pos@132 ; DEAD 144..159 ; delta@160
- *   mine:   stepRadius@72 count@84   stepAngle@92 ; pos@132 ; delta@144
+ *   Verified on this function 13 more times: every probe's frame size,
+ *   aggregate offsets and a2/t1 store offsets are predicted exactly.
+ *   `sw t1,X(sp)` / `sw a2,X+4(sp)` are NOT spill slots -- they are the
+ *   HOMES of the first two declared locals (payload, trail).
  *
- * Golden's declared-local area is 8 bytes TALLER than mine and carries a
- * 16-byte hole at 144..159 that the golden .s never touches. Everything else
- * lines up. The one missing instruction pair is a spill store+reload that I
- * DID reproduce (see `count` below); the last single instruction is a
- * scheduling `nop` that follows from the offsets.
+ * DECODING GOLDEN WITH THAT RULE.  Frame 184; a2/t1 stored at 180/176;
+ * delta at 160 (`addiu a0,sp,0xa0` feeds func_15143E64); pos at 132
+ * (`addiu a0,sp,0x84`).  So golden's declaration list is, top-down:
  *
- * WHAT WAS TRIED, WITH SCORES (all whole-TU asm-differ, -R and non-R agree):
+ *     180 payload | 176 trail | 172 [1 word] | 160 delta (12)
+ *     144 [4 words] | 132 pos (12) | 88..131 [11 words]
  *
- *   2749  first cold write (count = payload->unk14 before the `if`;
- *         `payload->unk4 != obj->unk3B`; `unk25 == unk2E` comparison order)
- *   2699  + flipped all four integer comparisons. IDO emits `bne(RHS, LHS)`,
- *         so golden's `bne(unk25, unk2E)` needs source `unk2E == unk25`, and
- *         golden's `bne(payload->unk4, obj->unk3B)` needs source
- *         `obj->unk3B != payload->unk4`. Four flips, all confirmed.
- *   2693  `count` removed entirely, `payload->unk14` read twice. IDO did NOT
- *         make a CSE temp -- it just re-loaded from (a2). WRONG DIRECTION.
- *   2137  `count = payload->unk14;` moved INSIDE the `if`, so the local has
- *         exactly ONE def and ONE use and `payload->unk14` is CSEd with the
- *         comparison. This is what produces golden's redundant
- *         `swc1 $f2,0x58(sp)` / `lwc1 $f8,0x58(sp)` pair. KEY FINDING.
- *   1681  aggregate locals (`delta`, `pos`) declared FIRST in the block.
- *   1533  aggregates declared after `dist` (current). BEST.
- *   2161  `pos` declared before `delta` (they swap slots; strictly worse).
+ *   = 96 bytes of declared locals, temp area 16 bytes at 72..87.
+ *   ONE word above delta, FOUR words between delta and pos, ELEVEN below.
+ *   My previous list put THREE words above delta and NONE between.
  *
- * DECLARATION-POSITION SWEEP (13 builds, aggregates walked through the scalar
- * list): score is monotone in position -- 1681,1533,1713,1753,1793,1833,1873,
- * 1913,1953,1993,2033,2121,2161. Each preceding scalar slides the aggregate
- * block DOWN by 4 bytes; the local-area top is pinned at 160 in every variant
- * and the frame never leaves 176. Declaration order alone cannot buy the
- * missing 8 bytes.
+ * That reordering alone (e above delta; obj, dist below it) plus two more
+ * words in the middle group reproduces golden's frame size and EVERY
+ * aggregate offset:  1533 -> 1406 -> 1398.
  *
- * REORDERING SWEEP (count first/last/before-steps, steps first, vecs last):
- * 1533 / 1541 / 1689 / 1713 / 2009 / 2129. The three FP spill slots stay at
- * 72/84/92 no matter how the scalars are ordered -- they are assigned by the
- * allocator, not by declaration order. Golden's 72/80/88 is not reachable this
- * way.
+ * THE ONE OPEN QUESTION: `unknown0` / `unknown1` below.
+ * Golden's frame PROVES 96 bytes of declared locals.  Every value this
+ * function computes, named, comes to 88 (22 words).  Two words are
+ * therefore declared in the original and never make it into the emitted
+ * code.  They are NOT a frame-moving forcer of my invention -- the binary
+ * demands them -- but they are also not identified, so THIS FILE MUST NOT
+ * BE COMMITTED AS A MATCH until they are named or the score reaches 0.
+ * Everything below was tried to dissolve them and FAILED:
+ *   - widening `delta` and/or `pos` to 16 bytes: the only consumer of
+ *     `&delta` is func_15143E64, which is LIVE MATCHED C in game_16EE20 and
+ *     reads exactly 12 bytes (`sqrtf(x*x+y*y+z*z)`, `struct17` = 0x C bytes).
+ *     There is no support for a 4th component.  Inverse case: the missing
+ *     bytes belong to some OTHER local.
+ *   - `Trail151B65D4 tmp;` (0x1C) spanning 132..159 exactly, with
+ *     stepAngle/stepRadius written as in-loop loop-invariant expressions
+ *     (semantically identical -- neither unk1C nor unk20 is written in the
+ *     loop).  Fits the byte budget EXACTLY (24 words) but IDO then keeps one
+ *     of them in a register: 210 instructions, 844 B, score 2987.
+ *   - the same with only stepAngle inlined (W1 3246 / W3 3238), only
+ *     stepRadius inlined (W2 1777), both inlined + padding (W4 3246,
+ *     W5 2991).  Every inlining LOSES instructions; golden has one MORE
+ *     than we do, so this whole basin is the wrong direction.
+ *   - "88 declared + 24-byte temp area" (v_d88, 1777): the temp area is
+ *     16 bytes in every single build ever measured here; it never grows.
+ *   - 104 declared bytes (u1/u2/u3 1673, u4 1681, u5 1809, u6 1689): frame
+ *     goes to 192.  92 declared (pgap4 1615, pdelta16 1631): frame 184 but
+ *     pos lands at 136 and delta at 152.
  *
- * LAYOUT PROBE (diagnostic only, NOT parked -- it needs a dead local): adding
- * one more 12-byte aggregate between `delta` and `pos` reproduces golden's
- * aggregate SHAPE exactly -- pos block, 16-byte hole, delta block at 160 --
- * but overshoots the frame to 192 (golden 184) and moves the spill slots to
- * 76/88/96. So golden is +8 bytes of locals over mine, not +12/+16.
+ * WHAT THE 32 REMAINING ROWS ARE.  Two things, both in the setup block:
+ *  (a) a 4-byte shift of two spill slots.  golden stepRadius@72(temp)
+ *      stepAngle@80(temp) count@88 ; mine stepRadius@72 count@84(temp)
+ *      stepAngle@88.  MEASURED LAW (8 orderings, t0..t9): the third slot is
+ *      always exactly stepAngle's declared HOME, and count and stepRadius
+ *      always take the two compiler temps at 72 and 84.  In golden the roles
+ *      are swapped -- the count value owns the home and stepAngle is a temp.
+ *      Making stepAngle stop being a declared local is the only lever that
+ *      does that, and it costs instructions (see above).  This is worth ~5
+ *      rows.
+ *  (b) a scheduling permutation of ~14 instructions: golden issues
+ *      `addiu a0,sp,0x84` BEFORE the bc1f, loads payload->unk18 and
+ *      D_800BE9A4 immediately after the div.s and computes
+ *      `add.s $f18` (age) before the delta loads, and computes
+ *      `sub.s $f14` (unk1C-unk20) before the mul block, leaving a third
+ *      `nop` in it (golden 3 nops, mine 2 -- that IS the missing 213th
+ *      instruction).
  *
- * NEXT LEVER FOR WHOEVER PICKS THIS UP: find the honest source shape worth
- * exactly 8 more bytes of declared locals that also tightens the three FP
- * spill slots from 12/8 spacing to 8/8. A 12-byte aggregate is too big and a
- * scalar reorder is too small; suspect either an 8-byte local or one more
- * live value in the setup block that I folded into a register. decomp-permuter
- * is NOT installed in this WSL instance (tools/permuter_pass.py expects
- * ~/conker/tools/decomp-permuter, which does not exist here) -- installing it
- * is probably the cheapest way to finish this one.
+ * STATEMENT-ORDER SWEEP (the cookbook's top lever) -- 136 builds, all
+ * dependency-respecting permutations of the 12 head statements of the
+ * `if (1.0f < payload->unk14)` block (16 hand-picked + 120 random, seed
+ * 20260812).  NOTHING beats the order below.  Best random was 1456 (r035);
+ * ties at 1398 came from o05/o06/o07/o09/o13/o14 (moving `count`/`pos`/
+ * `scale` and the sAng/sRad tail around).  Twelve orders reached the
+ * CORRECT 852-byte size (o15 2674, r003 2293, r027 1900, r042 2155,
+ * r044 2065, r048 3791, r060 3195, r068 1651, r095 2733, r107 3899,
+ * r108 3448, r110 3255, r116 2070) -- none of them near the optimum, so
+ * the 213th instruction and the good schedule are not simultaneously
+ * reachable on this axis.
  *
- * NOT A BLOCKER: no rodata migration needed. D_800AA474/478 live in
- * asm/data/24EF20.rodata.s (7 glabels) and D_800BE9A4 is already in
- * variables.h -- all real globals, correctly spelled `extern f32`.
- * func_15143E64 is a 3-component vector length (sqrt of sum of squares),
- * `f32 func_15143E64(struct17 *)` in the already-matched game_16EE20.
+ * STILL TRUE FROM THE PREVIOUS REVISION (do not re-explore):
+ *   2749 first cold write; 2699 + flipped comparisons; 2693 count removed
+ *   (IDO re-loads instead of CSEing -- wrong direction); 2137 `count`
+ *   moved inside the if so it has one def and one use (this is what makes
+ *   golden's redundant swc1/lwc1 pair and is still in the code below);
+ *   1681/1533/1713/.../2161 declaration-position sweep.
+ *   IDO emits bne(RHS,LHS), so golden's `bne(unk25,unk2E)` needs source
+ *   `unk2E == unk25` and `bne(unk4,unk3B)` needs `obj->unk3B != payload->unk4`.
+ *
+ * NEXT LEVER: make the count value own a declared home and stepAngle a
+ * compiler temp WITHOUT losing an instruction, then re-run the statement
+ * sweep.  The permuter has never been run on this function; the 1398 base
+ * with its frame now exactly golden's is a genuinely good seed (gate with
+ * PERMUTER_TU_REQUIRE_FRAME, base frame = 184 = golden).
+ *
+ * NOT A BLOCKER: no rodata migration needed.  D_800AA474/478 live in
+ * asm/data/24EF20.rodata.s and D_800BE9A4 is in variables.h.
  */
 #include <ultra64.h>
 #include "functions.h"
@@ -232,9 +283,11 @@ s32 func_151B65D4(Actor151B65D4 *arg0) {
     Payload151B65D4 *payload;
     Trail151B65D4 *trail;
     Trail151B65D4 *e;
+    Vec151B6320 delta;
     Obj151B65D4 *obj;
     f32 dist;
-    Vec151B6320 delta;
+    f32 unknown0;
+    f32 unknown1;
     Vec151B6320 pos;
     f32 scale;
     f32 age;
@@ -245,8 +298,8 @@ s32 func_151B65D4(Actor151B65D4 *arg0) {
     f32 stepX;
     f32 stepY;
     f32 stepZ;
-    f32 stepAngle;
     f32 stepRadius;
+    f32 stepAngle;
 
     payload = arg0->unk98;
     trail = arg0->unk94;

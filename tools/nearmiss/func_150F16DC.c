@@ -78,6 +78,102 @@
  * global in a multi-glabel block (D_800A1898..D_800A18B4 live in
  * asm/data/*.rodata.s alongside many other symbols), and .rodata compares
  * IDENTICAL in every build above.
+ * ===========================================================================
+ *
+ * ---------------------------------------------------------------------------
+ * WAVE 2026-08-12 -- 1529 RE-VERIFIED AND THE RESIDUAL RE-DERIVED FROM SCRATCH
+ * ---------------------------------------------------------------------------
+ * The score above is real: an independent private whole-TU scorer (repo
+ * pipeline -> private build/ + expected/ pair -> the real asm-differ) prints
+ *     SCORE 1529 INSNS 204 FRAME 144 BYTES 816
+ * for this file, and SCORE 0 / INSNS 201 / FRAME 144 / BYTES 804 for the repo
+ * copy with the #pragma still in.  permuter_tu.sh selftest check (b) proves the
+ * private pipeline's object is BYTE-IDENTICAL to `make build/src/game_11C2B0.c.o`.
+ * So: golden 201 instructions, ours 204 -- exactly 3 too many -- frame correct.
+ *
+ * THE PARKED "NEXT LEVER" ABOVE WAS BASED ON A STALE RESIDUAL.  Compared with
+ * addresses stripped, this candidate is identical to golden INCLUDING REGISTERS
+ * from 28dc all the way to 29e4.  There are exactly three defects left:
+ *
+ *  (1) THE 3 EXTRA INSTRUCTIONS -- `arg1 * 12` is computed TWICE in the final
+ *      block.  Golden computes it once into $v0 at the top of the block and
+ *      shares it between BOTH address arguments:
+ *          2b34 sll t9,v0,2 / subu t9,t9,v0 / sll v0,t9,2      <- once
+ *          2b7c lw t1,0x4c(sp)                                  <- 168C partial
+ *          2b8c addu t0,t6,v0   (a3 = ...174C + arg1*12)
+ *          2b98 addu a2,t1,v0   (a2 = partial + arg1*12)
+ *      Ours emits the sll/subu/sll chain a second time for a3, because it forms
+ *      a2 EARLY (it reloads the 168C partial in the first three instructions of
+ *      the block) and the arg1*12 register is then dead and gets reused.
+ *      This is a CSE decision, not a spelling: see the flat sweeps below.
+ *
+ *  (2) The two compiler spill slots land at 0x40/0x44; golden uses 0x48/0x4C.
+ *      MEASURED RULE (probes p1/p2/p3, which strip one or both call-crossing
+ *      values out of the last call): spill temps are handed out DESCENDING from
+ *      a boundary, and in our build that boundary is 0x48 -- with only ONE
+ *      call-crossing value the single temp lands at 0x44, never at 0x4C, and
+ *      with none the frame drops to 0x88 with 0x40..0x47 unused.  Golden's
+ *      boundary is 0x50 (the locals base).  Both frames are 0x90 and every
+ *      DECLARED local offset (0x50..0x8F) already matches golden exactly, so
+ *      this is an allocation-ORDER difference in IDO's temp list, not a missing
+ *      local.  Confirmed: adding locals does not fix it (see d1/d3/d4 below).
+ *
+ *  (3) Cosmetic: golden hoists `addiu v0,sp,0x80` above the `arg0->id == 0x23`
+ *      branch where we hoist `lui t2,%hi(D_800A1810)`.
+ *
+ * NEW NEGATIVES, ALL MEASURED WITH THE SCORER ABOVE (score / insns / frame):
+ *   a2 and a3 spelled `&X[..][..][..]` vs `X[..][..][..]` vs `&X[..][..][..][0]`
+ *     -- all 9 combinations BYTE-IDENTICAL to base (1529/204/144).
+ *   a2 or a3 as `(D_800A168C[sp83][arg2] + arg1)`      4422/203/152 and 5993/207/152
+ *   prototype arg2 as `f32 *` or `f32 (*)[3]` (no cast) 2904/200/144  <- 1 SHORT:
+ *     IDO then CSEs the FULL 3-index address and the FIRST block stops matching
+ *     golden (the spilled value becomes the full address, not the 2-index
+ *     partial).  The (s32) cast on arg2 is therefore load-bearing and correct.
+ *   prototype arg3 as `f32 *` / `f32 (*)[3]`            4422/203/152
+ *   both as `f32 *` / `f32 (*)[3]` / `Vec3 *`           5808/198/152 (3 SHORT)
+ *   D_800A174C dimensioned [2][4][6] with `[arg1 * 3]`  4729/206/152
+ *   BOTH arrays [2][4][6] with `[arg1 * 3]`             5072/201/152 <- right
+ *     instruction count, wrong frame and an extra spill; rejected.
+ *   extern-declaration ORDER of D_800A1810/168C/174C/180C, all 3 shuffles  1529 (identical)
+ *   `% 5` / `% 0x33` / `% 6` signed instead of unsigned  1729 / 1729 / 1724 (all worse
+ *     -- `divu` confirms the unsigned spelling is right); all three at once 2124
+ *   `((u32) sp50[0] % 6U)`                              1529 (identical)
+ *   sp5C[0]/sp5C[1] order swapped                       1597
+ *   sp50[0]/sp50[2] order swapped                       1545
+ *   the two sp50 stores before the two sp5C stores      1779
+ *   `s32 sp50[3]` replaced by a 3-field Vec3i struct    1729  <- the ARRAY is right
+ *   `sp7C = &D_800A168C[..][..][..][0];`                1529 (identical)
+ *   `sp78 = &sp84[0];`                                  1529 (identical)
+ *   `(u8) D_800A180C[sp83][arg1]` at the call           1529 (identical)
+ *   `(s32) &sp84[0]` for the 9th argument               1529 (identical)
+ *   `if (!arg0)` / `if (arg0 == 0)`                     1529 (identical)
+ *   shift term cast / operands swapped in `+ (…<< 6)`   1529 (identical)
+ *   two extra pointer locals (`f32 (*)[3]` + `u8 *`) holding the reused
+ *     addresses                                          5410/203/160 -- REFUSED,
+ *     grows the frame to 0xA0; golden's 0x90 cannot hold two more locals, which
+ *     DISPROVES the "golden spills declared locals" reading of 0x48/0x4C.
+ *   `s32 sp50[4]` / `s32 sp50[5]`                       1862/204/152 (frame grows 8,
+ *     temps move up 4) -- you cannot buy golden's 0x48/0x4C with extra locals.
+ *
+ * PERMUTER: setup + selftest PASS (all five checks; (b) byte-identical codegen,
+ * (b2) pycparser round-trip neutral, (e) isolation DIFFERS so the TU harness is
+ * load-bearing).  Base permuter metric 1519 (asm-differ 1529; constant +10
+ * offset).  ~3,400 iterations at -j4 with PERMUTER_TU_REQUIRE_FRAME=144 produced
+ * SEVEN "wins" (1320,1323,1344,1489,1493,1507,1517).  **ALL SEVEN REJECTED** --
+ * every one is a single `perm_temp_for_expr` insertion, i.e. a `new_var` that
+ * caches `arg2`, `sp83` or the function pointer `func_150ADA20` and changes
+ * nothing else.  Reproduced by hand as `u8 diag = arg2;` declared last: 1490,
+ * 204 instructions, frame 144, spill temps STILL at 0x40/0x44 -- so it does not
+ * even touch defect (2); it is pure register noise over a banned construct.
+ *
+ * WHERE TO GO NEXT.  Defect (1) is the whole 3-instruction gap and it is a CSE
+ * decision inside ONE basic block, so the productive question is what makes IDO
+ * defer the 0x4C reload (and hence the a2 `addu`) to the end of the block.
+ * Everything reachable by respelling the two address arguments, the prototype,
+ * the array dimensions and the declaration order has now been enumerated and is
+ * flat; what has NOT been tried is changing the FIRST use (`sp7C = ...`) so that
+ * the CSE'd 2-index partial is created by a different statement shape while the
+ * first block's bytes are preserved.
  * =========================================================================== */
 
 #include <ultra64.h>

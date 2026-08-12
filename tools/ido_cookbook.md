@@ -1136,3 +1136,82 @@ Before citing an in-tree type as precedent, check that the function using it is 
 stub. A matched function's types are evidence; a stubbed function's types are a guess someone
 wrote down. (This cuts both ways — it is also why "grep the tree for the real type" must be
 followed by "and check it compiles into a matched object".)
+
+# ==================================================================================
+# IDO STACK-FRAME LAYOUT — SOLVED (2026-08-12). Read this before any cold decompile.
+# ==================================================================================
+
+Calibrated on an already-matched function, then confirmed by 13 predictive probes on a second.
+This supersedes the earlier, partly-wrong stack-home notes further up this file (see the
+CORRECTION below).
+
+    EVERY DECLARED AUTO GETS A STACK HOME, whether or not it ends up living in a register.
+    The home area is EXACTLY sum(sizeof(local)) bytes, it ENDS AT framesize, and locals are
+    laid out TOP-DOWN in DECLARATION ORDER (first-declared = highest address).
+    Below the home area sits the compiler-TEMP area; below that, the saved registers.
+
+        framesize = (arg-build + saved regs) + temp_area + sum(sizeof(local))
+
+Calibration, matched sibling func_151B6320: frame 144, locals occupy 64..143, and the declaration
+list (top_dummy / header / pad_dummy / payload / temp_v0) sums to exactly 80 bytes. Observed
+offsets place payload at 68..111, header at 116..139, top_dummy at 140, pad_dummy at 112,
+temp_v0 at 64 — exactly declaration order, top-down, ZERO SLACK.
+
+## Three consequences that matter far beyond one function
+
+**1. `sw t1,X(sp)` / `sw a2,X+4(sp)` pairs around a call are usually NOT spill slots.**
+They are the HOMES of the first two declared locals. Reading them as spills is precisely what made
+an earlier revision of one near-miss model the frame as three separate regions and conclude —
+wrongly — that declaration order could never buy the missing bytes.
+
+**2. A golden `.s` with "dead holes" in its frame is telling you the ORIGINAL DECLARATION LIST,
+exactly.** You can read the original author's declaration order and each local's byte size straight
+off the offsets. For func_151B65D4 the frame decodes to:
+
+    180 payload | 176 trail | 172 [1 word] | 160 delta | 144 [4 words] | 132 pos | 88..131 [11 words]
+    = 96 bytes of declared locals
+
+That is a *reading*, not a search. **Do this FIRST on every cold target** — it converts "guess the
+locals and iterate" into "decode the locals, then write them down."
+
+**3. It explains the `top_dummy` / `pad_dummy` locals in already-matched functions.** They are
+frame-shaping declarations standing in for locals nobody has named yet. Which is exactly why they
+must be treated as an OPEN QUESTION, not a finished match — see the discipline note below.
+
+## The third-slot law (how to tell a home from a temp)
+
+Sweeping a local to every position in the declaration list (8 orderings) showed the third slot is
+*always* exactly that local's declared home, while the other two slots always take compiler temps:
+
+    position in list:  1st  2nd  6th  7th  9th  10th 11th
+    resulting home:     88  128  108  104   96    92  124
+
+Exact match every time. So if a slot moves when you reorder declarations, it is a HOME; if it
+stays put, it is a compiler TEMP and no declaration change will move it.
+
+## CORRECTION to the earlier stack-home entries in this file
+
+Two earlier notes are now known to be imprecise and should be read through this section:
+* "stack homes are per USED local" — **wrong**. Every *declared* auto gets a home, used or not.
+  The earlier probe concluded otherwise because unreferenced locals were being appended after the
+  used ones, which looks like "used first" but is really just declaration order with the dummies
+  declared last.
+* "first-declared = highest address" for aggregates — **right, and it generalises to all locals**,
+  not just aggregates.
+The negative result recorded earlier (a frame that did NOT respond to adding or removing declared
+locals) is still true and is not a contradiction: that function's missing bytes were in the
+compiler-TEMP area, which the declaration list cannot reach. The two areas are separate, and the
+first job is deciding which one your missing bytes are in.
+
+## DISCIPLINE: an unnamed frame-shaping local is an OPEN QUESTION, not a match
+
+When the frame proves N bytes of declared locals and every value you can name accounts for fewer,
+the shortfall is real and it means the original had locals you have not identified. Declaring
+`unknown0` / `unknown1` to reach the right frame is a legitimate *working state* — and it is NOT
+shippable. It is the banned dead-local forcer wearing better names.
+The parked func_151B65D4 does exactly this and is marked **MUST NOT BE COMMITTED AS A MATCH** until
+those two 4-byte locals are either named or the score reaches 0 without them. Keep that discipline:
+a byte-perfect score obtained with `unknownN` locals is a fake match, because the claim it encodes
+("there are two more locals here") is unevidenced even when the bytes agree.
+Route to resolving it: follow-the-pointer (does a consumer copy more out of an aggregate than you
+have modelled?) before inventing a scalar.
