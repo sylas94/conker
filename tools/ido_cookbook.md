@@ -1269,3 +1269,61 @@ parked baselines reproduced exactly (1398 and 517), and the final 172 was re-mea
 repo's own `make`. A private scorer that is never reconciled with the shared tool is how a pipeline
 starts producing numbers nobody else can reproduce; that failure mode has already been seen here
 once.
+
+## THE N-NO-OPS TEST: how to tell an evidenced construct from a forcer
+
+The cleanest fake-match test found so far, and it settled a question that had blocked a function
+for two waves.
+
+A function reached 172 (from 517) on `spA0.unk14 |= 0x0;` — a statement emitting no instruction
+that nonetheless re-aligned the whole register allocation. The structural defence was that the
+function pokes an alignment field in four blocks as `(x & ~6) | k` for k = 6, 4, 0, 2, so the k=0
+member "should" be spelled uniformly with its siblings.
+
+**Both halves of that were refuted by measurement:**
+
+1. The uniform shape `(x & ~6) | 0` scores **517 — byte-identical to simply dropping the term.**
+   IDO folds `| 0` *inside an expression*; it consumes no register web. So the uniform spelling
+   does not produce the codegen, and the "uniformity" argument buys nothing.
+2. The 172 is reachable ONLY from a STANDALONE no-op statement — and **four different ones reach it
+   equally**: `|= 0x0`, `+= 0`, `|= (0 << 1)`, `|= (x & 0x0)`.
+
+That second point is the general test. **If N mutually-exclusive no-ops all produce the identical
+score, the binary is evidencing "one extra folded temp web exists here" — not any particular source
+construct.** No spelling among them is preferred by the evidence, so none of them is evidenced at
+all. Ship none.
+
+Making the four blocks genuinely uniform was measured too, and is strictly worse: 587 and 1413,
+with two variants LOSING two instructions (265 vs golden's 267). The family argument was wrong in
+both directions.
+
+### Corollary: a gain contingent on a forcer is not a separate gain
+The same function had a second edit recorded as "clean and valuable independently" — splitting
+`= (x & ~6) | 2` into `&= ~6; |= 2;`. Measured without the forcer present, it is worth **zero**
+(517 either way). Its 345 points existed only in the presence of the banned statement.
+**When you remove a forcer, re-measure everything you attributed to other edits.** Contingent gains
+evaporate, and a parked log that records them as independent will mislead the next wave.
+
+## A written-to register parameter is homed in the CALLER's arg slot
+
+Corrects a wrong claim in a parked log, measured twice. Reassigning a parameter (`arg2 = ...`)
+instead of declaring a local for the same value is NOT "byte-identical with identical frame" — it
+sheds exactly 4 bytes of frame (0x110 -> 0x108) and 326 points. A register parameter that is
+written to is homed in the caller's argument slot (golden's `sw a3,276(sp)`), not in the callee's
+local area, so it costs no local-area bytes.
+Use it deliberately: when your frame is 4 bytes over and you have a scalar that shadows a
+parameter, assigning through the parameter is the honest way to lose those bytes.
+
+## Refuse a better score that breaks golden's store sequence
+
+Recorded because the refusal was correct and the temptation was real: moving one field assignment
+scored 1312 against a parked 1345 — 33 points better — but changed the emitted byte-store order
+from golden's `1e 20 61` to `1e 61 20`. A score bought by making the emitted sequence demonstrably
+LESS like golden is not progress. Dump the store order and diff it against golden before accepting
+any reordering win.
+
+## Environment: /tmp is wiped between tool invocations
+
+In this WSL setup the distro shuts down between invocations and systemd clears `/tmp`, so a scorer
+or snapshot written there vanishes before the next call. Keep working state under `$HOME` (or the
+scratchpad) — within a single invocation `/tmp` is fine, across invocations it is not.

@@ -1,113 +1,131 @@
-# func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 172** (was 517, was 4333)
+# func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
 `tools/nearmiss/func_151CA6A0.c` is the WHOLE TU with this function live (pragma removed).
 Drop it over `conker/src/game_1F4650.c` to resume. The repo copy of the TU is UNTOUCHED
 (pragma still in place) — verified with `git status --short -- conker/src/game_1F4650.c`
 (prints nothing).
 
-## WAVE 2026-08-12 — 517 → 172, and the register allocation now matches golden EXACTLY
+## WAVE 2026-08-12 (b) — THE HONESTY QUESTION IS CLOSED: `|= 0x0` WAS A FORCER
 
-**172 / 267 instructions / frame 248 / 1068 bytes.** Everything from the prologue to
-instruction 195 is byte-identical to golden, *including every register name*, and everything
-from instruction 218 to the epilogue is byte-identical. The entire residual is **16 rows in
-one basic block** — the fifth (3.0f) descriptor block — and it is a pure SCHEDULING
-permutation: the instruction multiset, the register assignment and every stack offset are
-already golden's.
+The previous wave parked this at **172** on the back of `spA0.unk14 |= 0x0;` in block 3 — a
+statement that emits no instruction and only re-aligns the register allocation — and left the
+call to a later wave. **The call has now been made, by measurement, and it goes against the
+forcer.** The forcer is dropped, the 172 is void, and the honest base is **517**.
 
-### The two edits, and what they mean
+### What was tested, and what it showed
 
-Both are the same discovery: **the four quadrant blocks are written with one uniform idiom.**
-The function builds the same 0x58-byte descriptor four times, once per corner, poking a 2-bit
-alignment field in `spA0.unk14` with a different code each time. The parked file used to spell
-those four blocks three different ways. Golden spells them **one** way:
+The structural defence was: the four corner blocks poke a 2-bit alignment field as
+`(x & ~6) | k` for k = 6, 4, 0, 2; three are forced by the binary; so the k=0 member should be
+spelled uniformly with its siblings. **If that family is real, the uniform `(x & ~6) | k` shape
+must reproduce the codegen for k=0. It does not.**
 
-```c
-spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x6;   spA0.unk0 =  25.0f;  spA0.unk4 =  25.0f;
-spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x4;   spA0.unk0 = -25.0f;  spA0.unk4 =  25.0f;
-spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x0;   spA0.unk0 = -25.0f;  spA0.unk4 = -25.0f;
-spA0.unk14 &= ~0x6;  spA0.unk14 |= 0x2;   spA0.unk0 =  25.0f;  spA0.unk4 = -25.0f;
-```
-
-| step | edit | score | rows |
-|---|---|---|---|
-| base (last wave) | blocks 1,2 split; block 3 `&= ~0x6` only; block 4 combined | 517 | 39 `r` + 2 `<` + 2 `>` |
-| **1** | block 3 gains `spA0.unk14 \|= 0x0;` | **477** | block 3 becomes byte-identical |
-| **2** | block 4 split from `= (x & ~6) \| 2` into `&= ~6; \|= 2;` | **172** | **every register in the function now matches** |
-
-Step 1 emits **no instruction** (267 before and after) but consumes one IDO temp-register web,
-which is exactly the "forcers are temp-register rotation counters" law seen from the useful
-side. Step 2 emits no extra instruction either. Together they moved the whole t-register
-rotation onto golden's and collapsed all 39 register rows plus the two block-3/4 blocks.
-
-### HONESTY FLAG on `spA0.unk14 |= 0x0;` — read this before shipping
-
-A statement that emits zero instructions and only shifts register allocation is, in isolation,
-exactly the banned "no-op mask chain". The argument *for* it here is that it is not an isolated
-invention: it is the `k = 0` member of a four-way family whose other three members (`k` = 6, 4,
-2) are each independently forced by the binary, in four copy-pasted blocks that are otherwise
-identical token for token. Copy-paste-and-edit-the-constant is the obvious origin of four such
-blocks, and editing `0x6` to `0x0` rather than deleting the line is what produces it.
-**That is an argument, not proof.** It is recorded here rather than decided, because the
-function is at 172 and the question is not yet live. If a later wave reaches 0, the call has
-to be made explicitly.
-
-Measured, so nobody re-explores it: `|= 0x0` is **inert everywhere except block 3**. Inserting
-it before block 1's `&= ~0x6` (n8), or at any of the six positions inside block 5 (n0–n5), or
-after block 5's `unk14`/`unk30`/`unk34` (n6, n7), is **byte-identical** to the base. It is
-load-bearing only in the one place where golden's registers demand it.
-
-## The residual at 172 — 16 rows, one block, pure scheduling
-
-Instructions 193–217, the block that rebuilds the descriptor for the twelve-particle ring.
-Same 25 instructions, same registers, different order:
-
-```
-       GOLD                              MINE
- 193   lui at,0x4040                     lui at,0x4040          <- identical
- 194   mtc1 at,$f0                       mtc1 at,$f0
- 195   mtc1 zero,$f2                     mtc1 zero,$f2
- 196   li v1,1                           lw t8,248(sp)
- 197   lw t8,248(sp)                     li t1,153
- 198   li t1,153                         sb t1,176(sp)
- 199   swc1 $f2,160(sp)                  swc1 $f0,172(sp)
- 200   swc1 $f2,164(sp)                  swc1 $f0,168(sp)
- 201   swc1 $f0,172(sp)                  swc1 $f2,160(sp)
- 202   swc1 $f0,168(sp)                  swc1 $f2,164(sp)
- 203   sb   t1,176(sp)                   lbu t6,573(t8)
- ...
- 211   sllv t2,t0,t9                     li v1,1
-```
-
-Two facts:
-* golden emits the five opening stores in **exact source order** (160, 164, 172, 168, 176);
-  mine emits the three *constant groups* in **reverse** order (`sb`, then the 3.0f pair, then
-  the 0.0f pair) while preserving source order *within* each group;
-* golden hoists `li v1,1` (the comparison constant of `if (D_80082FA0 == 1)`) to the head of
-  the block; mine emits it at its use, 15 instructions later.
-
-**This block's emitted order is completely insensitive to the source.** Everything below was
-swept this wave against the 172 base and every single variant is byte-identical:
-
-| sweep | size | result |
+| variant | score | insns |
 |---|---|---|
-| block 5, brace-aware: **every unit to every position** (14 units incl. both `if/else`s) + **all 120 permutations of the five opening stores** | 273 | **122 tie at 172**, none changes the emitted store order |
-| adjacent line **joins**, runs of 2/3/4/5, at every position in block 5 | 16 | flat at 172 |
-| literal spellings `0.f`, `3.f`, `0` (int), chained `a = b = k`, copy `unk8 = unkC`, `0x99`→`153` | 9 | flat at 172 (`0.f` and `0` *cost* an instruction: 268) |
-| `if (D_80082FA0 != 1)` with the arms swapped | 1 | 382 |
-| `\|= 0x0` inserted at 9 further positions | 9 | flat at 172 |
-| declaration order of `temp_v0`/`temp_type`/`i` (all 6), `int`/`u32`/`register` `i`, `register temp_type`, `register`/`u8 *` `temp_v0` | 12 | flat at 172 |
-| loop forms: `while`, `do/while`, `i < 12` | 3 | flat at 172 |
-| `if (temp_v0)`, `memcpy` cast form | 2 | flat at 172 |
-| block-3 mask spellings `= x & ~6`, `&= 0xFFF9`, chained store, stores-before-mask | 4 | flat |
-| `0x50 \| (1 << …)` | 1 | flat |
-| `spA0.unk10 = 0x99` moved after `unk34` | 1 | 672 |
-| `sp44.unk28` / the `if` block hoisted above the spA0 stores | 1 | 1363 |
-| `spA0.unk14` split from `\| 0x50` | 1 | 1332 |
-| `s16 i` | 1 | 797 / **269 instructions** |
+| `spA0.unk14 &= ~0x6;` alone (honest) | **517** | 267 |
+| `spA0.unk14 = (spA0.unk14 & ~0x6) \| 0x0;` — the uniform shape | **517** | 267 |
+| `= (spA0.unk14 & ~0x6) \| 0;` / `\| 0x00;` / `\| (0 << 1)` / `\| (0 & 0x6)` | **517** | 267 |
+| `= (spA0.unk14 & 0xFFF9) \| 0x0;` | **517** | 267 |
+| `= (u16)(spA0.unk14 & ~0x6);` and two other cast forms | **517** | 267 |
+| `spA0.unk14 \|= 0x0;` (the forcer) | 172 | 267 |
+| `spA0.unk14 += 0;` | 172 | 267 |
+| `spA0.unk14 \|= (0 << 1);` | 172 | 267 |
+| `spA0.unk14 \|= (spA0.unk14 & 0x0);` | 172 | 267 |
 
-## The frame, re-read under the declaration-list law
+**IDO folds `| 0` inside an expression completely — no web is consumed — so the uniform
+combined shape is byte-identical to just dropping the term.** The 172 is reachable *only*
+through a separate no-op *statement*, and four different no-op statements reach it equally
+well. So the binary does not evidence `| 0` at all; it evidences only "one more folded temp
+register web here", and every construct that supplies one is banned.
 
-Frame 248, and it is fully explained — **no unexplained words in this function.**
+### The uniform-family argument is not merely unproven — it is refuted
+
+Making the four blocks genuinely uniform makes things **worse**, and two of those variants
+lose two instructions (golden has 267):
+
+| family shape | score | insns |
+|---|---|---|
+| all four `&= ~6; \|= k;` (current parked), block 3 bare | 517 | 267 |
+| blocks 2+4 combined, block 3 bare | 587 | 267 |
+| block 2 combined only, block 3 bare | 567 | 267 |
+| blocks 2,3,4 combined | 587 | 267 |
+| **all four combined** | **1413** | **265** |
+| all four combined, block 3 bare | 1413 | 265 |
+| block 1 combined only, block 3 bare | 1383 | 265 |
+
+Block 1 is *provably* the split form (it is the only block that emits two `sh`; combining it
+costs 2 instructions and 866 points). The binary rejects the uniform-combined family outright.
+
+### The previous wave's "step 2" is worth ZERO without the forcer
+
+The block-4 edit — splitting `= (x & ~6) | 2` into `&= ~6; |= 2;` — was credited with 345
+points (477 → 172). Measured on the honest base, block 4 combined and block 4 split score
+**517 and 517**: byte-identical. Its whole value was contingent on the banned statement. It is
+kept in the parked file because it is honest and internally consistent with block 1, not
+because it buys anything.
+
+### Every other honest lever tried this wave (all measured, none beat 517)
+
+| sweep | n | result |
+|---|---|---|
+| chained `unk0 = unk4 = -25.0f`, reversed chain, read-back `unk4 = unk0` | 6 | 517 / 525 |
+| block-3 store order swap, mask before/mid/after the float pair | 4 | 517 / 525 |
+| literal spelling `-25.f`, `-25.0e0f`, `-25.0` (double), `-25` (int), `(f32)-25.0` | 7 | 517 |
+| `&= ~0x2; &= ~0x4;` two-bit split mask, `&= ~(0x2\|0x4)` | 2 | 527 / 517 |
+| **bitfield**: `union { u16 unk14; struct { u16 hi:13, quad:2, lo:1; } b; }`, `b.quad = 0/1/2/3` | 5 | 1522 / 1757 / **4143** |
+| **array members**: `f32 pos[2]; f32 size[2];`, `f32 v[4];`, pos-only, size-only | 10 | **byte-identical to scalars on both bases** |
+| reversed comparison `if (1 == D_80082FA0)` (one, other, both) | 6 | 527 / 537 (honest), 182 / 192 (forced) |
+
+Two of these close out the previous wave's "next moves": **arrays are completely inert here**
+(all ten array variants are byte-identical to the scalar declaration, on both bases), and the
+**bitfield reading is refuted** (a zero-valued bitfield store does *not* allocate-and-fold a
+web; it costs 2 extra instructions and 1005+ points). The union declaration on its own is inert
+(control scored 172 on the forced base), so those numbers are the bitfield *stores* talking.
+
+## The residual at 517 — 28 register rows + the same 16 scheduling rows
+
+Instructions 1–138 are byte-identical to golden. From 139 the whole difference is a **one-web
+rotation offset**: golden's temp stream is exactly one position ahead of mine.
+
+```
+ 139  GOLD andi t7,v0,0xfff9      MINE andi t5,v0,0xfff9      <- block 3's mask
+ 147  GOLD li   t1,88             MINE li   t7,88
+ 148  GOLD li   t8,255            MINE li   t1,255            <- mine[i] == golden[i-1]
+ 149  GOLD li   t6,1              MINE li   t8,1
+ 168  GOLD andi t0,v0,0xfff9      MINE andi t9,v0,0xfff9
+ ...  (rows 139-182 and 239-244 are all of this one kind)
+```
+
+Golden spent one more temp web than an honest `&= ~0x6` produces, and it spent it with no
+instruction to show for it. That is a real fact about the binary and it is worth recording —
+but it does **not** identify the source construct, because four different banned no-ops supply
+it identically.
+
+Plus the unchanged block-5 residual (rows 196–217), a pure scheduling permutation:
+
+```
+ 196  GOLD li v1,1                MINE lw t8,248(sp)
+ 199  GOLD swc1 $f2,160(sp)       MINE swc1 $f0,172(sp)
+ ...  golden emits the five opening stores in EXACT SOURCE ORDER (160,164,172,168,176) and
+      hoists `li v1,1` to the head; mine emits the three constant groups in REVERSE order
+      (sb, then the 3.0f pair, then the 0.0f pair), preserving source order within each group.
+```
+
+## What is left, and what is NOT worth re-running
+
+Do not re-explore: statement order in block 5 (every unit to every position + all 120
+permutations of the five opening stores, 273 variants, previous wave), line joins, literal
+spellings, declaration order, loop forms, array members, bitfields, comparison operand order,
+`|= 0x0` at ten insertion points — all measured flat or worse.
+
+The two open questions are now sharply stated:
+1. **What honest construct spends one temp-register web and emits nothing?** Everything obvious
+   has been tried. Candidates not yet reachable: a fifth declared local (the frame is full and
+   exactly explained, so there is no room — see the frame decode below), or a different
+   *type* for `unk14` that makes the mask a two-step operation. Note the requirement is narrow:
+   it must not change instruction count (267) or any stack offset.
+2. Block 5's group ordering, which is insensitive to everything tried in ~380 variants.
+
+## The frame, re-read under the declaration-list law (unchanged, still fully explained)
 
 ```
 locals area ends at framesize:  spA0  160..247 (0x58 = 88)   <- declared first
@@ -122,7 +140,7 @@ Calibrated directly: adding 1 unused scalar keeps 248 (the round-up absorbs it),
 locals are NOT dropped by IDO**; they occupy their home like any other. So the declaration list
 is right, and there is no room for a cached `D_80082FA0` or any other extra local.
 
-## Still true from the previous revision (do not re-explore)
+## Still true from earlier revisions (do not re-explore)
 
 * `if (arg1)` not `if (arg1 != 0)` — the u8-parameter law, threshold at TWO explicit `!= 0`
   comparisons; worth 1737 and it fixes the instruction count (269 → 267).
@@ -137,24 +155,10 @@ is right, and there is no room for a cached `D_80082FA0` or any other extra loca
 * **The sibling `func_151CAB78` contains byte-identical text.** Anchor every edit between
   `void func_151CA6A0(` and `void func_151CAACC(`. Every generator used this wave does.
 
-## REFUSED this wave
+## REFUSED
 
-Nothing needed refusing: no variant beat 172, so no trade between score and plausibility came
-up. The previous wave's refusals stand — the permuter's `if ((short) arg1)` (562 at 269
-instructions), `(unsigned short)` on a pointer NULL test (semantically wrong), and the
-gratuitous `(long long)` shift-count cast (467, but the same two displaced instructions and
-pure register noise). Note that the `(long long)` cast's 467 has now been beaten *and
-explained* by step 1 above: it was doing the same register rotation, badly.
-
-## Next move for whoever picks this up
-
-The block-5 schedule is not reachable from statement order, line joins, literal spelling or
-declaration order — 300+ variants, all byte-identical. What is left is a structural question
-about that block: golden's scheduler had a different *pre-scheduling* order for three
-independent things (the 0.0f store pair, the 3.0f store pair, and `sb 0x99`), and something
-must make IDO generate them in a different sequence. Untried ideas, in the order I would try
-them: whether `spA0.unk0/unk4` and `unk8/unkC` are array members (`f32 pos[2]; f32 size[2];`)
-rather than four scalars — array subscripting produces different ucode for the same stores;
-whether `sp44` is built by a helper the four call sites share; and the permuter seeded here
-(the base is now excellent: correct count, frame, offsets and registers) with a hard gate on
-`INSNS == 267` **and** on the residual staying inside block 5.
+* `spA0.unk14 |= 0x0;` (172) — **dropped this wave as a forcer**, see above.
+* `spA0.unk14 += 0;`, `|= (0 << 1)`, `|= (spA0.unk14 & 0x0)` (all 172) — same construct wearing
+  different clothes; recorded only to show the binary cannot tell them apart.
+* the permuter's `if ((short) arg1)` (562 at 269 instructions), `(unsigned short)` on a pointer
+  NULL test (semantically wrong), and the gratuitous `(long long)` shift-count cast (467).
