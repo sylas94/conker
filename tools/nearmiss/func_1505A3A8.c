@@ -53,6 +53,80 @@
  *
  * No banned constructs: no dummy labels, no volatile, no self-assignment, no dead locals
  * (this version has no locals at all), no no-op masks.
+ *
+ * ========== WAVE 2026-08-11b: THE TWO AXES SWEPT EXHAUSTIVELY -- BOTH FLAT ==============
+ * The "mutually exclusive" verdict above rested only on RESPELLINGS; statement ORDER and
+ * pairwise LINE JOINS had never been swept.  Both are now swept EXHAUSTIVELY, plus two new
+ * families.  98 builds, each hard-built (object + asm-processor intermediate removed first,
+ * `make` hard-failed on error) and scored with AND without -R; the two always agreed exactly.
+ *
+ * THE RESIDUAL IS NOT A REGISTER-ALLOCATION CONFLICT.  IT IS A SCHEDULER TIE-BREAK.
+ * The note above says a2 must be scaled SECOND to win $f20, so golden's a2-first emission is
+ * unreachable.  That framing is wrong in a way that matters.  With the -g3 line numbers that
+ * asm-differ prints in the CURRENT column, the real invariant is:
+ *        the mul.s writing $f14 is ALWAYS emitted BEFORE the mul.s writing $f20.
+ * It held in 16 of 16 instrumented spellings, INCLUDING every form that puts both multiplies
+ * on ONE line number.  In the shipped base the register MAP IS ALREADY GOLDEN'S
+ * (mtc1 a2,$f20 / mtc1 a3,$f14, byte-identical); the sole divergence is that IDO emits
+ * arg3's multiply first where golden emits arg2's first.  So the open question is not "how
+ * do I get a2 into $f20" -- that is solved and shipped -- but "how do I make IDO schedule
+ * the $f20 multiply first".  No source-level lever found so far touches that tie-break.
+ *
+ * AXIS 1 -- EXHAUSTIVE ORDER SWEEP of the three independent opening statements
+ * (3 = `arg3 *= D_800D1550[0];`, 2 = `arg2 *= ...;`, G = the whole D_800CC27C guard block).
+ * All 3! = 6 orderings built and scored:
+ *        32G     20    <- shipped base, unique best
+ *        3G2    480
+ *        23G    165    (reproduces the old "a2-first costs 145" figure exactly)
+ *        2G3    625
+ *        G32   1735
+ *        G23   1735
+ * Law: the guard block must come third and arg3 must be scaled before arg2.  Nothing ties.
+ *
+ * AXIS 2 -- EXHAUSTIVE SINGLE-JOIN SWEEP.  Joining any two adjacent lines is always valid C
+ * here (the body carries no // comments and no preprocessor lines), so all 64 adjacent line
+ * pairs of the 65-line body were joined one at a time and scored:
+ *        ALL 64 SCORED EXACTLY 20.  DEAD FLAT, no exceptions.
+ * A greedy climb therefore has no first step to take.  IDO's line grouping has NO effect
+ * anywhere in this function -- a real per-function property, not a general law.
+ *
+ * SCALE-PAIR SPELLING BATTERY (14 builds, each instrumented for the mtc1/mul rows):
+ *         20  arg3 *= S; arg2 *= S;                          <- base
+ *         30  both plain (arg3 = arg3 * S; arg2 = arg2 * S;)
+ *         25  mixed compound/plain, either way round
+ *        175  both plain, a2 first
+ *         20  comma operator, ONE statement:  arg3 *= S, arg2 *= S;
+ *        165  comma operator reversed
+ *         20  both statements on ONE physical line (a3 first)
+ *        165  ... a2 first
+ *         25  nested comma:  arg2 = (arg3 *= S, arg2 * S);
+ *        170  nested comma the other way round
+ *         30  reversed operands (S * arg3)
+ *         20  first scale joined onto the function's signature line
+ *         20  second scale joined onto the guard's line
+ * In EVERY one of these the $f14 mul precedes the $f20 mul.  The same-line and comma forms
+ * give both multiplies the SAME -g3 line number and STILL do not reorder them.
+ *
+ * LOCALS ARE THE WRONG FAMILY -- ruled out properly (8 builds).  The pre-2026-08 whole-TU
+ * snapshot used `f32 aa/bb` locals; on the CURRENT base (levers 1-4 applied) they are
+ * catastrophic, so that shape can be abandoned for good:
+ *       2786 / 2426  two locals aa+bb: both declaration orders x both assignment orders
+ *        270 / 2296  one local for the arg2 role (assigned first / second)
+ *        200 / 2366  one local for the arg3 role (assigned first / second)
+ *
+ * `register` IS INERT (6 builds).  This was the most promising remaining idea: the 23-order
+ * base ALREADY has golden's mul emission order, so flipping only its register map would have
+ * closed the function.  `register f32 arg2` / `register f32 arg3` / both, applied to the
+ * 32-base and to the 23-base:  20/20/20 and 165/165/165 -- identical to unqualified in all
+ * six cases.  IDO 5.3 at -O2 ignores the storage class for this decision.
+ *
+ * VERDICT (stronger than the previous bail, and differently aimed).  Residual 2 rows, 100%
+ * register-only, 0 structural.  Both assigned axes are now EXHAUSTIVELY swept and both are
+ * FLAT (the 6-ordering table above; 64/64 joins at exactly 20).  The blocker is a single
+ * list-scheduler tie-break between two independent, equal-priority mul.s that IDO always
+ * resolves toward the $f14 destination.  Re-open ONLY with a lever that acts on scheduling
+ * priority rather than on source order or spelling.  Spellings, orders, joins, locals and
+ * storage classes are all now measured dead.
  */
 void func_1505A3A8(f32 arg0, struct127 *arg1, f32 arg2, f32 arg3, u8 arg4) {
     arg3 *= D_800D1550[0];

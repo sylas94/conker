@@ -132,6 +132,70 @@
  * decisive datum: merging made the combined web long-lived and it immediately took an
  * $a-register, which is why "make old and cb one variable" cannot be the answer by itself.
  *
+ * ========== WAVE 2026-08-11b: BOTH AXES SWEPT EXHAUSTIVELY -- BOTH FLAT ================
+ * 77 builds, each hard-built and scored with AND without -R (always equal).  The verdict
+ * above rested on spellings plus one merge family; statement ORDER and LINE JOINS had never
+ * been swept, and three structural levers had never been tried.  All now measured.
+ *
+ * THE ALLOCATION MODEL IS NOW PINNED DOWN, AND IT EXPLAINS THE MISS EXACTLY.
+ * IDO ranks the four webs by REFERENCE COUNT and hands out $v0,$v1,$a1,$a2 in that order:
+ *        p   (many refs)            -> $v0
+ *        cb  (5 defs + 2 uses = 7)  -> $v1
+ *        cur (2 defs + 3 uses = 5)  -> $a1
+ *        old (1 def  + 1 use  = 2)  -> $a2
+ * That reproduces the observed map EXACTLY, and it is why `old` loses $v1: it is the LEAST
+ * referenced web in the function.  Golden gives $v1 to `old` and then recycles it for `cb`,
+ * i.e. golden's allocator ranked `old` SECOND.  Because `cb` and `old` have these same
+ * reference counts in ANY source that emits golden's five `lb` sites and its single guard,
+ * no reference-count-preserving respelling can reorder them -- which is precisely what the
+ * thirteen spellings at exactly 10 were already saying, now with a mechanism behind it.
+ * This also retro-explains the merge family: merging made ONE web with 9 refs, which outranks
+ * everything and takes $v0/$v1 for the wrong role.
+ *
+ * AXIS 1 -- statement order, swept at EVERY independent site (10 builds).  The base is
+ * uniquely optimal everywhere; every deviation is strictly and heavily worse:
+ *         10  base
+ *        225  branch 0: `p->unk24 = 0;` before the unk2F store
+ *        595  branch 2: flag store before the unk2F store
+ *       1040  branch 1: flag store first / flag store in the middle   (both exactly 1040)
+ *        630  branch 3: flag store first / flag store in the middle   (both exactly 630)
+ *       2320  all four branches with the flag store first
+ *         10  seed via arg0->unk18.unk24: p first / p last / p in the middle (all 10)
+ * Law: in every branch the `p->unk24 = N;` store must come LAST.  The opening seed block is
+ * a genuine 3-way tie at 10 and is the ONLY flat site on this axis.
+ *
+ * AXIS 2 -- EXHAUSTIVE SINGLE-JOIN SWEEP.  All 51 adjacent line pairs of the 56-line body
+ * joined one at a time:  ALL 51 SCORED EXACTLY 10.  DEAD FLAT.  Line grouping does nothing
+ * on this function, so the greedy climb has no first step to take.
+ *
+ * NEW STRUCTURAL LEVERS -- all measured, all negative (7 builds):
+ *         18  `s8 cb` declared INSIDE the `if (old != cur)` block.  This was the obvious
+ *             generalisation of the `rise`-scoping lever that was worth 160 points on this
+ *             very function; here it costs 8, and it does NOT hand `old` the register that
+ *             `cb` vacates.
+ *         10  `default:` moved to the top of the switch                        (inert)
+ *        445  cases written 3,2,1,0 (with default last or default first -- both 445)
+ *       2118  if / else-if chain instead of the switch
+ *       2100  if / else-if chain + cb scoped into the block
+ * The switch with ascending cases and default last is load-bearing, not cosmetic -- worth
+ * knowing, because golden's dispatch is a linear beq chain and an if-chain looks equivalent.
+ *
+ * `register` IS INERT (8 builds).  It was the one honest source-level way to raise `old`'s
+ * allocation rank, and it is in-corpus (this TU already has a `register` declaration in
+ * func_15162510).  Measured: `register u8 old` = 10, +p = 10, +p+cur = 10, register on p
+ * alone = 10, register on all four locals = 10, register on old+cur = 10 -- every one
+ * IDENTICAL to the unqualified base.  `register s32 old` = 15 (the plain s32 penalty from
+ * the older table, unchanged by the qualifier); qualifying while moving `cur` above `fall`
+ * = 18.  IDO 5.3 at -O2 ignores the storage class for allocation priority.
+ *
+ * VERDICT: unchanged at 10, but the bail is far better evidenced and the open question is
+ * sharper.  Residual 2 rows, 100% register-only, 0 structural; both assigned axes swept
+ * EXHAUSTIVELY and both FLAT; and the reference-count priority model reproduces IDO's map
+ * exactly while predicting that `old` cannot outrank `cb` at equal reference counts.
+ * Re-open ONLY with a lever that changes web PRIORITY without changing emitted code.
+ * Spellings, merges, orders, joins, case order, dispatch form and storage class are all
+ * now measured dead.
+ *
  * ------------------------------------------------------------------ PERMUTER STATUS
  * conker/permuter_tu.sh selftest PASSES on game_18D770 (all five checks).  Note that
  * it used to FAIL check (b2) here; that was a harness bug (a `| head -5` SIGPIPE-killing

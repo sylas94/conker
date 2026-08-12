@@ -1037,3 +1037,65 @@ call (2000). Field-by-field is 3750 because golden's copy goes through $at, the 
 struct-assignment expansion, which field assignments cannot produce.
 
 Revisit only with a new idea about operand ordering, not with more search.
+
+## IDO allocates registers by WEB REFERENCE COUNT — a predictive law, and a bail criterion
+
+The mechanism behind a whole family of "two registers are swapped and nothing moves them"
+residuals. IDO ranks webs by reference count and hands out $v0, $v1, $a1, $a2 in that order.
+Worked example (func_15162B28, settled at 10):
+
+    p    many refs           -> $v0
+    cb   5 defs + 2 uses = 7 -> $v1
+    cur  5                   -> $a1
+    old  1 def + 1 use  = 2  -> $a2      golden wants this one in $v1
+
+`old` is the LEAST-referenced web in the function, so it can never outrank `cb` for $v1 in any
+source that still emits golden's five `lb` sites and its single guard. That is not "we haven't
+found the spelling" — it is arithmetic.
+
+USE IT BOTH WAYS. Before hunting a register swap, count each web's defs+uses and check whether the
+ranking you need is even reachable. If the register you want is held by a web with strictly more
+references than yours, the only lever is changing the REFERENCE COUNTS (adding or removing uses),
+not the spelling — and if golden's instruction count is already exact, you cannot change them.
+This also explains why MERGING two locals backfires (measured 10 -> 55/80/293/1248): merging makes
+one long-lived web out of two, and long-lived webs lose $v1 to short ones.
+
+## The line-join lever is PER-FUNCTION, and "always-valid" means enumerate, don't climb
+
+Joining two adjacent statements onto one line is always valid C in a body with no `//` comments
+and no preprocessor lines — so the single-join neighbourhood is small and completely enumerable.
+Do that instead of a greedy climb. Two exhaustive sweeps:
+
+    func_1505A3A8   all 64 adjacent pairs joined, one at a time -> ALL exactly 20
+    func_15162B28   all 51 adjacent pairs joined, one at a time -> ALL exactly 10
+
+Dead flat. A greedy climb has no first step to take, because every first step is a plateau. This
+does not refute the lever (it was worth 10 points twice on func_150B06B0) — it establishes that
+line-number grouping is a per-function property. Enumerating costs ~50 builds and settles it.
+
+## Distinguish a REGISTER tie from a SCHEDULER tie before theorising about either
+
+func_1505A3A8's parked diagnosis claimed "mutually exclusive requirements": golden needs one
+parameter scaled second to win the callee-saved $f20, yet emits its multiply first. That was
+WRONG, and the correction matters more than the function.
+
+**The register map is already golden's** — `mtc1 a2,$f20` / `mtc1 a3,$f14` are byte-identical. So
+there is no allocation conflict at all; it is a single list-scheduler tie-break over two
+independent multiplies. Measured invariant across 16/16 instrumented spellings: **the `mul.s`
+writing $f14 is always emitted before the one writing $f20**, including in every form that gives
+both multiplies the SAME `-g3` line number (same-line and comma forms).
+
+Diagnostic that settles it in one look: asm-differ prints the `-g3` source line in the CURRENT
+column. If your two rows carry DIFFERENT registers, it is allocation; if they carry the same
+registers in a different ORDER, it is scheduling. Reordering the source flips the whole map on an
+allocation problem and changes nothing on a scheduling one — on this function, swapping the two
+scale statements flipped $f20/$f14 across the map while leaving the emission order identical.
+
+### Two more per-function laws found by exhaustive sweep
+* func_1505A3A8: of the 3! = 6 orderings of its independent opening statements, the parked order
+  is the UNIQUE best (20); the others are 165, 480, 625, 1735, 1735. The order axis is live here
+  but already optimal.
+* func_15162B28: in every branch, `p->unk24 = N;` must come LAST (moving it costs 225–2320). The
+  opening seed block is the only genuinely flat site, a real 3-way tie at 10.
+* `register` is inert on both functions across 14 combined spellings — and it is in-corpus, since
+  game_18D770 already contains a `register` declaration in a matched function. Stop reaching for it.

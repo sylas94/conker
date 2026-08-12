@@ -483,13 +483,13 @@ void func_151CA6A0(void *arg0, u8 arg1) {
     spA0.unk3C = 0x20;
     spA0.unk40 = 0;
     spA0.unk41 = 0xA;
+    spA0.unk44 = *(u8 *)((s32)arg0 + 0x23D);
     spA0.unk14 &= ~0x6;
     spA0.unk14 |= 0x6;
     spA0.unk0 = 25.0f;
     spA0.unk4 = 25.0f;
-    spA0.unk44 = *(u8 *)((s32)arg0 + 0x23D);
 
-    if (arg1 != 0) {
+    if (arg1) {
         temp_type = 4;
     } else {
         temp_type = 0;
@@ -499,10 +499,11 @@ void func_151CA6A0(void *arg0, u8 arg1) {
         memcpy((u8 *)temp_v0 + 0x70, &sp44, 0x58);
     }
 
-    spA0.unk14 = (spA0.unk14 & ~0x6) | 0x4;
+    spA0.unk14 &= ~0x6;
+    spA0.unk14 |= 0x4;
     spA0.unk0 = -25.0f;
     spA0.unk4 = 25.0f;
-    if (arg1 != 0) {
+    if (arg1) {
         temp_type = 4;
     } else {
         temp_type = 0;
@@ -515,7 +516,7 @@ void func_151CA6A0(void *arg0, u8 arg1) {
     spA0.unk14 &= ~0x6;
     spA0.unk0 = -25.0f;
     spA0.unk4 = -25.0f;
-    if (arg1 != 0) {
+    if (arg1) {
         temp_type = 4;
     } else {
         temp_type = 0;
@@ -528,7 +529,7 @@ void func_151CA6A0(void *arg0, u8 arg1) {
     spA0.unk14 = (spA0.unk14 & ~0x6) | 0x2;
     spA0.unk0 = 25.0f;
     spA0.unk4 = -25.0f;
-    if (arg1 != 0) {
+    if (arg1) {
         temp_type = 4;
     } else {
         temp_type = 0;
@@ -558,9 +559,10 @@ void func_151CA6A0(void *arg0, u8 arg1) {
     } else {
         sp44.unk20 = D_800AAE94;
     }
+    i = 0;
     sp44.unk24 = 0.0f;
 
-    for (i = 0; i != 12; i++) {
+    for (; i != 12; i++) {
         temp_v0 = func_1515548C(&spA0, 7, 0, 0, 0x58, 0xFF, 1);
         if (temp_v0 != NULL) {
             memcpy((u8 *)temp_v0 + 0x70, &sp44, 0x58);
