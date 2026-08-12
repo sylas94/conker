@@ -1327,3 +1327,71 @@ any reordering win.
 In this WSL setup the distro shuts down between invocations and systemd clears `/tmp`, so a scorer
 or snapshot written there vanishes before the next call. Keep working state under `$HOME` (or the
 scratchpad) — within a single invocation `/tmp` is fine, across invocations it is not.
+
+## When a SHARED HEADER is wrong: shadow it file-locally, never edit it
+
+`include/functions.h` declares `func_150ADA20` as returning `u8`. Golden feeds its result straight
+into `divu` with NO zero-extension, which a u8-returning declaration cannot produce — so the real
+return type is a word and the header is simply wrong.
+
+**Do not fix the header.** That symbol is referenced by **106 TUs**, including already-matched ones
+under `src/game/done/`, and this was tested rather than assumed: correcting it to `s32` and
+rebuilding every referencing TU causes **BUILD FAILURES in 13 of them**. A shared-header retype is
+one of the few edits that can silently invalidate committed, byte-verified work.
+
+The file-local fix, which is now the project idiom for a wrong prototype:
+```c
+/* functions.h declares this as u8; golden's divu with no zero-extension proves it is a word. */
+#define func_150ADA20 func_150ADA20_u8_decl_in_functions_h
+#include "functions.h"
+#undef func_150ADA20
+s32 func_150ADA20(void);
+```
+This renames the header's declaration out of the way across the include, then supplies the correct
+one. Measured on func_150DFEFC: u8 header prototype **946**, file-local s32 prototype **110**, and
+removing it after the match sends the score **0 -> 836**. Confirm the TU has no OTHER caller of the
+symbol (this one had none), so the override cannot affect anything else in the file.
+Always record the binary evidence for the retype in a comment above it — the justification is the
+thing that makes this honest rather than a convenient hack.
+
+## `addu` operand order: `<variable> + <temp>` canonicalises the TEMP first
+
+Sharpens the earlier index-order entries. For `variable + temp`, IDO puts the TEMP first **no
+matter how the source is written** — `mtx + (p->bone << 6)` and `(p->bone << 6) + mtx` BOTH emit
+`addu a2,t7,v0`. For `temp + temp`, it keeps source order.
+So when golden has `addu a2,v0,t7` (base first) and you cannot get it by swapping the operands,
+**make the variable into a temp**: an explicit cast node does it. `(s32)mtx` with `mtx` declared
+`u8 *` restored golden's order and was worth 10 points on func_1508114C (70 -> 60).
+
+## An address-taken local is an ALIAS BARRIER the scheduler will not cross
+
+If a local's address is passed to a callee, IDO must assume stores to it may alias, so it will not
+hoist a load above those stores. On func_1508114C, golden's `lw v0,0x1d4(s2)` sits at the top of
+the loop body, 20 instructions before its use — reachable only if the source reads the field into a
+local BEFORE the `local.unkN` stores that precede the call. Left inline, the load is pinned next to
+the `jal`, the `mtc1`->`cvt.s.w` delay becomes unfillable, and IDO emits a `nop` — and that single
+nop was the entire 1068-vs-1064 size difference. Worth **890 points** (960 -> 70).
+Generalisation: when golden loads something suspiciously early and you cannot move it, look for an
+address-taken local between your load and golden's position, and hoist the read above the stores.
+
+## IDO chooses a BASIC BLOCK for a spilled reload — a third residual class
+
+Beyond allocation ties and intra-block scheduling there is a third kind: which block a spilled
+variable's reload lands in. func_1508114C's final residual is exactly one instruction, and golden
+puts the reload of a pointer in the compiler-generated LOOP PREHEADER (the block after the count
+guard, beside the hoisted `addiu fp,sp,0x84`), while the candidate emits it as a plain statement
+before the guard.
+The only source-level control found is the LOOP SHAPE: `if (count > 0) { p = spheres; do {...}
+while (i != count); }` fixes the placement exactly — but re-ranks three saved registers (a 3-cycle
+rotation costing 20 rows, 60 -> 105). So the two requirements trade against each other, which is
+the signature of a genuine tie rather than a missing spelling. The permuter found nothing better
+across ~500 gated iterations.
+
+## Check permuter output directories for UNSCORED wins before deleting
+
+The last instruction of one match came from a permuter output left behind by a wave that was killed
+mid-run: `permuter_tu/<func>/output-0-1/` with `score.txt` reading **0**, never applied. Nobody had
+looked. Before deleting or re-running a permuter directory, list its `output-*` and read each
+`score.txt` — and note `chain` does `rm -rf output-*`, so copy first.
+(These directories are now gitignored: 1.6M of regenerable state that was one `git add .` away from
+the repo.)

@@ -1,5 +1,65 @@
 # func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
+## WAVE 2026-08-12 (c) — BAIL. The missing web has no source-level handle.
+
+Still 517. ~170 further honest variants this wave, **every single one exactly 517 or worse**,
+plus a decomp-permuter run (1100+ iterations, frame- and offset-gated) whose *only*
+improvements are the banned no-op shape. The evidence is now conclusive enough to stop.
+
+### The permuter localised the web, and then refuted itself
+
+The permuter's three improving outputs are all the SAME construct — `if ((temp_v0 != 0) != 0)`,
+a semantically-inert doubled comparison — applied at three DIFFERENT `if (temp_v0 != NULL)`
+guards, scoring **277 / 327 / 367**. Combined with the previous wave's four no-ops at block 3
+all tying at **172**, that is seven mutually-exclusive no-op statements at four sites producing
+four different scores. Per the N-NO-OPS TEST the binary is evidencing "extra folded temp webs
+exist near here" and nothing about any source construct. Ship none.
+
+What it *did* buy is a location: the best forcer site is block 3's mask (172), the second is
+**block 2's guard**, immediately before block 3 — which is exactly where the one-web offset
+first becomes visible (`andi t7` vs `andi t5`).
+
+### Everything honest tried at that location — all byte-identical to the base
+
+| axis | n | result |
+|---|---|---|
+| guard spelling at block 2 AND at all five sites: `if (temp_v0)`, `!= 0`, `NULL != temp_v0`, `(s32)temp_v0 != 0` | 8 | **517, all** |
+| memcpy destination spelling: `(void*)((s32)tv0+0x70)`, `&((u8*)tv0)[0x70]`, `((u8*)tv0)+0x70` | 6 | **517, all** |
+| 5th local `u8 *dst` holding the destination (block 2 only, and all sites) | 2 | **517** |
+| `temp_v0` declared `s32` instead of `void *`, with casts at every use | 1 | **517** |
+| block-3 mask casts: `(s16)/(u16)/(s32)/(u32)` on the result, on `~0x6`, on the read | 12 | **517** (`(u8)` 532, `(s8)` 717) |
+| block-3 shapes: `& ~6`, `& ~0x06`, mask before/mid/after the float pair | 5 | **517** (shift-form 847) |
+| `temp_type` if/else: ternary, `= 0x4` | 2 | **517** (`if (arg1 != 0)` 1779 — reconfirms the u8-parameter law) |
+| loop form `i < 12` / `++i` | 2 | **517** |
+| **all 120 permutations of block 5's five opening stores, RE-RUN on the honest base** | 120 | **517, every one** |
+
+That last row matters: the previous wave's 273-variant block-5 sweep was run on the now-void
+**forced** base, so it was worth re-running. It reproduces exactly. IDO *canonicalises* those
+five independent stores — source order is not observable at all — which is why the block-5
+scheduling residual is not a statement-order problem either.
+
+### The frame has room for a 5th local, and it buys nothing
+
+The old NOTES said "no room for a cached `D_80082FA0` or any other extra local". That was
+wrong — its own calibration says adding one scalar keeps 248, and I re-measured it directly
+(`frame=-0xf8` with a dead 5th scalar, and with `u16 flags`, and with `s32 mode`). So the axis
+was open. It is now closed by measurement, not by arithmetic:
+
+* dead 5th scalar — **517**, byte-identical (an unreferenced local really is inert here)
+* `u16 flags` / `s32 flags` holding the block-3 mask result — **517**, byte-identical
+* `s32 mode = D_80082FA0;` hoisted, both `if`s reading `mode` — **537** (early) / **537** (late)
+* `s32 kind = *(u8*)(arg0+0x23D);` in block 5 — **692**
+
+### Verdict
+
+Residual is 28 register-only rows plus a 16-row block-5 scheduling permutation that is
+provably insensitive to source order (120/120). Two *hundred* independent spellings across
+three waves leave the score EXACTLY unchanged; only banned no-ops move it, and they disagree
+with each other about where. This meets the cookbook's BAIL RULE. **Recommend: stop spending
+waves on func_151CA6A0.** The parked file is honest, semantically correct, instruction-count
+exact (267) and frame/offset exact; it is a good permanent near-miss record.
+
+
 `tools/nearmiss/func_151CA6A0.c` is the WHOLE TU with this function live (pragma removed).
 Drop it over `conker/src/game_1F4650.c` to resume. The repo copy of the TU is UNTOUCHED
 (pragma still in place) — verified with `git status --short -- conker/src/game_1F4650.c`

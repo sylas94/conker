@@ -1,6 +1,33 @@
 /* func_150D4D58 -- game_100810.c -- 972 bytes / 243 insns / frame 0x108
- * STATUS: best 1345 (was 3498 at the start of this wave, 7399 on the first honest draft).
+ * STATUS: best 1205 (1345 at the start of this wave, 3498 the wave before, 7399 first draft).
  * NOT a match.  Live C is parked here; the repo file has the #pragma restored.
+ *
+ * ===================== WAVE 2026-08-12: 1345 -> 1205 ================================
+ * ONE edit, and it is a TYPE lever, not an order lever:
+ *     params.unkA = func_150ADA20() % 18U + 27;            <- 1345
+ *     params.unkA = (s16) (func_150ADA20() % 18U) + 27;    <- 1205
+ * Semantically identical (the modulus is 0..17, unkA is s16, so the narrowing cannot
+ * change a bit) and it is instruction-count-neutral: 243 insns both ways, and the
+ * params-area byte-store sequence is still golden's EXACTLY.  What it buys is the whole
+ * three-instruction group, registers included:
+ *     GOLD  mfhi t8 / addiu t7,t8,0x1b / sh t7,0xa2(sp)
+ *     MINE  mfhi t8 / addiu t7,t8,0x1b / sh t7,0xa2(sp)    (was mfhi t5 / addiu t7,t5)
+ * The narrowing creates the extra temp web golden spends there.  The cast type is
+ * load-bearing and UNIQUE -- this is not "any cast will do":
+ *     (s16) 1205   (u16) 1340   (s32) 1345 (inert)   (s8) 1410   (u8) 1440
+ *     (s16) applied OUTSIDE the +27 instead: 1345 (inert)
+ * Discovered by the permuter (which proposed the cruder statement split
+ * `unkA = ...%18U; unkA = unkA + 27;`, 1215) and then reduced to the cast, 10 better.
+ * The same cast on the OTHER two loop expressions is worth nothing or negative:
+ *     unk1B: (u8) 1320  (u16) 1320  (s16) 1325  (s32) 1205 (inert)
+ *     unk1D: (u8)/(s32) 1205 (inert);  splitting unk1B into two statements: 1345
+ * REFUSED this wave: moving params.unk1E after params.unk61 scores 1315 but emits
+ * `1c 20 61 1e` where golden has `1c 1e 20 61` -- same class as the 1312 refused last
+ * wave.  Moving params.unk66 between the two angleBase statements (the permuter's
+ * top-ranked candidate on ITS scale) scores 2336 on asm-differ AND breaks the store
+ * order to `1e 61 20`.  NOTE: the permuter's internal score is NOT comparable to
+ * asm-differ here -- its "1280" is asm-differ 2336.  Re-score every candidate.
+ * ====================================================================================
  *
  * WHAT IT IS: a particle burst emitter.  It fills a 0x70-byte spawn-parameter struct and
  * calls func_15130280 (the particle spawner) rand%11+10 times, each time re-randomising
@@ -73,7 +100,7 @@ extern f32 D_800A0A28;
 extern void func_15143794(s32, s32, f32, f32 *);
 extern void *func_15130280(void *, u8, s32, s32, u8, s32);
 
-/* ---- body (score 1345, frame 0x108 = golden, 243 insns = golden) -------------- */
+/* ---- body (score 1205, frame 0x108 = golden, 243 insns = golden) -------------- */
 
 void func_150D4D58(struct17 *arg0, struct17 *arg1, f32 arg2, u8 arg3, s32 arg4) {
     Struct150D4D58 params;
@@ -121,7 +148,7 @@ void func_150D4D58(struct17 *arg0, struct17 *arg1, f32 arg2, u8 arg3, s32 arg4) 
     do {
         arg2 = func_150ADA68() * spread + base;
         params.unk1D = D_800A09C0[func_150ADA20() & 3];
-        params.unkA = func_150ADA20() % 18U + 27;
+        params.unkA = (s16) (func_150ADA20() % 18U) + 27;
         params.unk1B = func_150ADA20() % 156U + 100;
         params.unk28 = params.unk2C = func_150ADA68() * 233.0f + 199.0f;
         r1 = func_150ADA20();
@@ -231,7 +258,51 @@ void func_150D4D58(struct17 *arg0, struct17 *arg1, f32 arg2, u8 arg3, s32 arg4) 
  *       this one is cross-checked against the LIVE MATCHED definition in src/game_15D730.c.
  *   All four signatures are confirmed; none is a remaining risk.
  *
- * ---- RESIDUAL at 1345: 174 of 243 rows identical ----
+ * ---- NEGATIVES measured 2026-08-12 at the 1205 base (~1700 builds this wave) ----
+ *   EXHAUSTIVE single-unit-move sweep RE-RUN at the new base, all 32 units to all 32
+ *     positions (992 builds).  Only FOUR beat 1205 and all four break golden's byte-store
+ *     sequence, i.e. they are the same refused class as last wave's 1312:
+ *       unk20 <-> unk61 swap            1172   emits ... 1c 1e 61 20 62 ...  (golden 1e 20 61 62)
+ *       unk1E moved after unk61         1175   emits ... 1c 20 61 1e 62 ...
+ *       unk62 moved before unk61        1179   emits ... 1c 1e 62 20 61 ...
+ *     Everything else is >= 1205; 14 further orderings are exactly 1205 (inert).
+ *   EXHAUSTIVE split-angleBase placement: the two angleBase statements placed INDEPENDENTLY
+ *     at every (p,q) with p<=q over the 31-unit backbone (528 builds).  Best is the base
+ *     itself (adjacent, last, 1205); the next family is 1482.  The pair genuinely wants to
+ *     be adjacent and last.  This closes the axis the permuter kept proposing.
+ *   CAST SWEEP over every other expression site x {s16,u16,s32} / {f32,f64} (26 builds):
+ *     count, unk1B, unk54, unk28/2C, both angleBase halves, unk48.unk0/unk8, arg2, the
+ *     r2|r1 or -- ALL exactly 1205 (inert) or worse.  The unkA site is the ONLY one.
+ *   DECLARATION-TYPE sweep: all 15 s32/s16 assignments over {count,angleBase,r1,r2} that
+ *     keep the frame at 0x108 (an f32 local costs 8 home bytes, an s32 4, and 0x108 only
+ *     pins sum(homes)=32) -- every one is WORSE, 1505..2320.  angleBase as u16/u8: 3318.
+ *     All four locals are confirmed s32 by measurement, not just by the frame arithmetic.
+ *
+ * ---- THE PREHEADER ORDERING (a) IS NOT REACHABLE FROM STATEMENT PLACEMENT ----
+ * Proven this wave, and worth not re-deriving.  Every `lui at,X` in the preheader writes
+ * the SAME register $at, so the scheduler cannot reorder them: the $at chain is a direct
+ * readout of IDO's PRE-SCHEDULING order.  Measured:
+ *     GOLDEN  1.0f, D_800A0A18, 10.0f, 199.0f, 233.0f, D_800A0A1C, D_800A0A20
+ *     MINE    1.0f, D_800A0A18, D_800A0A20, D_800A0A1C, 10.0f, 199.0f, 233.0f
+ * and the chain follows SOURCE ORDER exactly (verified by moving the pair to the top:
+ * chain moves with it, 3237; by swapping the two: chain swaps, 1635; by moving the 1.0f
+ * store to the end: chain follows, 2497).  The LICM-hoisted group is ALWAYS appended after
+ * every source statement of the preheader, in DESCENDING allocated-register order
+ * (f30,f28,f26 = reverse of first use in the loop), then the integer hoists (s6,s5,s8,s7).
+ * Golden's group is the same but with f24 and f22 INSIDE it -- so in golden those two loads
+ * are LICM hoists, not preheader source statements.  IDO will not hoist a global LOAD out
+ * of a call-containing loop; it hoists only the ADDRESS into $s6/$s7 and reloads per
+ * iteration.  Measured three ways, all 4989-6000 and all with `lwc1 $f16,0(s6)` in the loop:
+ *     globals inlined in the loop expression                     6000  [frame 0xf8]
+ *     same + `extern const f32` on both globals                  6000  BYTE-IDENTICAL to
+ *         the non-const build -- IDO ignores `const` for aliasing entirely
+ *     globals as separate assignment statements at the loop top  4989  [frame 0x108]
+ * So (a) needs a mechanism that puts a preheader source statement AFTER the LICM group, and
+ * no source-level handle for that exists.  Do not spend another wave on statement order
+ * here; the remaining $t transpositions (7<->1 and -1<->0x4C207, plus the D_800A09C0 index
+ * chain) are downstream of it.
+ *
+ * ---- RESIDUAL at 1345 (superseded, kept for the row map): 174 of 243 rows identical ----
  *   (a) rows ~74-114, the setup block: golden materialises the three FP LITERALS
  *       (10.0f -> f30, 199.0f -> f28, 233.0f -> f26) BEFORE loading the two globals
  *       (D_800A0A1C -> f24, then D_800A0A20 -> f22), and interleaves all five with the
