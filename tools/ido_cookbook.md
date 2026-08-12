@@ -1099,3 +1099,40 @@ scale statements flipped $f20/$f14 across the map while leaving the emission ord
   opening seed block is the only genuinely flat site, a real 3-way tie at 10.
 * `register` is inert on both functions across 14 combined spellings — and it is in-corpus, since
   game_18D770 already contains a `register` declaration in a matched function. Stop reaching for it.
+
+## A struct passed by pointer is bounded by what its CONSUMER copies, not by what you see written
+
+The technique that turned a suspected forcer into a checked fact, and it is reusable whenever a
+stack struct's tail extent is in doubt (which is whenever the frame needs N more bytes than your
+fields account for).
+
+Do NOT reason "the extent is unknown, so padding is fair". Follow the pointer:
+
+1. Find every callee the struct pointer is passed to.
+2. Walk through THIN FORWARDERS — they prove nothing. Here `func_151303BC` just calls
+   `func_15130374`, which just calls `func_15130280`, none of them dereferencing the pointer.
+3. Read the real consumer. `func_15130280` is live matched C and does
+   `memcpy((s32)temp_v0 + 0x10, arg0, 0x70);` — it copies **0x70 bytes** out of the struct.
+
+That single line bounds the type from below: the struct provably extends to at least 0x70,
+regardless of how few fields the caller writes. A tail declaration is then a FACT, not padding.
+
+The inverse case is the one to be suspicious of: if the consumer never touches past your last
+modelled field, extra tail bytes have no support and the frame's missing bytes belong to some
+other local.
+
+### Corollary: model-vs-frame disagreement can be an ORIGINAL-GAME OVERREAD
+Here the consumer copies 0x70 while the verified frame proves the local is 0x6C — so the original
+game reads 4 bytes past its own params local every call. That is original-game behaviour and must
+NOT be "fixed": declaring the struct 0x70 changes the frame and breaks the match. Record it and
+move on.
+
+### An unverified model in the tree is not evidence — check whether its user is still stubbed
+`src/game_117490.c` models this same callee's parameter struct as `struct_EA11C_params`, ending at
+0x63 with no tail — **12 bytes short** of what the consumer demonstrably reads. It looks
+authoritative and is not: its only user, `func_150EA5CC`, is still a `#pragma GLOBAL_ASM` stub, so
+nothing about that struct has ever been byte-verified.
+Before citing an in-tree type as precedent, check that the function using it is LIVE C, not a
+stub. A matched function's types are evidence; a stubbed function's types are a guess someone
+wrote down. (This cuts both ways — it is also why "grep the tree for the real type" must be
+followed by "and check it compiles into a matched object".)
