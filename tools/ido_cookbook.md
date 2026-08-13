@@ -1459,3 +1459,41 @@ measurements then close both halves:
 Jointly contradictory under any model where preheader order follows source statement order, so no
 statement ordering, cast spelling or declaration type can reach it. That is an honest bail with a
 mechanism, not a plateau.
+
+## VALIDATE the frame decode against golden's own spill/reload pairs
+
+The frame law tells you the declaration list is readable off the offsets. Golden will often *prove*
+two of those offsets for you, which turns the decode from a reading into a checked reading.
+
+Any value live across a call must be spilled and reloaded, so golden brackets its `jal` with the
+pairs. On func_150825C0 (frame 0x50, home area 0x40..0x4f = 16 B):
+
+    sw  v1,0x48(sp)  ...  jal func_150A6360  ...  lw  v1,0x48(sp)
+    sb  t1,0x45(sp)  ...  jal func_150A6360  ...  lbu t1,0x45(sp)
+
+That pins two homes outright — and the *widths* pin the types: `sb`/`lbu` at 0x45 means a `u8`
+there. The decode then follows by arithmetic: with `i` at 0x48 and `ok` at 0x45, exactly two bytes
+sit between them, so there is exactly one `u16` in the gap. That is how `t` was typed, and the
+resulting list (0x4c f32 rad, 0x48 s32 i, 0x46 u16 t, 0x45 u8 ok, 0x44 u8 flags, 0x40 s32 j) was
+correct first time.
+**Look for the spill/reload pairs around every call before guessing any local's type.**
+
+## LICM of a register-passed `lda` of a local — not a CSE, and not reachable by spelling
+
+A distinct hoist to recognise. Golden rematerialises `addiu a0,sp,0xa8` (the address of a local
+matrix) at each call site; the candidate hoists it into a callee-saved register once and uses
+`move a0,s5`, which costs a saved-register slot and rotates every downstream register.
+
+The natural theory — "it is CSE'ing the two references to `&mtx` across the call" — is WRONG, and
+the diagnostic is cheap: pass a *different* pointer at one site so `&mtx` has only ONE reference.
+It still hoists into `$s5` with `move a0,s5`. So this is loop-invariant motion of the address
+computation itself, not common-subexpression elimination of two uses.
+
+Consequence: the address SPELLING is not a handle. Eight independent forms — `mtx`, `&mtx[0][0]`,
+`mtx[0]`, an `f32 *` parameter, `f32[4][4]`, `void *`, a flat `f32[16]` with casts, and a
+cast-through-address — all score EXACTLY 1446. When you see this shape, stop respelling the
+address and look for what else is competing for the callee-saved slot.
+Related trade measured on the same function: an early-exit `if (part == NULL) continue;` kills the
+`&mtx` hoist and hits golden's exact byte count (828), but the loop bound `6` immediately takes the
+freed slot instead. Something must remove BOTH hoists at once; removing either alone just moves the
+problem.

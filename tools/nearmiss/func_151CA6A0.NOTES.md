@@ -1,5 +1,29 @@
 # func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
+## WAVE 2026-08-13 — BAIL CONFIRMED. The alias-barrier hypothesis is now closed too.
+
+Still **517**. This wave was pointed at the one hypothesis the residual actually suggests —
+"golden spends one temp-register web and emits no instruction; what REAL value does it hold?
+an address-taken local, a hoisted read, something the guard-side lever would move" — and
+tested it directly. **All seven variants are byte-identical to the base at 517.**
+
+| variant | score |
+|---|---|
+| `u16 *pflags = &spA0.unk14;` (6th local, declared LAST so every offset is preserved), all four masks written `*pflags &= ~0x6; *pflags \|= k;` | **517** |
+| the same, used at block 3 only | **517** |
+| `struct_151CA6A0_spA0 *p = &spA0;` (6th local), the four masks written `p->unk14 ...` | **517** |
+| `void *src = &sp44;` (6th local), every `memcpy` source written `src` | **517** |
+| `if ((temp_v0 = func_1515548C(...)) != NULL)` — assignment inside the condition, all five sites | **517** |
+| `dst = (u8 *)temp_v0 + 0x70;` computed BEFORE the guard, all five sites | **517** |
+| block 3's mask written `spA0.unk14 = spA0.unk14 & ~0x6;` (explicit read-modify-write) | **517** |
+
+The first four matter most: the cookbook's strongest lever for "a value that exists but emits
+nothing" is the **address-taken local as an alias barrier**, and it is completely inert here —
+IDO folds `p = &spA0; p->unk14` into direct frame addressing and consumes no web at all. That
+was the last structurally-motivated candidate. Combined with the ~400 variants below, the call
+stands: **stop spending waves on func_151CA6A0.** Confirmed the parked file still scores 517
+and that the repo TU restores to 0 with the pragma in.
+
 ## WAVE 2026-08-12 (c) — BAIL. The missing web has no source-level handle.
 
 Still 517. ~170 further honest variants this wave, **every single one exactly 517 or worse**,

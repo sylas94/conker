@@ -1,3 +1,70 @@
+/* ============================================================================
+ * PARKED NEAR-MISS  func_150D1C30  (game_FF0E0.c) -- LAST pragma in this TU.
+ * Measured 2026-08-13 with the stale-object guard (rm .o AND the asm-processor
+ * intermediate, then make, then assert the object exists). Calibration: with the
+ * #pragma in place the same harness prints CURRENT (0).
+ *
+ * BEST STRUCTURE (the body below, `continue` form): size 828 == golden 828,
+ *   score 1538 with and without -R.
+ * BEST SCORE (plain `if (part != NULL) { ... }` instead of the early exit):
+ *   size 832 (+1 instruction), score 1446.
+ * Both are ONE loop-invariant candidate away; the 1446 form is NOT closer --
+ * it is one instruction LONGER (cookbook: count ins/del, not the score).
+ *
+ * FRAME DECODE (framesize 0xf0), read off the golden .s -- this is what fixes
+ * the declaration list and it reproduces every sp offset exactly:
+ *   0x00..0x3b arg build (func_150AC9C0 takes 15 args -> stack slots 0x10..0x38)
+ *   0x48 $f20, 0x50..0x74 $s0..$s8/$ra          -> arg-build+saved = 0x00..0x77
+ *   0x78..0x87 compiler temp area (16 B, unreferenced)
+ *   0x88..0xef HOME AREA = 104 B = sum(sizeof(local)), top-down in decl order:
+ *       0xec  4  sub          (pointer, lives in $s2)
+ *       0xe8  4  part         (pointer, lives in $s0)
+ *       0xa8 64  mtx[4][4]    (passed to func_150A8050 and func_150A7960)
+ *       0xa4  4  i            (lives in $s3)
+ *       0xa0/0x9c/0x98  3xf32 outputs of func_150A7960
+ *       0x94/0x90/0x8c  3xf32 + 0x88 f32 outputs of func_150AC9C0
+ *   The two dead 4-byte holes at 0xe8/0xec and the hole at 0xa4 ARE the three
+ *   register-resident locals' homes; that is how the list was recovered.
+ *
+ * THE RESIDUAL, both forms: golden fills its four free callee-saved slots with
+ *   s5=&D_800A08F0  s6=12  s7=&sp98  s8=&sp9C
+ * and rematerialises `addiu a0,sp,0xa8` (the matrix) and `li at,6` (the loop
+ * bound) inside the loop. We get one extra hoisted candidate which displaces
+ * &sp9C and rotates every downstream register by one:
+ *   plain-if form : s5=&mtx  s6=&D_800A08F0 s7=12 s8=&sp98   (+`move a0,s5` x2)
+ *   continue form : s5=6     s6=&D_800A08F0 s7=12 s8=&sp98   (exact size)
+ *
+ * MEASURED NEGATIVES (all with the guard; every number is a real differ score):
+ *   plain-if base, func_150A7960 proto `f32 *`, call `&mtx[0][0]` ....... 1446
+ *   proto `f32 mtx[4][4]`, call `mtx` ................................... 1446
+ *   proto `f32 *`, call `mtx` (implicit ptr conversion, warns) .......... 1446
+ *   proto `void *`, call `mtx` .......................................... 1446
+ *   `f32 mtx[16]` flat + casts .......................................... 1446
+ *   outer call spelled `(f32 (*)[4])&mtx[0][0]` ......................... 1446
+ *   call `mtx[0]` with `f32 *` proto .................................... 1446
+ *   swap the `sub`/`part` declaration order ............................. 1446
+ *   sp98/sp9C/spA0 as `f32 dir[3]`, sp8C/90/94 as `f32 hit[3]` .......... 1446
+ *     (the array form is frame-identical -- 0x98..0xa3 and 0x8c..0x97 --
+ *      and byte-identical output, so it is score-neutral, not a lever)
+ *   `goto next;` early exit instead of `continue` ....................... 1538 (828 B)
+ *   dir/hit arrays + `continue` ......................................... 1538 (828 B)
+ *   do/while + `continue` + `} while (++i != 6);` ....................... 1748
+ *   do/while + `goto next;` + explicit `i++` before the test ............ 1748
+ *   `continue` in the ELSE-branch loop too (kills its unrolling) ........ 5766 (788 B)
+ * DIAGNOSTIC (not a candidate, semantically wrong -- kept for the finding):
+ *   pass `(f32 (*)[4])arg0` to func_150A8050 so &mtx has ONE reference:
+ *   IDO STILL hoists it into $s5 with `move a0,s5`. So the hoist is not the
+ *   two-reference CSE across the call -- it is LICM of a register-passed
+ *   `lda` of a local, and no spelling of the address reaches it.
+ *
+ * WHAT IS STILL OPEN: the early exit is the only lever found that removes the
+ * &mtx hoist, and it costs the `6`. Something must remove BOTH. Next moves:
+ * seed conker/permuter_tu.sh with this body (it has a real structural handle --
+ * 2 ins / 2 del -- so the "loop-invariant ranking tie" BAIL RULE does not apply
+ * yet), or find the form in which the loop test's constant keeps ONE reference
+ * while the guard still early-exits.
+ * ============================================================================ */
+
 #include <ultra64.h>
 #include "functions.h"
 #include "variables.h"
@@ -73,7 +140,7 @@ typedef struct {
 } Obj150D1C30;
 
 extern f32 D_800A08F0[][3];
-extern void func_150A7960(f32 *mtx, f32 x, f32 y, f32 z, f32 *ox, f32 *oy, f32 *oz);
+extern void func_150A7960(f32 mtx[4][4], f32 x, f32 y, f32 z, f32 *ox, f32 *oy, f32 *oz);
 extern s32 func_150AC9C0(f32 x0, f32 y0, f32 z0, f32 x1, f32 y1, f32 z1, void *arg6,
                          void *arg7, f32 *arg8, f32 *arg9, f32 *arg10, f32 *arg11,
                          s32 *arg12, s32 arg13, f32 arg14);
@@ -100,8 +167,11 @@ void func_150D1C30(struct260 *arg0) {
 
         for (i = 0; i != 6; i++) {
             part = ((Part150D1C30 **)sub)[i + 9];
-            if (part != NULL) {
-                func_150A7960(&mtx[0][0], D_800A08F0[i][0], D_800A08F0[i][1], D_800A08F0[i][2],
+            if (part == NULL) {
+                continue;
+            }
+            {
+                func_150A7960(mtx, D_800A08F0[i][0], D_800A08F0[i][1], D_800A08F0[i][2],
                               &sp98, &sp9C, &spA0);
                 if (func_150AC9C0(sub->unk0, sub->unk4, sub->unk8, sp98, sp9C, spA0, NULL, NULL,
                                   &sp8C, &sp90, &sp94, &sp88, NULL, 0, 0.0f) != 0) {

@@ -1,3 +1,79 @@
+/* ============================================================================
+ * PARKED NEAR-MISS  func_150825C0  (game_AEB40.c)   1560 -> 95
+ * Measured 2026-08-13 with the stale-object guard (rm the .o AND the
+ * asm-processor intermediate, make, assert the object exists). Calibration:
+ * with the #pragma in place the same harness prints CURRENT (0).
+ *
+ * STATE: size 924 == golden 924 (EXACT instruction count), score 95 with -R
+ * and 95 without -R, and the residual is 14 rows that are 100% REGISTER-ONLY
+ * -- zero inserts, zero deletes, zero reorders, every address in the two
+ * columns aligned. Four independent respellings leave it at 95/135/295, two of
+ * them EXACTLY 95, which is the cookbook's named BAIL signal.
+ *
+ * FRAME DECODE (framesize 0x50) -- this is what pinned the declaration list:
+ *   0x00..0x1f arg build (func_150A6360 takes 8 args -> stack slots 0x10..0x1c)
+ *   0x28 $f20 (8 B), 0x30/0x34/0x38 $s0/$s1/$s2, 0x3c $ra
+ *   0x40..0x4f HOME AREA = 16 B = sum(sizeof(local)), top-down in decl order:
+ *       0x4c  4  f32 rad
+ *       0x48  4  s32 i      <- PROVEN: `sw v1,0x48(sp)` / `lw v1,0x48(sp)`
+ *                              around the jal func_150A6360
+ *       0x46  2  u16 t
+ *       0x45  1  u8  ok     <- PROVEN: `sb t1,0x45(sp)` / `lbu t1,0x45(sp)`
+ *                              around the same call
+ *       0x44  1  u8  flags
+ *       0x40  4  s32 j
+ *   `ok` at 0x45 is the load-bearing fact: it forces EXACTLY two bytes of
+ *   locals between `i` (0x48) and `ok`, i.e. one u16 (or two u8) -- which is
+ *   why `t` must exist and must be 2 bytes wide, and why there is no room for
+ *   a separate `mode` local.
+ *
+ * THE THREE LEVERS THAT PAID (all evidenced, none of them forcers):
+ * 1. The golden timer block has `move a1,v1` feeding `subu t4,a1,a0`, i.e. the
+ *    subtraction reads a COPY of the CSE'd load while the two tests read the
+ *    original. That copy only appears when `t` takes the load's web and the
+ *    remaining occurrences are RE-READS of D_800D2110[arg0] in another block.
+ *    Both tests on `t` (the original parked form): 1560, no copy.
+ *    Only the subtraction re-reads:                1660, copy in the WRONG role
+ *                                                  (the tests got the copy).
+ *    `<=` test AND subtraction re-read:            1460, copy in golden's role.
+ * 2. `t = flags & 6;` as an ASSIGNMENT STATEMENT is what produces golden's
+ *    other two copies: IDO lowers it as `move v0,t3` (load the operand into a
+ *    fresh temp) / `andi t6,v0,6` (the expression) / `move v0,t6` (store into
+ *    the variable), and the later `flags & 8` still reads the original t3.
+ *    Writing the chain as three `(flags & 6) == k` tests CSEs to one `andi`
+ *    with no copies at all. `t` is REUSED here -- it is dead after the timer
+ *    block (that block always returns), so this is a genuine second use of the
+ *    one 2-byte local the frame allows, not a frame-shaping dummy.
+ *      switch ((flags & 6)) { case 2/4/default }:  2045
+ *      `flags &= 6;` (one variable instead of two): 2055 (924 B, wrong regs)
+ *      separate `u16 mode` + no timer local:        745 (920 B, copy missing)
+ *      `u8 mode` replacing `flags` entirely:       2855 (932 B, second lbu)
+ *      `t` reused for both  (SHIPPED)               705 -> then 3 and 4 below
+ * 3. Operand order, both from the cookbook's `addu`/`&` canonicalisation law:
+ *      swap the two squared terms (z-term first):   705 -> 185
+ *      swap the `&` operands (mask & (1 << n)):     185 -> 105
+ *      `(arg0 * 0x30) + (s32)D_800D20FC` so the
+ *      final addu is `addu a0,s2,t4` like golden:   105 ->  95
+ *
+ * MEASURED NEGATIVES from the 95 state (all size 924 unless noted):
+ *   `D_800BE9A0 >= arr[arg0]` instead of `arr[arg0] <= D_800BE9A0` ....... 95
+ *   `rad >= dist` instead of `dist <= rad` ............................... 95
+ *   the `!= 0` guard re-reads the array instead of using `t` ..... 135 (920 B)
+ *   the `<=` test uses `t` instead of re-reading ......................... 295
+ *
+ * WHAT IS LEFT (both clusters are pure allocation, no instruction is missing):
+ *   a) timer block, 10 rows: golden colours {v0=&D_800D2110[arg0], v1=t,
+ *      a0=D_800BE9A0}; we get {v1=addr, a0=t, v0=D_800BE9A0} -- a 3-cycle on
+ *      v0/v1/a0 with every ROLE already correct (a1 is the copy on both sides).
+ *   b) the distance test, 4 rows: golden squares in place
+ *      (`mul.s $f0,$f0,$f0` / `mul.s $f2,$f2,$f2` / `add.s $f6,$f0,$f2`),
+ *      we allocate fresh destinations (`$f6`/`$f4`/`$f8`). The two `sub.s`
+ *      that feed them already match exactly.
+ *   Per the BAIL RULE this is not a permuter job either -- there is no
+ *   structural handle to pull. If it is ever revisited, the question to answer
+ *   is which web IDO ranks first among three 3-reference webs in (a).
+ * ============================================================================ */
+
 #include <ultra64.h>
 #define func_150ADA20 func_150ADA20_u8_proto
 #define func_15083E90 func_15083E90_s32_proto
@@ -122,19 +198,20 @@ s32 func_150825C0(s32 arg0, s32 arg1) {
     }
     t = (*(u16 **)&D_800D2110)[arg0];
     if (t != 0) {
-        if (t <= D_800BE9A0) {
+        if ((*(u16 **)&D_800D2110)[arg0] <= D_800BE9A0) {
             (*(u16 **)&D_800D2110)[arg0] = 0;
         } else {
-            (*(u16 **)&D_800D2110)[arg0] = t - D_800BE9A0;
+            (*(u16 **)&D_800D2110)[arg0] = (*(u16 **)&D_800D2110)[arg0] - D_800BE9A0;
         }
         return 0;
     }
     flags = ((GameAEB40Spawn *)D_800D20FC)[arg0].unk1;
     if (arg0 >= 5) {
-        if ((flags & 6) != 0) {
-            if ((flags & 6) == 2) {
+        t = flags & 6;
+        if (t != 0) {
+            if (t == 2) {
                 rad = D_8009CC30;
-            } else if ((flags & 6) == 4) {
+            } else if (t == 4) {
                 rad = D_8009CC34;
             } else {
                 rad = D_8009CC38;
@@ -147,16 +224,9 @@ s32 func_150825C0(s32 arg0, s32 arg1) {
                 if (D_800CC2D0[j].unk127 == 0xFF) {
                     continue;
                 }
-                if ((1 << D_800CC2D0[j].unk127) &
-                    *(u16 *)((u8 *)&D_800D2138 + 0x208)) {
-                    if (((D_800CC2D0[j].x_position -
-                          ((GameAEB40Spawn *)D_800D20FC)[arg0].unk6) *
-                         (D_800CC2D0[j].x_position -
-                          ((GameAEB40Spawn *)D_800D20FC)[arg0].unk6)) +
-                        ((D_800CC2D0[j].z_position -
-                          ((GameAEB40Spawn *)D_800D20FC)[arg0].unkA) *
-                         (D_800CC2D0[j].z_position -
-                          ((GameAEB40Spawn *)D_800D20FC)[arg0].unkA)) <= rad) {
+                if (*(u16 *)((u8 *)&D_800D2138 + 0x208) &
+                    (1 << D_800CC2D0[j].unk127)) {
+                    if (((D_800CC2D0[j].z_position - ((GameAEB40Spawn *)D_800D20FC)[arg0].unkA) * (D_800CC2D0[j].z_position - ((GameAEB40Spawn *)D_800D20FC)[arg0].unkA)) + ((D_800CC2D0[j].x_position - ((GameAEB40Spawn *)D_800D20FC)[arg0].unk6) * (D_800CC2D0[j].x_position - ((GameAEB40Spawn *)D_800D20FC)[arg0].unk6)) <= rad) {
                         ok = 0;
                         break;
                     }
@@ -182,7 +252,7 @@ s32 func_150825C0(s32 arg0, s32 arg1) {
             return 0;
         }
     }
-    return func_15082A44(&((GameAEB40Spawn *)D_800D20FC)[arg0], arg0, 0, 0, 0);
+    return func_15082A44((GameAEB40Spawn *)((arg0 * 0x30) + (s32)D_800D20FC), arg0, 0, 0, 0);
 }
 
 void func_1508295C(s32 arg0, s32 arg1, s32 arg2) {
