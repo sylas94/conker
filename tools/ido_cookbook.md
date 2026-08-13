@@ -1627,3 +1627,55 @@ swapped registers: with our assignment the scheduler can fill the slot, with gol
 Fix the register swap and both opcode rows go away for free.
 Before treating an opcode difference as its own problem, check whether the registers feeding it are
 already wrong — if they are, it is downstream and costs nothing to chase directly.
+
+## The in-place FP square is a STATEMENT FORM, not a spelling
+
+Closed func_150825C0 from 30. Golden's `mul.s $f0,$f0,$f0` — the product reusing its operand's
+register — comes from squaring a NAMED f32 local in its own statement:
+
+    d = a - b;
+    d = d * d;      /* -> mul.s $fN,$fN,$fN  */
+
+The same square written INLINE inside a larger expression takes a fresh destination:
+
+    if ((a-b)*(a-b) + (c-d)*(c-d) < r)   /* -> mul.s $f6,$f2,$f2 etc. */
+
+Both forms are ordinary C and neither is a forcer; the difference is only whether the value has its
+own statement. So when a residual is "same opcodes, same sources, same slots, only the DESTINATION
+registers differ", the question is not how to respell the expression — it is whether the value
+should be a named local with its own assignment.
+
+### How it was found: mine the MATCHED corpus for the instruction pattern
+Not by guessing at the compiler, and not by the idea the brief suggested (writing the subtraction
+twice so CSE builds the temp — that was wrong). Disassemble every `expected/build/src/*.c.o`, keep
+the functions that have no `#pragma GLOBAL_ASM` anywhere in `src/`, and grep for the pattern:
+**57 in-place squares exist game-wide.** Two sit in one file and settle it between them:
+
+* `game_83300 func_1505A6F8` (matched, live C) — `x = p->x - q->x; x *= x;` … reproduces golden's
+  cluster instruction for instruction, nop included.
+* `game_83300 func_1505693C` (matched, live C) — the contrast: an inline square in a comparison,
+  taking fresh registers.
+
+When a residual is a codegen shape you cannot reach, find a MATCHED function that already emits
+that exact shape and read its C. Matched code is ground truth; the compiler manual is not available
+and guessing is expensive.
+
+## FOURTH RESIDUAL CLASS: an ASSEMBLER peephole, decided by basic-block boundaries
+
+The three known classes are allocation, intra-block scheduling, and which block a reload lands in.
+func_150D1C30 exposed a fourth, and it is not the compiler at all — it is `as1`.
+
+`as1` rewrites `beqz X,L / nop` into `beqzl X,L+4`, by duplicating the fall-through block's last
+instruction into the nullified delay slot and moving the join label past it. It does this at five
+of the six unrolled guards in golden. **Guard 2 is spared** — and only because, in golden, its join
+label is the first instruction of the 4×-unrolled main body, so the fall-through block ends at
+`sb s4,0x9(t9)`, which is unsafe to duplicate (`$t9` is undefined on the taken path) and `as1`
+gives up. Our compile has no block boundary at that address, sees a harmless load as the block's
+last instruction, and fills the slot.
+
+So the two remaining rows are worth 400 points and are **not a codegen problem at all** — they are
+the assembler behaving correctly on a control-flow graph whose block boundaries differ from
+golden's. The fix is to restore the boundary, which is a source-level control-flow question.
+Recognise the shape: an isolated `beqz`/`nop` pair in golden where you emit `beqzl` plus a
+duplicated instruction, with every register already correct, means look at where golden's basic
+blocks begin — not at the branch.

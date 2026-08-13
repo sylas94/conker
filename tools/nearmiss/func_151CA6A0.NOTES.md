@@ -1,5 +1,126 @@
 # func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
+## WAVE 2026-08-13 (d) — BAIL RE-CONFIRMED a FIFTH time. The two levers this wave was aimed at
+## are now CLOSED BY MEASUREMENT, and the "what real value does the missing web hold?" question
+## has an answer: **the binary cannot tell a named variable from `+= 0`.**
+
+Base re-verified through `make` + `tools/buildlock.sh`: **517 with -R and 517 without -R**, 267
+instructions, and the pragma-in repo TU rebuilds to **0/0**. A private parallel scorer was
+calibrated against both (pragma-in => 0 @ 267; parked base => 517 @ 267, and it reproduces the
+parked object's `.text` sha1 exactly) before any variant was believed.
+
+### (1) THE UNUSED-PARAMETER LEVER IS UNAVAILABLE HERE — proved by instruction count, not argument
+
+The wave's lever says "IDO homes every integer register parameter at entry whether or not it is
+read, and those homes are in the incoming-argument area, NOT the local area". **The first half of
+that is true and the second half is what kills it here**: the home store is a real instruction.
+
+| prototype | prologue | insns | score |
+|---|---|---|---|
+| `func_151CA6A0(void *arg0, u8 arg1)` (parked) | `sw a0,0xf8(sp)` / `sw a1,0xfc(sp)` | **267** | **517** |
+| `+ s32 arg2` (never read) | `… sw a2,0x100(sp)` | 268 | 617 |
+| `+ s32 arg2, s32 arg3` | `… sw a2,0x100 / sw a3,0x104` | 269 | 717 |
+| `+ s32 sz` used as the 0x58 size carrier at all 10 sites | `… sw a2,0x100(sp)` | 268 | 617 |
+
+Golden's prologue is `sw a0,0xf8(sp)` then `sw a1,0xfc(sp)` and **nothing else** (rows 9-10 of the
+diff), and golden is 267 instructions. So an unused third parameter is *excluded by the binary*:
+it would cost exactly the one instruction the function does not have. The parameter list is
+closed at two. (The two callers agree — `func_151C9BA0` at 151C9C58 and 151C9DB8 both set only
+`a0` and `a1`; `a2` merely holds a stale `1` left over from the preceding `func_151C9F38` call,
+which is not evidence of a third argument.)
+
+### (2) THE INT-WIDTH CARRIER: 15 REAL VALUES TRIED IN THE 4th SCALAR SLOT
+
+The frame *does* admit a 4th scalar declared last (`roundup8(52+196) = 248`, offsets of
+`temp_v0`/`temp_type`/`i` at 0x40/0x3C/0x38 preserved; verified `addiu sp,sp,-248` in every row
+below). The previous wave tried four values; this wave tried fifteen, each wired to *all* of its
+natural use sites (and, for three of them, initialised late instead of early):
+
+| carrier (declared last), used at every natural site | score | insns |
+|---|---|---|
+| `s32 size = 0x58` (helper arg 5 + `memcpy` size, 10 uses) | **517** | 267 |
+| `s32 size` at the helper only (5 uses) | **517** | 267 |
+| `s32 alpha = 0xFF` (5 uses) / `s32 one = 1` (5 uses) | **517 / 517** | 267 |
+| the same three initialised late (just before block 3) | **517 / 517 / 517** | 267 |
+| `s32 seven = 7` (the loop call's type argument) | **517** | 267 |
+| `s32 off = 0x70` (the `memcpy` destination offset, 5 uses) | **517** | 267 |
+| `s32 mask = ~0x6` (4 uses) | **517** | 267 |
+| `u16 f16 = 0x58` / `void *pay = &sp44` / `void *desc = &spA0` | **517 / 517 / 517** | 267 |
+| `s32 count = 12` (the loop bound) | 1332 | 269 |
+| `s32 flag = D_80082FA0` | 1293 | 267 |
+| `s32 bits = (1 << (k+0xB)) \| 0x50` | 6471 | 262 |
+| `s32 shift = k + 0xB` | 7369 | 263 |
+| `s32 kind = *(u8*)(arg0+0x23D)` | 7984 | 258 |
+| `u8 temp_type` / `u32 temp_type` / `s16 temp_type` | 957 / **517** / **517** | 263 / 267 / 267 |
+
+Ten of the fifteen are **byte-identical to the base** (`.text` sha1 `8de865e242…`). An int-width
+carrier holding a real value is simply inert here — IDO constant-propagates it away and the local
+occupies its home without consuming a temp web.
+
+### (3) THE `quad` VARIABLE — the strongest form of the 172 hypothesis, and it is REFUTED
+
+The sharpest statement the previous wave left was: *"the missing web is probably real and probably
+came from a parameterised source idiom instantiated with k = 0"*. This wave built exactly that
+idiom out of a **named local holding the real value**:
+
+```c
+    s32 quad;                       /* the 2-bit corner/alignment code */
+    ...
+    quad = 0x6;  spA0.unk14 &= ~0x6;  spA0.unk14 |= quad;   /* block 1 */
+    quad = 0x4;  spA0.unk14 &= ~0x6;  spA0.unk14 |= quad;   /* block 2 */
+    quad = 0x0;  spA0.unk14 &= ~0x6;  spA0.unk14 |= quad;   /* block 3 */
+    quad = 0x2;  spA0.unk14 &= ~0x6;  spA0.unk14 |= quad;   /* block 4 */
+```
+
+It scores **172 at 267 instructions** — the best number this function has ever reached. It is
+still **REFUSED**, and this time the refutation is airtight rather than a judgement call:
+
+```
+              score insns  .text sha1 of func_151CA6A0's disassembly
+spA0.unk14 |= 0x0;                 172  267  50ece708e1cc698e
+spA0.unk14 += 0;                   172  267  50ece708e1cc698e
+spA0.unk14 |= (0 << 1);            172  267  50ece708e1cc698e
+spA0.unk14 |= (spA0.unk14 & 0x0);  172  267  50ece708e1cc698e
+spA0.unk14 ^= 0x0;                 172  267  50ece708e1cc698e
+quad = 0; ... |= quad;  (block 3)  172  267  50ece708e1cc698e
+quad, all four blocks              172  267  50ece708e1cc698e
+```
+
+**Seven mutually-exclusive spellings, one identical object.** The named variable is not a
+different construct — it *is* `+= 0` wearing a name, and the binary cannot distinguish them. The
+N-NO-OPS TEST fires exactly as before. Two further checks close it:
+
+* `quad` typed `u8` / `u16` / `s16` / `u32`, and declared in any of the four slot positions, and
+  assigned *after* the mask instead of before — **all 172, all byte-identical**.
+* written in the COMBINED form `spA0.unk14 = (spA0.unk14 & ~0x6) | quad;` at all four blocks it
+  scores **1413 at 265 instructions** — *exactly* the previous wave's number for the combined form
+  with literals. So IDO folds `quad` away completely; there is no `quad` web in the object at all.
+  The 172 comes solely from the existence of a separate statement whose value is zero.
+
+So the honest answer to "what REAL value does the extra temp web hold?" is: **the binary does not
+say, and cannot say.** Any statement at that point supplies the web; none of them is evidenced.
+
+### (4) Block 5, re-swept on the 172 base (in case the forcer unlocked the other residual)
+
+29 orderings of block 5's nine independent units run on the **quad/172** base: minimum **172**
+(the identity ordering), everything else 420–1950. So even granting the forcer, block 5's group
+permutation does not become reachable. This kills the last "maybe they interact" argument.
+
+### Axes varied this wave vs axes not varied (the seven-axis rule)
+
+Varied: **4 TYPE/WIDTH** (carrier types, `temp_type` u8/u32/s16), **5 SCOPE/DECL** (4th scalar in
+four declaration positions, carrier init early vs late), **7 REFCOUNT** (15 distinct carriers, each
+at one site and at all sites), **3 SHAPE** (split vs combined with a variable, assignment before vs
+after the mask), **2 ORDER** (29 block-5 orderings on the new base), and the **prototype/ABI** axis
+that four previous waves had *not* touched (parameter count — now closed by the homing law).
+**Not varied:** the callee prototypes and the struct layouts (fixed by the byte-perfect sibling
+`func_150CF680` and by the frame/offset decode), and the FP-literal spellings (closed in wave b).
+
+**The call stands, now five times over: stop spending waves on func_151CA6A0.** The parked file is
+honest, semantically correct, instruction-count exact (267), frame- and offset-exact.
+
+---
+
 ## WAVE 2026-08-13 (c) — BAIL RE-CONFIRMED a fourth time, and one PRIOR ARGUMENT CORRECTED
 
 436 fresh variants through a calibrated private scorer (pragma-in => 0, parked base reproduces
