@@ -126,7 +126,7 @@ extern Gfx *func_150417AC(Gfx *, f32, f32, u8 *, u8, u8, u8, u8, f32, f32, s32);
 Gfx *func_1516C934(Gfx *gfx, Struct1516C934 *arg1, u8 arg2, u8 arg3, u8 arg4, u8 arg5) {
     Gfx *orig;
     u8 buf[0x54];
-    s32 flags;
+    Struct1516C934 *p;
     s32 cond;
     s32 i;
     s32 len;
@@ -140,13 +140,14 @@ Gfx *func_1516C934(Gfx *gfx, Struct1516C934 *arg1, u8 arg2, u8 arg3, u8 arg4, u8
 
     i = 0;
     len = 0;
+    p = arg1;
     orig = gfx;
     dx = arg1->field_0x50 - arg1->field_0x30;
     y = arg1->field_0x54 - arg1->field_0x34;
     WGFX1516C934(gfx++, 0xDE000000, D_800859A0);
     first = 1;
 
-    while (arg1->field_0x24[i] == 0xA) {
+    while (p->field_0x24[i] == 0xA) {
         i++;
     }
 
@@ -160,7 +161,7 @@ Gfx *func_1516C934(Gfx *gfx, Struct1516C934 *arg1, u8 arg2, u8 arg3, u8 arg4, u8
             return orig;
         }
 
-        buf[len] = arg1->field_0x24[i];
+        buf[len] = p->field_0x24[i];
         if (buf[len] == 0xA) {
             buf[len] = 0;
         }
@@ -171,16 +172,15 @@ Gfx *func_1516C934(Gfx *gfx, Struct1516C934 *arg1, u8 arg2, u8 arg3, u8 arg4, u8
             } else {
                 first = 0;
             }
-            flags = *arg1->field_0x10;
-            if (flags & 0x20000) {
+            if (*arg1->field_0x10 & 0x20000) {
                 xoff = (arg1->field_0x30 - (f32)(w >> 1)) - 1.0f;
             } else {
                 xoff = 0.0f;
             }
-            if (flags & 0x40000) {
+            if (*arg1->field_0x10 & 0x40000) {
                 gfx = func_150417AC(gfx, (dx + xoff) + 1.0f, y, buf, 0xFF, 0xFF, 0xFF, arg5, 4096.0f, 4096.0f, len);
                 len = 0;
-            } else if ((flags & 4) == 0) {
+            } else if ((*arg1->field_0x10 & 4) == 0) {
                 gfx = func_150417AC(gfx, (dx + xoff) + 1.0f, y, buf, 0, 0, 0, arg5, 4096.0f, 4096.0f, len);
                 len = 0;
             } else {
@@ -191,7 +191,7 @@ Gfx *func_1516C934(Gfx *gfx, Struct1516C934 *arg1, u8 arg2, u8 arg3, u8 arg4, u8
         } else {
             len++;
         }
-    } while (arg1->field_0x24[i++] != 0);
+    } while (p->field_0x24[i++] != 0);
 
     return gfx;
 }

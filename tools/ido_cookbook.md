@@ -1497,3 +1497,72 @@ Related trade measured on the same function: an early-exit `if (part == NULL) co
 `&mtx` hoist and hits golden's exact byte count (828), but the loop bound `6` immediately takes the
 freed slot instead. Something must remove BOTH hoists at once; removing either alone just moves the
 problem.
+
+# ================================================================================
+# THE BAIL SIGNAL IS ONLY VALID IF THE VARIANTS SPAN DIFFERENT AXES
+# ================================================================================
+
+**This has now been falsified TWICE, on two different functions, and both times the bail was
+wrong.** Read this before writing "N independent spellings score identically, therefore tie".
+
+The rule as previously stated — "two independent spellings leaving the score EXACTLY unchanged
+means an allocation tie with no source handle" — is unsound as written. N variants that all score
+the same are evidence only about the axis they vary. If all N are points on ONE axis, they say
+nothing about any other axis.
+
+* **func_1512B730** was parked as an immovable "loop-invariant ranking tie" on five spellings. All
+  five respelled INDIVIDUAL STATEMENTS; none reordered INDEPENDENT ones. Sweeping statement ORDER
+  took it **355 -> 165** and an exhaustive 720-ordering sweep then gave the law in closed form.
+* **func_150825C0** was bailed at 95 on four respellings. All four varied the SPELLING of the timer
+  block; none varied its SHAPE. Binding the scratch AFTER the guard instead of before it
+  reproduced golden's integer register allocation **EXACTLY** — 13 mismatched integer registers
+  down to zero.
+
+So before recording a bail, list the axes you actually varied and name the ones you did not. The
+axes known to be independent here:
+
+  1. SPELLING of an expression (casts, operand order, literal form)
+  2. ORDER of independent statements
+  3. SHAPE — where a binding sits relative to a guard, a loop, or a call
+  4. TYPE/WIDTH of a local or parameter
+  5. SCOPE — block-local vs function-top declaration
+  6. LINE placement (which statements share a source line)
+  7. REFERENCE COUNT of a web (adding or removing a use)
+
+A bail is only defensible when several of these are exhausted, or when a mechanism rules the
+target out (a web reference-count that cannot be reached, a corpus scan showing no matched C
+produces the pattern, or two jointly contradictory requirements).
+
+## Corollary, seen three times now: BETTER STRUCTURE CAN SCORE WORSE
+
+On func_150825C0 the variant with **zero** integer register mismatches scores **230**, while the
+variant with thirteen scores **95**. The 230 is strictly closer to golden — its whole integer body
+matches — and asm-differ charges more for the one remaining row's shape than for thirteen renames.
+Track `ins/del/chg/register-only` counts separately and read the actual diff rows; never let the
+scalar score alone pick which candidate to park. The parked file here holds the *structurally*
+better body even though its number is worse, which is the right call.
+
+## A binding that spans both arms of an `if` costs a callee-saved register
+
+The mechanism that moved func_150D1C30 from 1538 to 1425 at golden's exact byte count.
+
+If both arms of an outer `if` bind the same local, that is ONE web spanning the whole construct, so
+IDO gives it a callee-saved register held across the entire function — which pushes an argument out
+of `$s0` into `$s1` and re-colours everything downstream. Reading the array expression *directly*
+in the else arm confines the local to the if arm and lets golden's caller-saved `$v0`/`$v1` pair
+appear. That removed seven prologue rows and about twenty else-arm rows in one edit.
+Generalisation: when golden uses caller-saved registers where you use callee-saved ones, look for a
+local your source binds in more places than golden's does. The fix is to stop binding it, not to
+respell it.
+
+## Which constants IDO must keep in a register (and which it need not)
+
+Useful when a loop-invariant hoist is evicting the value you want hoisted. A constant needs a
+register only if the consuming instruction has no immediate form:
+* `multu` and `sb` have no immediate form -> their operands MUST be in registers.
+* `bne reg,imm` is an assembler MACRO through `$at` -> the bound of a `!=` loop test need NOT be,
+  and golden may rematerialise it in the latch instead of hoisting it.
+So a loop bound appearing in a callee-saved register is not inevitable — it is competing for the
+slot, and whether it wins depends on what else is live. On func_150D1C30 the plain `if` form does
+not hoist the bound at all (the matrix address takes the slot), while the early-exit form hoists it
+at rank one.

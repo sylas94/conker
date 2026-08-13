@@ -55,23 +55,95 @@
  *      `(arg0 * 0x30) + (s32)D_800D20FC` so the
  *      final addu is `addu a0,s2,t4` like golden:   105 ->  95
  *
- * MEASURED NEGATIVES from the 95 state (all size 924 unless noted):
+ * =====================  2026-08-13 WAVE: THE BAIL IS WITHDRAWN  =============
+ * The previous wave concluded "two spellings score EXACTLY 95, that is the named
+ * bail signal".  That conclusion was WRONG, and the way it was wrong is the
+ * lesson: it only ever varied the SPELLING of the timer block, never its SHAPE.
+ * Moving the binding of the scratch variable from BEFORE the guard to AFTER it
+ * reproduces golden's register allocation EXACTLY.  Golden's colouring is
+ * reachable; what is not yet reachable is one OPCODE.
+ *
+ * FIRST, THE SCORE DECODER (derived, then used all wave -- it is what turned a
+ * flat list of numbers into a diagnosis).  On this function asm-differ charges
+ *      5 per mismatched REGISTER, 100 per DELETED instruction,
+ *      200 per REPLACED instruction (same address, different opcode).
+ * So 95 = NINETEEN mismatched registers (13 integer + 6 FP) with a byte-exact
+ * instruction stream, and 135 = one deletion + seven registers.  ALWAYS decode
+ * the score into (ins, del, regs) before ranking two candidates: 135 looked
+ * worse than 95 and was in fact the doorway.
+ *
+ * THE LADDER THAT OPENED IT
+ *   1. `if (arr[arg0] != 0)` re-reading instead of `if (t != 0)`  ... 135, 920 B
+ *      Its residual is NOT a 3-cycle: the WHOLE timer block matches golden --
+ *      addu v0 / lhu v1 / lui a0 / beqz v1 / lbu a0 / slt at,a0,v1 /
+ *      sh zero,0(v0) / sh t4,0(v0) -- and the only losses are the missing
+ *      `move a1,v1` and the `subu` reading v1 instead of a1.  So the 3-cycle
+ *      was never a register-allocation wall; it was caused by BINDING THE
+ *      SCRATCH BEFORE THE GUARD.
+ *   2. Restore the copy by binding the scratch INSIDE the guard and letting the
+ *      subtraction read it:
+ *          if (arr[arg0]) { t = arr[arg0];
+ *              if (arr[arg0] <= D_800BE9A0) arr[arg0] = 0;
+ *              else                         arr[arg0] = t - D_800BE9A0; ... }
+ *      -> 230, size 924, and the integer body is BYTE-IDENTICAL to golden with
+ *      ZERO register mismatches.  One single row is left in the whole function
+ *      apart from the FP cluster:
+ *          golden  ff0:  move  a1,v1
+ *          ours    ff0:  andi  a1,v1,0xffff
+ *      Same register, same slot, same operand.  `andi 0xffff` is IDO truncating
+ *      an int-typed CSE temp into the u16 local -- so GOLDEN'S COPY TARGET IS
+ *      NOT A u16.  (`t != 0` for the guard instead of bare truthiness costs the
+ *      same opcode plus 6 registers: 260.)
+ *   3. Proof of that claim, not a guess: repeat step 2 with an s32 scratch and
+ *      the `andi` really does become `move a1,a0` -- but a fourth VARIABLE web
+ *      re-rotates the colouring and pulls `move v0,zero` into the block.
+ *
+ * SO THE OPEN QUESTION IS NOW ONE LINE WIDE, and it is a real question, not a
+ * search: what C emits an UNTRUNCATED copy of the loaded halfword while the
+ * load itself stays a compiler TEMP?  Every construct measured so far forces a
+ * choice: a u16 destination truncates (230), an int-width destination adds a
+ * variable web and re-rotates (350-360), and no destination at all deletes the
+ * instruction (135).  Note the frame allows no NEW local -- sum(sizeof) is
+ * exactly 16 -- so an int-width carrier has to be an existing 4-byte local, and
+ * the only way to free one is to merge the two disjoint loop counters (below).
+ *
+ * MEASURED NEGATIVES from the 95 state (size 924 unless noted).  Everything
+ * below was measured this wave with the stale-object guard, through buildlock:
  *   `D_800BE9A0 >= arr[arg0]` instead of `arr[arg0] <= D_800BE9A0` ....... 95
  *   `rad >= dist` instead of `dist <= rad` ............................... 95
- *   the `!= 0` guard re-reads the array instead of using `t` ..... 135 (920 B)
+ *   `if ((t = arr[arg0]) != 0)` -- assignment folded into the guard ....... 95
+ *   `arr[arg0] -= D_800BE9A0;` (compound RMW) ............................ 95
+ *   `if (t)` bare truthiness on the guard ................................ 95
+ *   `if (t)` + compound `-=` ............................................. 95
  *   the `<=` test uses `t` instead of re-reading ......................... 295
+ *   `if (t)` and the subtraction uses `t` ................................ 270
+ *   `flags = spawn.unk1` hoisted above the timer block ........... 315 (920 B)
+ *   arms swapped, `if (arr[arg0] > D_800BE9A0)` .................. 405 (920 B)
+ *   an explicit `return 0;` in each arm ......................... 1631 (916 B)
+ *   THE SHAPE FAMILY (scratch bound after the guard):
+ *   guard re-reads, both tests re-read, subtraction re-reads .... 135 (920 B)
+ *   guard re-reads, `t` bound first, subtraction reads `t` ...... 390 (920 B)
+ *   guard re-reads, `t` bound in the ELSE arm ................... 175 (920 B)
+ *   `t != 0` guard, `t` bound inside the guard .................. 260
+ *   BARE guard,     `t` bound inside the guard ............ 230  <-- best shape
+ *   ditto + `t = (u16)arr[arg0]` ............................... 230 (cast inert)
+ *   `t != 0` guard + `(u16)` cast .............................. 260
+ *   s32 scratch = `i` / = `j` instead of `t` ............... 360 / 350
+ *   dedicated `s32 timer` + BOTH loops on `i` (frees j's 4 bytes;
+ *     tried with `rad` declared first and with `timer` first) ... 360 / 360
  *
- * WHAT IS LEFT (both clusters are pure allocation, no instruction is missing):
- *   a) timer block, 10 rows: golden colours {v0=&D_800D2110[arg0], v1=t,
- *      a0=D_800BE9A0}; we get {v1=addr, a0=t, v0=D_800BE9A0} -- a 3-cycle on
- *      v0/v1/a0 with every ROLE already correct (a1 is the copy on both sides).
- *   b) the distance test, 4 rows: golden squares in place
- *      (`mul.s $f0,$f0,$f0` / `mul.s $f2,$f2,$f2` / `add.s $f6,$f0,$f2`),
- *      we allocate fresh destinations (`$f6`/`$f4`/`$f8`). The two `sub.s`
- *      that feed them already match exactly.
- *   Per the BAIL RULE this is not a permuter job either -- there is no
- *   structural handle to pull. If it is ever revisited, the question to answer
- *   is which web IDO ranks first among three 3-reference webs in (a).
+ * CLUSTER (b), THE FP ROWS -- the "later use" explanation is FALSIFIED.
+ *   golden  mul.s $f0,$f0,$f0 / mul.s $f2,$f2,$f2 / add.s $f6,$f0,$f2
+ *   ours    mul.s $f6,$f0,$f0 / mul.s $f4,$f2,$f2 / add.s $f8,$f6,$f4
+ *   Read OUR OWN listing: after `mul.s $f6,$f0,$f0` at 1138, `$f0` never
+ *   appears again before it is redefined next iteration, and likewise `$f2`.
+ *   Our sub.s results are dead at the multiply exactly as golden's are, so
+ *   nothing is keeping them live -- this is a pure FP-temp tie-break, and it is
+ *   the same 4 rows / 6 registers in ALL TWENTY sources measured this wave,
+ *   including the ones whose integer body matched golden byte for byte.  It is
+ *   independent of everything in the timer block; do not spend spellings of the
+ *   distance test on it, and do not re-test `rad >= dist` (95) or the term
+ *   swap (recorded above as the 705 -> 185 rung).
  * ============================================================================ */
 
 #include <ultra64.h>

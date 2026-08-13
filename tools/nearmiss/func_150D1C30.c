@@ -4,12 +4,16 @@
  * intermediate, then make, then assert the object exists). Calibration: with the
  * #pragma in place the same harness prints CURRENT (0).
  *
- * BEST STRUCTURE (the body below, `continue` form): size 828 == golden 828,
- *   score 1538 with and without -R.
- * BEST SCORE (plain `if (part != NULL) { ... }` instead of the early exit):
- *   size 832 (+1 instruction), score 1446.
- * Both are ONE loop-invariant candidate away; the 1446 form is NOT closer --
+ * BEST STRUCTURE (the body below, `continue` form + unbound else arm):
+ *   size 828 == golden 828, score 1425 with and without -R.
+ * BEST SCORE (plain `if (part != NULL)` instead of the early exit, same else
+ *   arm): size 832 (+1 instruction), score 1333.
+ * Both are ONE loop-invariant candidate away; the 1333 form is NOT closer --
  * it is one instruction LONGER (cookbook: count ins/del, not the score).
+ *
+ * 2026-08-13 GAIN, 1538 -> 1425 at the SAME 828 bytes: the else arm must NOT
+ * bind `part'.  See the comment on the else arm.  This removed SEVEN prologue
+ * rows (the $s0/$s1 role swap) and re-coloured the whole unrolled else arm.
  *
  * FRAME DECODE (framesize 0xf0), read off the golden .s -- this is what fixes
  * the declaration list and it reproduces every sp offset exactly:
@@ -57,12 +61,40 @@
  *   two-reference CSE across the call -- it is LICM of a register-passed
  *   `lda` of a local, and no spelling of the address reaches it.
  *
- * WHAT IS STILL OPEN: the early exit is the only lever found that removes the
- * &mtx hoist, and it costs the `6`. Something must remove BOTH. Next moves:
- * seed conker/permuter_tu.sh with this body (it has a real structural handle --
- * 2 ins / 2 del -- so the "loop-invariant ranking tie" BAIL RULE does not apply
- * yet), or find the form in which the loop test's constant keeps ONE reference
- * while the guard still early-exits.
+ * MEASURED NEGATIVES, 2026-08-13 wave, all on top of the unbound else arm and
+ * all EXACTLY 1425 at 828 bytes -- five mutually exclusive respellings of the
+ * loop guard, which is the N-NO-OPS signal for this neighbourhood:
+ *   drop the redundant lexical block around the loop body .............. 1425
+ *   `if (!part) continue;` (bare truthiness) ........................... 1425
+ *   `if ((part = ((Part150D1C30 **)sub)[i + 9]) == NULL) continue;` .... 1425
+ *   the ELSE arm's bound spelled `i < 6` instead of `i != 6` ........... 1425
+ *   the IF arm's bound spelled `i < 6` (IDO canonicalises a counted `<`
+ *     into golden's `!=`, so this is not even a diagnostic) ............ 1425
+ * and on the plain-if branch: unbound else arm ................. 1333 (832 B)
+ *                             bound else arm (the old number) .. 1446 (832 B)
+ *
+ * WHAT IS STILL OPEN -- unchanged in KIND, but now the ONLY thing open.
+ * With the else arm fixed, the entire remaining residual has ONE cause: our
+ * loop hoists the bound `6` into $s5 where golden rematerialises it as
+ * `addiu at,zero,6` in the latch, so golden's fourth invariant `&sp9C` is
+ * evicted, and rematerialising &sp9C inside the loop burns one more temp,
+ * which rotates every t-register in the body by one.  Fix the `6` and the
+ * t-register rows, the s5..s8 rows and the ins/del pair all go together.
+ *   golden latch : addiu s3,s3,1 / addiu at,zero,6 / bne s3,at / addiu s1,s1,4
+ *   ours         : addiu s3,s3,1 /                   bne s3,s5 / addiu s1,s1,4
+ * WHY `6` IS A CANDIDATE AT ALL is the question to answer, and the two data
+ * points that constrain it are sharp: with the plain `if (part != NULL)` form
+ * `6` is NOT hoisted (&mtx takes the slot instead), and with the early exit it
+ * is hoisted AT RANK ONE.  `12` and `1` must be in registers (multu and sb have
+ * no immediate form) but `6` need not be -- `bne reg,imm` is an assembler macro
+ * that expands through $at.  So the target is: keep the early exit, and stop
+ * IDO from promoting a branch-immediate into a callee-saved register.
+ *
+ * NOT A ROUTE THIS WAVE: conker/permuter_tu.sh cannot be trusted here.  Setup
+ * succeeds but SELFTEST FAILS -- compile.sh's IDO invocation dies with
+ * `as1: Error: <tmp>/tu.c, line 255: No such file or directory`, so checks (b),
+ * (b2), (c) and (d) all fail and every score it would report is meaningless.
+ * Fix the harness before believing any permuter number on this TU.
  * ============================================================================ */
 
 #include <ultra64.h>
@@ -186,10 +218,16 @@ void func_150D1C30(struct260 *arg0) {
             }
         }
     } else {
+        /* Deliberately does NOT bind `part'.  Binding it here makes ONE web that
+           spans both arms of the outer if, so it holds a callee-saved register
+           across the whole function; that pushes `arg0' out of $s0 into $s1 and
+           rotates the else arm's temporaries.  Golden's else arm uses the
+           caller-saved $v0/$v1 pair, which is only reachable when `part' is
+           confined to the if arm.  Measured: bind -> 1538, don't bind -> 1425,
+           both at the exact 828 bytes. */
         for (i = 0; i != 6; i++) {
-            part = ((Part150D1C30 **)sub)[i + 9];
-            if (part != NULL) {
-                part->unk14->unk9 = 1;
+            if (((Part150D1C30 **)sub)[i + 9] != NULL) {
+                ((Part150D1C30 **)sub)[i + 9]->unk14->unk9 = 1;
             }
         }
     }

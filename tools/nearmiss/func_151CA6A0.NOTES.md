@@ -1,5 +1,66 @@
 # func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
+## WAVE 2026-08-13 (b) — BAIL RE-CONFIRMED. Four more axes closed; the matched sibling agrees.
+
+Still **517 at 267 instructions**. This wave deliberately avoided the ~400 variants already on
+record and went after four axes no previous wave touched. **All of them are inert or worse.**
+
+### The matched sibling proves the idiom is already right
+
+`func_150CF680` (src/game_FC5F0.c:132) is a **live, matched (score 0)** caller of the same
+helper, and its shape is character-for-character the shape parked here:
+
+```c
+    void *temp_v0;
+    ...
+    temp_v0 = func_1515548C(&sp40, 0xC, 0, 0, 0x10, arg1, arg2);
+    if (temp_v0 != NULL) {
+        memcpy((u8 *)temp_v0 + 0x70, &sp30, 0x10);
+    }
+```
+Its struct is the same 0x58-byte layout with the same field names, declared at **file** scope.
+So the `void *temp_v0` / `!= NULL` / `(u8 *)temp_v0 + 0x70` / `memcpy` idiom is confirmed from a
+byte-perfect function, not inferred — there is nothing left to guess there.
+
+### The four new axes, all measured (267 instructions in every row)
+
+| axis | n | result |
+|---|---|---|
+| the two function-local `typedef struct`s hoisted to **file scope** (as the matched sibling declares them) | 1 | **517**, byte-identical |
+| `arg0` given a real struct type and `*(u8 *)((s32)arg0 + 0x23D)` written `arg0->unk23D` | 1 | **517**, byte-identical |
+| `(1 << (x + 0xB)) \| 0x50` spellings: `+ 11`, `0x50 \| (…)`, `(s32)1 <<`, `0xB + x` | 4 | **517**; `+ 0x50` instead of `\| 0x50` **907** |
+| block-5 statement placement re-run on the HONEST base: `sp44` group ahead of the `spA0` group; first `if` block ahead; `sp44.unk28` ahead; `unk30`/`unk34` moved late; `unk10` first; `unk14` first | 6 | **5568 / 2727 / 1077 / 1442 / 517 / 1170** |
+| `if (D_80082FA0 != 1)` with the two branches swapped (both sites) | 1 | **947** |
+| `memcpy` size and the helper's size argument written `88` instead of `0x58` | 2 | **517** |
+
+`g_b5_unk10_first` scoring 517 **byte-identical** reconfirms from a fresh angle what the previous
+wave's 120-permutation sweep found: IDO *canonicalises* block 5's opening stores, so their source
+order is not observable at all, and the 16-row block-5 scheduling residual has no source handle.
+
+### The block-5 residual, read precisely
+
+Golden emits, at the head of block 5, one instruction mine defers by 14 slots:
+
+```
+ GOLD 380c  li v1,1          <- the constant for BOTH `D_80082FA0 == 1` tests, hoisted to the head
+ GOLD 3818  swc1 $f2,0xa0    MINE 3814  sb   t7,0xb0     <- and then the three constant groups
+ GOLD 381c  swc1 $f2,0xa4    MINE 3818  swc1 $f0,0xac       come out in the REVERSE group order
+ GOLD 3820  swc1 $f0,0xac    MINE 381c  swc1 $f0,0xa8       (mine: sb, 3.0f pair, 0.0f pair;
+ GOLD 3824  swc1 $f0,0xa8    MINE 3820  swc1 $f2,0xa0        golden: 0.0f pair, 3.0f pair, sb)
+ GOLD 3828  sb   t1,0xb0     MINE 3824  swc1 $f2,0xa4
+                             MINE 3848  li   v1,1
+```
+Within each group the order is identical; only the group order and the `li v1,1` position differ.
+Moving the two `D_80082FA0 == 1` tests (which are what create the `1` web) earlier in block 5 is
+1077–5568, i.e. strictly worse — so the hoist is not reachable from statement order either.
+
+### Verdict (unchanged, now with four more closed axes)
+
+**Stop spending waves on func_151CA6A0.** The parked file is honest, semantically correct,
+instruction-count exact (267), frame- and offset-exact, and matches a byte-perfect sibling's
+idiom. The residual is 41 rows: 28 of a one-web $t-rotation and 13 of the block-5 group
+permutation, neither of which any of ~430 measured source variants across four waves can touch.
+
 ## WAVE 2026-08-13 — BAIL CONFIRMED. The alias-barrier hypothesis is now closed too.
 
 Still **517**. This wave was pointed at the one hypothesis the residual actually suggests —
