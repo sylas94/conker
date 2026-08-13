@@ -1,5 +1,87 @@
 # func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
+## WAVE 2026-08-13 (c) — BAIL RE-CONFIRMED a fourth time, and one PRIOR ARGUMENT CORRECTED
+
+436 fresh variants through a calibrated private scorer (pragma-in => 0, parked base reproduces
+517 exactly); re-verified through `make` + `tools/buildlock.sh`: **517 with -R and 517 without
+-R**, restored TU => 0/0. Every one of the 436 is 517 or worse. Instruction count 267 throughout.
+
+### The two mechanisms this wave was pointed at are BOTH already satisfied by the parked file
+
+**(a) "a binding that spans both arms of an `if` becomes one long-lived web."** The parked file
+binds `temp_type` across both arms at four sites. Confining it to one arm is strictly WORSE, and
+at the first site it *loses an instruction* — i.e. the binary positively evidences the both-arms
+form:
+
+| variant | score | insns |
+|---|---|---|
+| `temp_type = 0; if (arg1) temp_type = 4;` (all 4 sites) | 7909 | 269 |
+| `temp_type = 4; if (!arg1) temp_type = 0;` (all 4 sites) | 9014 | 269 |
+| one-arm at site 0 only | 682 | **266** |
+| one-arm at sites 1 / 2 / 3 | 2456 / 2461 / 2461 | 269 |
+| a 6th local bound across both arms of the block-5 `D_80082FA0 == 1` tests (unk18 / unk20 / both) | 587 / 862 / 882 | 267 / 266 / 266 |
+| the block-5 tests written one-armed (`= -50.0f; if (…) = -62.0f;`) | 1157 / 902 | 266 |
+| block 1's `unk10` one-armed, and as a both-arms 6th local | 1052 / 1382 | 266 |
+
+**(b) the address-taken-local alias barrier** was closed by the previous wave (7 variants, all
+byte-identical) and nothing new was found: `&spA0` and `&sp44` are already address-taken (they
+are passed to the helper and to `memcpy`), which is exactly why *no* store in this function is
+dead-store-eliminated. There is no second barrier to add.
+
+Also measured and rejected: the `memcpy` written as a **struct assignment**
+(`*(struct_151CA6A0_sp44 *)((u8 *)temp_v0 + 0x70) = sp44;`) — IDO inlines the copy instead of
+calling the helper: 2147–7012 at 279–285 instructions per site, 15474 at 333 for all five.
+And SCOPE (axis 5): `i` declared in an inner block around the loop is **517, byte-identical**.
+
+### The block-5 order sweep, re-run on the honest base over ALL TWELVE units
+
+The previous wave only re-ran the five opening stores on the honest base. This wave swept all
+twelve independent units of block 5 (`unk0 unk4 unkC unk8 unk10 unk14 unk30 unk34 / sp44.unk28 /
+the two D_80082FA0 ifs / sp44.unk1C`): every unit moved to every position (144) plus 265 random
+permutations = **409 orderings, minimum 517, 18 tied at 517**. Note the corollary: block 5's
+order is *not* globally canonicalised (391 of 409 orderings score worse) — only the five opening
+stores are. 517 is a genuine floor of that axis, not a plateau artefact.
+
+### CORRECTION to the previous wave's honesty argument (it refuted the wrong family)
+
+The 2026-08-12(b) entry concluded the "uniform family" reading was *refuted* because the uniform
+**combined** shape `(x & ~6) | k` does not reproduce the codegen for k = 0. That refutation is
+aimed at the wrong family. Block 1 is provably the **split** form (it emits three `sh` to
+0x180(sp) — rows 64, 79, 81 — and combining it costs 2 instructions and 866 points), so the
+family the binary evidences is the SPLIT one, `f &= ~6; f |= k;`, and its k = 0 member is
+`f |= 0x0` — the very statement that scores 172. Measured this wave to make the point concrete:
+
+| variant | score | insns |
+|---|---|---|
+| all four blocks through one macro `SETQUAD(f,k){ (f) &= ~0x6; (f) \|= (k); }`, k = 6/4/**0**/2 | **172** | 267 |
+| the same macro with block 3 written bare instead | 517 | 267 |
+
+**This changes the argument but NOT the verdict, and the 172 is still REFUSED.** The macro form
+produces a byte-identical object to the bare `spA0.unk14 |= 0x0;`, so it is the same construct in
+different clothes and it adds no new evidence. The N-NO-OPS TEST still fires exactly as before:
+`|= 0x0`, `+= 0`, `|= (0 << 1)` and `|= (spA0.unk14 & 0x0)` all reach 172 identically, so the
+binary evidences only "one extra folded temp web exists here" and cannot name the construct. What
+a future wave should take from this is the narrower statement: *the missing web is probably real
+and probably came from a parameterised source idiom instantiated with k = 0* — but no honest
+source text has been found that supplies it, and a no-op must not be shipped to fake it.
+
+Four further block-3 spellings measured and flat at 517: `(u16)(x & (u16)~0x6)`, `&= ~0x00000006`,
+`&= 0xFFF9U`, `& ~(0x4 | 0x2)`.
+
+### Axes varied vs axes not varied (the cookbook's bail rule)
+
+Varied across four waves: 1 SPELLING (~150), 2 ORDER (409 this wave alone, plus the earlier 273),
+3 SHAPE (both-arms vs one-arm bindings, guard-side placement, assignment-in-condition, hoisted
+destination), 4 TYPE/WIDTH (`u16`/`s16`/`s32`/`u8`/`s8` on `unk14`, `void*`/`s32` on `temp_v0`,
+bitfields, array members), 5 SCOPE (file-scope typedefs, inner-block `i`), 7 REFCOUNT (5th and 6th
+locals, cached `D_80082FA0`, cached masks). Axis 6 LINE placement was swept in an earlier wave.
+**Not varied: the callee prototypes and the struct layouts** — both are fixed by the byte-perfect
+sibling `func_150CF680` and by the frame/offset decode, so there is nothing to vary there.
+
+The call stands: **stop spending waves on func_151CA6A0.**
+
+---
+
 ## WAVE 2026-08-13 (b) — BAIL RE-CONFIRMED. Four more axes closed; the matched sibling agrees.
 
 Still **517 at 267 instructions**. This wave deliberately avoided the ~400 variants already on

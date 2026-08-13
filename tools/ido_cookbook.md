@@ -1566,3 +1566,64 @@ So a loop bound appearing in a callee-saved register is not inevitable — it is
 slot, and whether it wins depends on what else is live. On func_150D1C30 the plain `if` form does
 not hoist the bound at all (the matrix address takes the slot), while the early-exit form hoists it
 at rank one.
+
+## An otherwise-unused PARAMETER is FREE int-width storage
+
+The lever that took func_150825C0 from 230 to 30 and made its entire integer body byte-identical
+to golden. It applies whenever you need an int-width carrier but the frame decode proves no local
+fits.
+
+IDO homes **every integer register parameter at entry** — `sw a0,0x50(sp)` / `sw a1,0x54(sp)` —
+whether or not the function ever reads it. Those homes sit in the incoming-argument area, NOT in
+the local area, so a parameter is 4 bytes of int-width storage that costs **nothing** against
+`sum(sizeof(locals))`.
+
+So when the frame says "16 bytes of locals exactly, no room" and the codegen says "this value must
+be carried at int width", the answer is not a new local (which moves the frame) and not a `u16`
+local (which truncates). It is an unused parameter. Golden's own `sw a1,0x54(sp)` is the evidence
+that the slot exists and is free.
+
+Ladder on that function, each rung measured:
+
+    u16 scratch bound inside the guard ......... 230
+    the parameter carries the halfword ......... 360 / 375
+    the parameter carries the halfword,
+      read by both tests ....................... 65
+    the parameter carries D_800BE9A0 ........... 30   <-- the whole integer body matches
+
+Note the last step: which VALUE the int-width carrier holds matters as much as having one. Try the
+carrier on each candidate value, not just the obvious one.
+
+## Read a suggested mechanism against the listing BEFORE spending builds on it
+
+A brief proposed that a `move a1,v1` was argument setup, since `$a1` is an argument register. That
+was falsifiable from the golden `.s` alone in about a minute — the block contains **no call at
+all**; it returns 0 down both arms. Several builds would have been wasted testing it.
+But the *axis* the hypothesis named (type/width) was correct and did contain the answer. So: check
+a proposed mechanism against the disassembly first, discard the specific claim if it does not
+survive, and **keep the axis**. A wrong mechanism on the right axis is still a useful pointer.
+
+## Proving golden has exactly ONE variable web of a given class
+
+Sharp technique for deciding whether a residual can come from a named local at all.
+
+func_150825C0's remaining 4 rows are FP: golden reuses a dying operand register in place
+(`mul.s $f0,$f0,$f0`) where we take fresh destinations. To test whether golden's source has a
+second `f32` local, introduce one — paid for by merging two disjoint loop counters so the frame
+does not move. Result: **50**, worse, and the diff shows why — the new local takes `$f12` and
+pushes the existing one to `$f14`.
+
+That is proof golden has exactly ONE named FP variable, so the in-place multiply cannot come from a
+named local; it is the allocator reusing a dead temp. When a "just add a local" idea is available
+and cheap, use it as a *probe* rather than a fix: where the new local lands tells you how many
+webs of that class golden really has.
+
+## A register swap can manufacture fake opcode differences
+
+On func_150D1C30 two rows differ by opcode — golden `beqz v0,2b8 / nop` against ours
+`beqzl v1,2bc / lw v0,0x24(s1)` — worth 200 points each and looking like a separate delay-slot
+problem. They are not. They are a *consequence* of having the loaded pointer and the cursor copy in
+swapped registers: with our assignment the scheduler can fill the slot, with golden's it cannot.
+Fix the register swap and both opcode rows go away for free.
+Before treating an opcode difference as its own problem, check whether the registers feeding it are
+already wrong — if they are, it is downstream and costs nothing to chase directly.

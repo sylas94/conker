@@ -1,4 +1,70 @@
 /* ============================================================================
+ * 2026-08-13 WAVE 2 -- STATE: score 30 with -R and without -R, size 924 == the
+ * golden 924.  THE ENTIRE INTEGER BODY IS NOW BYTE-IDENTICAL TO GOLDEN.  The
+ * only residual is the four-row FP cluster (6 registers x 5 = 30):
+ *     golden  mul.s $f0,$f0,$f0 / mul.s $f2,$f2,$f2 / add.s $f6,$f0,$f2
+ *                                                   / c.le.s $f6,$f12
+ *     ours    mul.s $f6,$f0,$f0 / mul.s $f4,$f2,$f2 / add.s $f8,$f6,$f4
+ *                                                   / c.le.s $f8,$f12
+ * Same opcodes, same sources, same slots -- only the DESTINATIONS differ:
+ * golden recycles the dying operand register in place, we take fresh ones.
+ *
+ * WHAT CLOSED THE `andi a1,v1,0xffff' ROW (the one-line residual of wave 1).
+ * The wave-1 diagnosis was right about the WIDTH and wrong about WHICH VALUE
+ * the extra variable holds.  Golden's block is
+ *     lbu  a0,%lo(D_800BE9A0)(a0)   <- a0 is a VARIABLE holding D_800BE9A0
+ *     or   a1,v1,zero               <- a1 is IDO's "copy the variable operand
+ *     slt  at,a0,v1                    of an assignment into a fresh temp"
+ *     subu t4,a1,a0
+ * i.e. the int-width carrier holds *D_800BE9A0*, not the timer halfword, and
+ * the `move' is then a plain temp copy that no u16 truncation can touch.  The
+ * frame admits no new local (sum(sizeof) is exactly 16), so the carrier has to
+ * be the otherwise-unused s32 PARAMETER arg1, which is homed in the caller's
+ * arg slot (`sw a1,0x54(sp)' in golden's prologue) and therefore costs nothing.
+ *   ladder, all at size 924 unless noted, all measured with the stale-object
+ *   guard through buildlock:
+ *     wave-1 best (u16 t bound inside the guard) ..................... 230
+ *     arg1 carries the halfword, tests re-read ...................... 360
+ *     arg1 carries the halfword, bound before the guard ..... 375 (920 B)
+ *     `if (arg1 = arr[arg0])' ............................... 375 (920 B)
+ *     arg1 carries the halfword, BOTH tests read arg1 ................ 65
+ *       (that one already emits golden's `move'; its residual was a0<->a1)
+ *     arg1 carries D_800BE9A0  (SHIPPED BELOW) ....................... 30
+ *   and on top of the 30 body, these are all EXACTLY 65 (=the a0/a1 swap) or
+ *   worse, i.e. the halfword-carrier family is a dead end, not this one:
+ *     `D_800BE9A0 >= arg1' .......................................... 65
+ *     `if (arr[arg0] != 0)' guard ................................... 65
+ *     `arg1 = (s32)arr[arg0]' ....................................... 65
+ *     `t = arr[arg0]; if (t) { arg1 = t; ... }' ..................... 65
+ *     arms swapped, `if (arg1 > D_800BE9A0)' ................ 370 (920 B)
+ *     compound `arr[arg0] -= D_800BE9A0' ............................ 75
+ *
+ * THE FP CLUSTER IS THE ONLY THING LEFT, and it is NOT reachable from the
+ * distance expression.  Every row below is a real differ score with the guard,
+ * size 924 == golden unless noted:
+ *     merge the mask test and the distance test with `&&' ............ 30
+ *     extra parentheses round the sum ............................... 30
+ *     `rad >= (dist)' instead of `(dist) <= rad' .................... 30
+ *     explicit `(f32)' casts on the two s16 spawn fields ............ 30
+ *       -- four mutually exclusive respellings at EXACTLY 30: the
+ *          N-NO-OPS signal, so no construct in this neighbourhood is it
+ *     x-term written first ......................................... 550
+ *     both differences negated, z-term first ........................ 80
+ *     both differences negated, x-term first ....................... 555
+ *     the two `continue' guards swapped ........................... 1000
+ *     mask test hoisted to `if ((mask & bit) == 0) continue;' 4410 (972 B)
+ *     all four conditions merged with `&&' ............... 6016 (780 B)
+ * AND THE DECISIVE ONE -- there is NO second f32 local in golden.  Merging the
+ * two disjoint loop counters onto `i' frees the last 4-byte home slot, and
+ * declaring it `f32 dist' to carry the sum scores 50, not less: `dist' takes
+ * $f12 and pushes `rad' out to $f14 (three extra rows), which proves golden has
+ * exactly ONE FP variable web (rad in $f12).  So the `mul.s $f0,$f0,$f0'
+ * in-place reuse cannot come from a named local, and the residual is a pure
+ * FP-temp tie-break: golden reuses the dying operand register, we take a fresh
+ * one.  Same opcodes, same sources, same slots, invariant across ~28 sources.
+ * ============================================================================ */
+
+/* ============================================================================
  * PARKED NEAR-MISS  func_150825C0  (game_AEB40.c)   1560 -> 95
  * Measured 2026-08-13 with the stale-object guard (rm the .o AND the
  * asm-processor intermediate, make, assert the object exists). Calibration:
@@ -268,12 +334,12 @@ s32 func_150825C0(s32 arg0, s32 arg1) {
     if (((GameAEB40Spawn *)D_800D20FC)[arg0].unk6 == 0x7FFF) {
         return 0;
     }
-    t = (*(u16 **)&D_800D2110)[arg0];
-    if (t != 0) {
-        if ((*(u16 **)&D_800D2110)[arg0] <= D_800BE9A0) {
+    if ((*(u16 **)&D_800D2110)[arg0]) {
+        arg1 = D_800BE9A0;
+        if ((*(u16 **)&D_800D2110)[arg0] <= arg1) {
             (*(u16 **)&D_800D2110)[arg0] = 0;
         } else {
-            (*(u16 **)&D_800D2110)[arg0] = (*(u16 **)&D_800D2110)[arg0] - D_800BE9A0;
+            (*(u16 **)&D_800D2110)[arg0] = (*(u16 **)&D_800D2110)[arg0] - arg1;
         }
         return 0;
     }
