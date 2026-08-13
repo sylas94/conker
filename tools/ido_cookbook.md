@@ -1395,3 +1395,67 @@ looked. Before deleting or re-running a permuter directory, list its `output-*` 
 `score.txt` — and note `chain` does `rm -rf output-*`, so copy first.
 (These directories are now gitignored: 1.6M of regenerable state that was one `git add .` away from
 the repo.)
+
+## Which SIDE OF A GUARD a statement is written on picks the basic block for a spilled reload
+
+The control for the third residual class (a reload landing in the wrong basic block), and it
+closed a function that was one instruction from done.
+
+Golden put the reload of a pointer in the compiler-generated LOOP PREHEADER — the block after the
+count guard, beside the hoisted `addiu fp,sp,0x84`. The candidate emitted it as a plain statement
+before the guard. The loop shape that fixes placement was known to re-rank three saved registers,
+costing 20 rows, so placement and ranking appeared to trade against each other.
+
+They do not. **Split the two initialisations across the guard:**
+
+    i = 0 BEFORE the guard, p = spheres INSIDE it   ->  0   <-- unique
+    i and p BOTH inside the if                      ->  65
+    i and p BOTH before the if                      ->  60  (the plain `for` shape)
+    p before the if, i inside                       ->  60
+
+Only one of four arrangements lands on zero. The mechanism: `i` must be live across the guard so
+its home is fixed before the preheader exists, while `p`'s reload has to be *generated inside* the
+preheader — and **the preheader only exists for statements written between the guard and the
+loop.** So when golden has an instruction in a preheader you cannot reach, do not reshape the whole
+loop; move that one statement to the other side of the guard and leave the rest where it is.
+The continuation edge is load-bearing here too: rewriting the bone-mask test as a goto-free
+positive nest scores 95.
+
+## THE PERMUTER'S SCORE IS NOT asm-differ's SCORE
+
+A measurement trap that would have shipped three regressions. A permuter run on a parked base
+produced three `output-*` dirs whose internal scores looked like improvements; re-scored on the
+real asm-differ they were all WORSE:
+
+    permuter 1140  ->  asm-differ 1482
+    permuter 1326  ->  asm-differ 1428
+    permuter 1437  ->  a whitespace-only reformat of the base
+
+**Never accept a permuter output on its own number.** Re-score every candidate with
+`diff.py -o <func> -R --max-lines 4096` before believing it beat anything, and diff the output
+against the base first — a "win" that is pure reformatting is the permuter round-tripping your
+source, not improving it.
+
+## Reading golden's `$at` chain to prove a preheader ordering is unreachable
+
+Technique worth reusing when the residual is a reordering inside one block. Every `lui` that
+materialises a constant or a `%hi` writes `$at`, so the `lui`s are **totally ordered** and the
+chain can be read straight off both listings:
+
+    GOLDEN  1.0f, %hi(A18), 10.0f, 199.0f, 233.0f, %hi(A1C), %hi(A20)
+    MINE    1.0f, %hi(A18), %hi(A20), %hi(A1C), 10.0f, 199.0f, 233.0f
+
+Golden's last five land in `f30,f28,f26,f24,f22` — one descending hoist group covering every
+callee-saved FP register — so golden's two global loads sit where only a hoist can sit. Two
+measurements then close both halves:
+
+* a pre-loop SOURCE statement can never be emitted after the hoist group (moving one to be the
+  last pre-loop statement moved its own `lui` past the globals but still left it before the
+  hoists);
+* the two global loads CANNOT be hoists, because **IDO never hoists a global load out of a
+  call-containing loop** — golden proves it against itself by reloading two other globals with
+  `lui`+`lwc1` every iteration.
+
+Jointly contradictory under any model where preheader order follows source statement order, so no
+statement ordering, cast spelling or declaration type can reach it. That is an honest bail with a
+mechanism, not a plateau.
