@@ -12,7 +12,10 @@ extern struct172 D_80086CC4[];
 extern void func_150302F0(struct127 *arg0, s32 arg1);
 extern s32 D_80086CAC[];
 extern void func_15036C70(struct127 *arg0);
-extern void func_150825C0(s32 arg0, s32 arg1);
+/* Returns 0 from every early-exit path (`or v0,zero,zero` before the epilogue in
+   golden) and tail-returns func_15082A44's result, so the symbol is s32-valued;
+   func_1508295C below simply discards the value. */
+extern s32 func_150825C0(s32 arg0, s32 arg1);
 extern u8 D_800D2100;
 extern u8 D_800D2101;
 extern u8 D_800BE590;
@@ -72,7 +75,128 @@ void func_15081E0C(struct127 *arg0, u16 arg1, u8 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_AEB40/func_15081E78.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AEB40/func_150825C0.s")
+/* --- func_150825C0 -------------------------------------------------- */
+
+/* structs.h's struct258 describes the same table but is only 0x10 bytes and has
+   no members below 0x4; golden indexes D_800D20FC with a 0x30 (48) byte stride
+   (`sll t4,s2,2; subu t4,t4,s2; sll s2,t4,4`) and reads u8 fields at +1/+2, so
+   this file uses a local 0x30-byte view instead of retyping the shared header. */
+typedef struct {
+    u8  unk0;
+    u8  unk1;
+    u8  unk2;
+    u8  unk3;
+    s16 unk4;
+    s16 unk6;
+    s16 unk8;
+    s16 unkA;
+    u8  padC[0x24];
+} GameAEB40Spawn;
+
+extern u8 *D_800D210C;
+extern f32 D_8009CC30;
+extern f32 D_8009CC34;
+extern f32 D_8009CC38;
+extern f32 D_8009CC3C;
+extern f32 D_800D9C10[][4][4];
+extern s32 func_150A6360(void *arg0, f32 arg1[4][4], f32 arg2, f32 arg3, f32 arg4,
+                         f32 arg5, f32 arg6, f32 arg7);
+extern s32 func_15082A44(GameAEB40Spawn *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
+
+/* The two squared component distances are NAMED f32 LOCALS with a self-assigning
+   square, not one inline expression.  That is what makes IDO emit golden's
+   `mul.s $f0,$f0,$f0' / `mul.s $f2,$f2,$f2': an inline `(a-b)*(a-b)' allocates a
+   FRESH fp temp for the product, an in-place `d = d * d' on a local reuses the
+   operand's register.  The two forms are visible side by side in already-matched
+   code -- game_83300's func_1505A6F8 (`x = ...; x *= x;' -> mul.s $f2,$f2,$f2)
+   versus func_1505693C (`(temp_f2 * temp_f2)' -> mul.s $f6,$f2,$f2).  Written
+   inline here the function scores 30 with the identical instruction stream and
+   only those two products plus their sum landing in fresh registers. */
+s32 func_150825C0(s32 arg0, s32 arg1) {
+    f32 rad;
+    s32 i;
+    u16 t;
+    u8 ok;
+    u8 flags;
+    s32 j;
+    f32 dx;
+    f32 dz;
+
+    if (D_800D210C[arg0] != 0) {
+        return 0;
+    }
+    if (((GameAEB40Spawn *)D_800D20FC)[arg0].unk2 == 1) {
+        return 0;
+    }
+    if (((GameAEB40Spawn *)D_800D20FC)[arg0].unk6 == 0x7FFF) {
+        return 0;
+    }
+    /* arg1 is dead on entry -- this block returns on every path -- so it is the
+       function's only spare int-width storage, and it is homed in the caller's
+       arg slot (`sw a1,0x54(sp)'), which is why golden's copy of D_800BE9A0 into
+       it (`or a1,v1,zero' feeding `subu t4,a1,a0') costs no frame bytes. */
+    if ((*(u16 **)&D_800D2110)[arg0]) {
+        arg1 = D_800BE9A0;
+        if ((*(u16 **)&D_800D2110)[arg0] <= arg1) {
+            (*(u16 **)&D_800D2110)[arg0] = 0;
+        } else {
+            (*(u16 **)&D_800D2110)[arg0] = (*(u16 **)&D_800D2110)[arg0] - arg1;
+        }
+        return 0;
+    }
+    flags = ((GameAEB40Spawn *)D_800D20FC)[arg0].unk1;
+    if (arg0 >= 5) {
+        t = flags & 6;
+        if (t != 0) {
+            if (t == 2) {
+                rad = D_8009CC30;
+            } else if (t == 4) {
+                rad = D_8009CC34;
+            } else {
+                rad = D_8009CC38;
+            }
+            ok = 1;
+            for (j = 0; j < D_8008FD8C; j++) {
+                if (D_800CC2D0[j].interaction_state == 0) {
+                    continue;
+                }
+                if (D_800CC2D0[j].unk127 == 0xFF) {
+                    continue;
+                }
+                if (*(u16 *)((u8 *)&D_800D2138 + 0x208) &
+                    (1 << D_800CC2D0[j].unk127)) {
+                    dx = D_800CC2D0[j].x_position - ((GameAEB40Spawn *)D_800D20FC)[arg0].unk6;
+                    dx = dx * dx;
+                    dz = D_800CC2D0[j].z_position - ((GameAEB40Spawn *)D_800D20FC)[arg0].unkA;
+                    dz = dz * dz;
+                    if (dx + dz <= rad) {
+                        ok = 0;
+                        break;
+                    }
+                }
+            }
+            if (ok != 0) {
+                return 0;
+            }
+        }
+    }
+    if (flags & 8) {
+        ok = 1;
+        for (i = 0; i <= D_80082FA0; i++) {
+            if (func_150A6360((void *)((i * 0x180) + D_800BE628), D_800D9C10[i],
+                              ((GameAEB40Spawn *)D_800D20FC)[arg0].unk6,
+                              ((GameAEB40Spawn *)D_800D20FC)[arg0].unk8 + 150,
+                              ((GameAEB40Spawn *)D_800D20FC)[arg0].unkA,
+                              150.0f, 150.0f, D_8009CC3C) != 0) {
+                ok = 0;
+            }
+        }
+        if (ok == 0) {
+            return 0;
+        }
+    }
+    return func_15082A44((GameAEB40Spawn *)((arg0 * 0x30) + (s32)D_800D20FC), arg0, 0, 0, 0);
+}
 
 void func_1508295C(s32 arg0, s32 arg1, s32 arg2) {
     s32 start;
