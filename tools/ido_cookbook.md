@@ -2814,3 +2814,97 @@ PARKED:
       already EXACT across all 238 instructions. The whole residual is a register-vs-memory inversion
       between two locals living across calls: golden keeps `alpha` resident in t0 and `actor` purely
       in memory at 0x20(sp); ours does the opposite.
+
+# ================================================================================
+# MEASUREMENT TRAP #6: SPLAT INTERIOR SYMBOLS GIVE A FUNCTION A NONZERO SCORE FLOOR
+# ================================================================================
+
+**A function can be CORRECT and still never reach score 0 at object level.** This is new, it is
+mechanical, and it is screenable in advance.
+
+## The mechanism, verified from the binary
+func_15084558 clears a 187-element array: `for (k=0;k<187;k++) if (D_800D1588[k]==x) D_800D1588[k]=0;`
+IDO unrolls it with a 3-iteration FRONT PEEL (187 & 3 == 3) then 46 iterations of 4. The peel
+references indices 0..3 as four separate addresses - and because the STILL-ASM version of the
+function referenced those addresses, **splat minted them as separate symbols**:
+
+    undefined_syms_auto.txt:7108-7111
+      D_800D1588 = 0x800D1588;   D_800D158C = 0x800D158C;
+      D_800D1590 = 0x800D1590;   D_800D1594 = 0x800D1594;
+    golden .s references: D_800D1588 x6, D_800D158C x4, D_800D1590 x4, D_800D1594 x2
+
+`expected/build/src/game_AEB40.c.o` is built FROM THAT PRAGMA, so it carries **addend-0**
+relocations against the invented names. Any C spelling of `D_800D1588[k]` emits R_MIPS_HI16/LO16
+against the BASE with addend 4/8/0xC. **o32 relocations are REL, so the addend lives IN THE
+INSTRUCTION FIELD** - confirmed by objdump:
+
+    mine      addiu v0,v0,12                      R_MIPS_LO16 D_800D1588
+    expected  addiu v0,v0,%lo(D_800D1594)         R_MIPS_LO16 D_800D1594   (addend 0)
+
+The LINKED bytes are IDENTICAL - the linker adds the addend either way - so the ROM stays
+byte-perfect. But `cmp` on `.text` can never be clean and the score has a floor of ~6 instructions.
+**Such a function is verifiable ONLY by the ROM gate.**
+The only way to force addend-0 relocations is to name the three interior symbols and hand-write the
+peel - i.e. a manual unroll. That is a fake and was correctly refused.
+
+## THE PRE-FILTER, run it before picking any target with an array loop
+tools/splat_interior2.sh: flag any function whose golden .s references a RUN of >= 3 CONSECUTIVE
+4-byte-spaced symbols (the unrolled-peel signature; the confirmed case had a run of 4).
+**542 stubbed functions carry it**, run lengths 3 to 67:
+    run 3: 141   run 4: 111   run 5: 63   run 6: 54   run 7: 40   run 8: 36   ... run 67: 2
+CAVEAT, so nobody over-reads this: a run is a RISK INDICATOR, not a verdict. It only bites if your C
+would index a base array where golden names the interior slots. Short runs may be genuinely distinct
+adjacent scalars. Long runs (>10) are near-certainly arrays.
+**AND DO NOT USE THIS AS A LICENCE.** func_15084558 is parked at 3240 with 25 non-register diffs, of
+which only ~6 are the artifact. The floor is ~6 instructions, so the artifact explains a residual of
+6 - it does not excuse 3240. A function is not "done but unscoreable" until everything except the
+floor is gone.
+
+# ================================================================================
+# THE ACTOR-INDEX LAW NEEDS A FOURTH CLAUSE: BOTH FORMS CAN APPEAR IN ONE FUNCTION
+# ================================================================================
+
+func_15084558 contains the `div` POINTER-DIFFERENCE form AND the sll/subu/addu 812 LADDER, ten
+instructions apart: `arg0 - D_800CC2D0` for the self-index test, and `D_800CC2D0[j]` for the scan.
+So the brief's rule "if the div is there, declare NO index local" is right about the div and wrong
+as a whole-function rule - **you still need the loop index local for the ladder.** Decide per SITE,
+not per function.
+
+**NEW, and it cost real points: the div expression must be written INLINE INSIDE THE INNER LOOP.**
+    if (j == arg0 - D_800CC2D0) continue;      <- correct
+    idx = arg0 - D_800CC2D0;  ... loop ...     <- wrong
+Golden computes the difference AFTER the loop's `blez` guard - i.e. IDO hoisted it from inside the
+loop into the preheader. Assigning it to a local before the loop puts it BEFORE the `blez` and costs
+the match. This is the same family as the which-side-of-a-guard lever: **let IDO do the hoisting;
+writing the hoist yourself puts the code in the wrong basic block.**
+
+# ================================================================================
+# `lw $at,0(reg)` / `sw $at,off(reg)` PAIRS ARE A STRUCT COPY, NOT SCALAR ASSIGNMENTS
+# ================================================================================
+
+**`$at` is never a data register in ordinary C expressions** - IDO reserves it for the assembler and
+for compiler-generated BLOCK MOVES. So a run of `lw $at` / `sw $at` pairs is a struct assignment.
+In func_151BDD8C six such pairs decode as
+    objA->unk34 = sp88[i];   objA->unk40 = sp70[i];
+where both sides are 12-byte structs. Writing them as six FIELD assignments would have required the
+members to be s32 (lw/sw) while the array is fp - an obvious contradiction, and the giveaway that
+the struct-copy reading is the right one.
+Add this to the reading rules: **see `$at` as a data register => look for an aggregate assignment.**
+
+# ================================================================================
+# WAVE 41: ZERO CLOSED, ONE TRAP FOUND, TWO FUNCTIONS ADVANCED
+# ================================================================================
+
+func_151BDD8C  3267 -> 1685. **Frame and every stack offset now match** (0xA8; ra 0x14, p-spill
+    0x28, ptr arrays 0x4C/0x5C, vec arrays 0x70/0x88, actor home 0xA0). Residual: 8 instructions
+    where golden MATERIALISES a sub-pointer (`addiu v0,a0,0x110`) that IDO folds into the load
+    displacement here - proved NOT a spelling issue, since inline cast, declared typed pointer and
+    declared s32 all produce BYTE-IDENTICAL output at 1685; the only case that does not fold is when
+    the assignment and its uses sit in different basic blocks, which is exactly the case that already
+    matches. Plus 4 instructions of scheduling and a systematic one-slot register shift, so the
+    12-scalar local set is still not exactly right.
+func_15084558  3800 -> 3240, and it is the trap case above. Everything from the prologue through the
+    outer-loop preheader is byte-identical INCLUDING both stack slots, the saved-register roles and
+    the 812 ladder. Of 25 non-register diffs, ~6 are the splat artifact (unfixable), 4 are a dead
+    4x-unrolled counting loop that also walks a pointer, and 4 are a loop-invariant RANKING inversion
+    with 9 candidates for 9 saved registers on both sides.
