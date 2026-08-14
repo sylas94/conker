@@ -174,7 +174,100 @@
  * flat; what has NOT been tried is changing the FIRST use (`sp7C = ...`) so that
  * the CSE'd 2-index partial is created by a different statement shape while the
  * first block's bytes are preserved.
- * =========================================================================== */
+
+ *
+ * ---------------------------------------------------------------------------
+ * WAVE 2026-08-13 -- 1529 RE-CONFIRMED; THE 0x48/0x4C READING IS NOW DISPROVEN
+ * ---------------------------------------------------------------------------
+ * expected/ was ABSENT at the start of this wave (it is gitignored).  Reseed
+ * with the pragma IN place before measuring anything:
+ *     mkdir -p expected/build/src
+ *     make -C conker build/src/game_11C2B0.c.o VERSION=us
+ *     cp conker/build/src/game_11C2B0.c.o expected/build/src/
+ * Control with the pragma in: score 0 and .text/.rodata/.data all IDENTICAL.
+ * This file: 1529 with AND without -R, 816 bytes, frame 0x90.  Golden 804 / 0x90.
+ * Scoring is NOT truncated: func_150F16DC starts at 0x28dc and .text ends at
+ * 0x34d0, so restrict_to_function() hands the differ 3060 bytes -- under the
+ * 4096 cap.  The tail functions are identical, so the whole 1529 is ours.
+ *
+ * THE RESIDUAL, RE-DERIVED: three instructions, all one defect.  Golden forms
+ * `arg1 * 12` ONCE into $v0 at 2b34 and consumes it at BOTH 2b8c (a3, the
+ * D_800A174C address) and 2b98 (a2, the reloaded D_800A168C 2-index partial).
+ * Ours forms it at 2b34, spends it immediately on a2 (`addu a2,t9,t1` at 2b40),
+ * and then re-emits the whole sll/subu/sll chain at 2b6c/2b84/2b8c for a3.
+ * Equivalently: golden emits a2 LAST in the block, we emit it FIRST.
+ *
+ * FRAME ARITHMETIC (settled).  0x90 = 0x38 outgoing args + 4 pad + 4 ra +
+ * 0x10 temp region + 0x40 locals.  `Header` is 6 bytes (structs.h says
+ * "size 0x6") and IDO rounds each home to 4, so the nine declared locals come
+ * to exactly 0x40 and sit at 0x50..0x8F in BOTH builds.  The 16-byte temp
+ * region 0x40..0x4F is likewise present in both; golden puts its two spills at
+ * the TOP of it (0x4C then 0x48, descending in creation order: 168C partial
+ * first, D_800A180C pointer second) and we put ours at the BOTTOM (0x44,0x40),
+ * i.e. two temps we create EARLIER than golden's already hold 0x4C/0x48.
+ * The likeliest source of those two is defect (3): golden hoists
+ * `addiu v0,sp,0x80` (&sp80) above the `arg0->id == 0x23` branch and keeps only
+ * `lui t2,%hi(D_800A1810)` in the delay slot, forming the full D_800A1810
+ * address INSIDE the else block; we form the whole symbol address early and
+ * &sp80 late.  So golden's first temp is &sp80 and ours is &D_800A1810.
+ *
+ * ** DISPROVEN: "golden's 0x48/0x4C are declared locals." **  Eight variants
+ * that make the two spilled partial addresses explicit locals were measured;
+ * every single one grows the frame, which golden's 0x90 cannot absorb:
+ *   f32 (*p168)[3] declared last  -> 5110 / 812 B / frame 0x98
+ *   f32 (*p168)[3] declared first -> 5030 / 812 B / frame 0x98
+ *   u8 *p180 declared last        -> 1898 / 816 B / frame 0x98
+ *   both, p168 first              -> 5396 / 812 B / frame 0xA0
+ *   both, p180 first              -> 5396 / 812 B / frame 0xA0
+ *   p168 used at the call only    -> 5110 / 812 B / frame 0x98
+ *   p168 with `(s32) p168[arg1]`  -> 1874 / 816 B / frame 0x98
+ *   p168 as f32* with `[arg1*3]`  -> 4532 / 800 B / frame 0x98
+ * They are compiler temps.  The 0x40-vs-0x48 boundary must be bought by
+ * changing IDO's temp CREATION ORDER, not by adding storage.
+ *
+ * NEW NEGATIVES THIS WAVE (real differ, -R, --max-lines 4096; score/size/frame):
+ *   both arrays as a 12-byte struct type (V3 D_800A168C[2][4][2])  1529/816/144
+ *   only D_800A174C as a struct                                    1529/816/144
+ *   only D_800A168C as a struct                                    1529/816/144
+ *   open leading dimension  f32 D_800A168C[][4][2][3]              1529/816/144
+ *   a2 as array-decay (no &); both as array-decay                  1529/816/144
+ *   a3 with an explicit [0] subscript                              1529/816/144
+ *   `sp7C = (f32 *) &D_800A168C[..][..][..];`                      1529/816/144
+ *   `D_800A180C[sp83][arg1] + 0` at the call                       1529/816/144
+ *   `(func_150ADA68()*D_800A18B0)+D_800A18B4` extra parens         1529/816/144
+ *   arg4 (and the prototype's 14th param) typed void *             1529/816/144
+ *   mask test operands swapped (`arg0->unk94 & sp80.unk0[arg1]`)   1529/816/144
+ *   sp78 assigned before sp7C                                      4344/816/144
+ *   `i = arg1` s32 local, both addresses indexed by i              4806/820/152
+ *   distinct spelling of the 180C index to break its pointer CSE   4394/820/152
+ *   three scalars sp58/sp54/sp50 instead of `s32 sp50[3]`          1729/816/144
+ *   `sp83 = 0` moved before the mask test                          7152/800/152
+ *   the id test inverted (`!= 0x23` with the branches swapped)     2734/816/144
+ *   Header fill: unk4 before unk2                                  1737/816/144
+ *   Header2 filled through sp78 instead of sp84                    3248/828/144
+ *   arg1 guard before the arg2 guard                               1547/816/144
+ *   the three entry guards merged into one ||                      6960/800/152
+ * The last two are useful positives-by-elimination: golden really does test
+ * arg2 < 4 first and really does use three separate `if`s.
+ *
+ * WHERE TO GO NEXT.  The address-argument axis (spelling, array dimensioning,
+ * array element type, the prototype types, declaration order) is now fully
+ * enumerated across two waves and is completely FLAT at 1529 -- every variant
+ * that keeps the emitted code legal lands on 816 bytes.  The remaining lever is
+ * defect (3): make IDO hoist `addiu v0,sp,0x80` instead of the D_800A1810
+ * symbol address over the `arg0->id == 0x23` branch.  If that flips, the temp
+ * numbering shifts by two, the spills move to 0x48/0x4C, and the last block's
+ * allocation -- which is what decides whether `arg1 * 12` survives to a2 -- is
+ * re-rolled.  Untried shapes for it: a different `Pair150F16DC` layout (a u16
+ * field instead of `u8 unk0[2]`, with the index read done on a cast), and
+ * moving the `sp80 = D_800A1810;` copy relative to the `sp83` store.
+ *
+ * PERMUTER: previously run for ~3,400 iterations; all seven "wins" were
+ * `perm_temp_for_expr` new_var insertions and were rejected.  Re-seeding it is
+ * only worth it with a frame-AND-size gate: require 804 bytes, not just
+ * frame 144, because every dead end above sits at 816.
+ * ===========================================================================
+ */
 
 #include <ultra64.h>
 #include "functions.h"

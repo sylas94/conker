@@ -1,8 +1,29 @@
 /* ===========================================================================
  * func_150380C0  --  game_64120.c  --  936 B, frame 0x80, 1 callee, 27 regions
  *
- * BEST HONEST SCORE: 1220 (this file, EXACT frame) / 635 (chained-store variant,
- * frame 0x88 -- rejected, see below).  Cold start this wave.
+ * ###########################################################################
+ * ## THIS FUNCTION IS **SCORE 0**.  IT IS FINISHED C.  IT CANNOT BE SHIPPED.##
+ * ###########################################################################
+ * Spelling the two constants as ordinary literals -- which is what they ARE --
+ *     out[0..2] = -99999.0f;      thresh = 1600000000.0f;
+ * gives, measured this wave through make + buildlock + the real asm-differ:
+ *     func_150380C0  flags='-R'  score=0
+ *     func_150380C0  flags=''    score=0
+ * and the emitted .rodata of build/src/game_64120.c.o is
+ *     0000 c7c34f80 4ebebc20 c7c34f80 00000000
+ * i.e. D_8009863C, D_80098640, D_80098644 in golden's exact ROM order and with
+ * golden's exact values.  There is nothing left to find in this function: the
+ * control flow, the declaration list, all 11 parameter types, the
+ * func_15037698 prototype and every register/stack/scheduling decision are
+ * confirmed byte-exact against golden.
+ *
+ * IT CANNOT BE SHIPPED because those 12 bytes cannot be linked to 0x8009863C.
+ * The full proof, and the death of the "just migrate the range" plan, is in
+ * the RODATA MIGRATION section at the bottom of this comment.  Read it before
+ * anyone spends another hour on this function or on the migration idea.
+ *
+ * BEST SHIPPABLE SCORE: 1220 (the code below, `extern f32', EXACT frame 0x80).
+ * Re-measured this wave from this exact file: -R = 1220.  Unchanged.
  *
  * RESIDUAL CLASS: **rodata float literal** -- and the residual is PROVEN to be
  * EXACTLY FOUR INSTRUCTIONS, nothing else.  Probe (one variable changed, rest
@@ -10,6 +31,7 @@
  *
  *     out[0..2] = D_8009863C / D_80098644   (extern f32)      -> 1220
  *     out[0..2] = -99840.0f  (0xC7C30000, low16 == 0)         ->  410
+ *     out[0..2] = -99999.0f  (the TRUE value, needs .rodata)  ->    0
  *
  * and at 410 the ENTIRE asm-differ output is these four lines and nothing else:
  *     14a8: lui  at,%hi(D_8009863C)        vs  lui  at,0xc7c3
@@ -36,13 +58,84 @@
  *             ; lwc1 f6,0(v1) ; swc1 f6,4(s2) ; lwc1 f8,0(v1) ; swc1 f8,8(s2)
  * The two extra fp webs per site also renumber the fp allocator downstream,
  * which is where most of the 1220 comes from.
- * => needs_rodata_migration = YES.  Migrating the 0x8009862C..0x80098644 float
- *    run into game_64120's own .rodata (conker.us.yaml `[0xADDR, .rodata,
- *    game_64120]' + splat --modes ld) closes this function at 0.  It cannot be
- *    done piecemeal while func_15036CE8 / 15036F34 / 15037698 / 150379DC /
- *    15038468 / 15038620 in the same TU are still #pragma GLOBAL_ASM and own
- *    literals interleaved in that same block (D_8009862C is already consumed by
- *    the live func_15037880).
+ * => needs_rodata_migration = YES, and the migration is IMPOSSIBLE.  See below.
+ *
+ * ---------------------------------------------------------------------------
+ * RODATA MIGRATION -- INVESTIGATED TO EXHAUSTION THIS WAVE, ANSWER IS **NO**
+ * ---------------------------------------------------------------------------
+ * The plan was `- [0x23D0FC, .rodata, game_64120]' covering exactly the twelve
+ * bytes D_8009863C..D_80098647, with [before] and [after] left as asm blocks.
+ * It fails on TWO independent, separately fatal grounds.  Both are measured,
+ * not argued.
+ *
+ * (1) MIGRATION GRANULARITY IS 16 BYTES, NOT 4.  IDO emits `.rodata' with
+ *     sh_addralign = 16 and pads sh_size up to a multiple of 16.  Every one of
+ *     the 14 objects in this tree that has a .rodata says align 16 / size 0x10
+ *     or 0x20 or 0x30 -- no exceptions.  Building this function with the real
+ *     literals gives 12 bytes of content in a 0x10-byte section:
+ *         .rodata PROGBITS 00000000 00fc90 000010 01  A  0  0 16
+ *         0000 c7c34f80 4ebebc20 c7c34f80 00000000
+ *     A migrated range must therefore start 16-byte-aligned AND be a multiple
+ *     of 16 AND have its trailing bytes be zero in the ROM.  Ours has none of
+ *     the three:
+ *         0x8009863C mod 16 == 0xC   -> ld would insert 4 bytes of alignment
+ *                                       padding and shift ALL later rodata;
+ *         ROM 0x23D108 == 42652EE0   -> the 4 pad bytes would overwrite
+ *                                       D_80098648 (func_15038468's 57.29578).
+ *     The two migrations that DO exist in conker.us.yaml are not
+ *     counter-examples, they are the rule: 0x247780 (game_138520) and 0x24F480
+ *     (game_1ED0F0) are each a COMPLETE original-TU rodata block, 16 bytes,
+ *     16-aligned, ending in the TU's own natural zero padding --
+ *         00247780: 38c90fdb 00000000 00000000 00000000
+ *         0024f480: 459c4000 3dcccccd 00000000 00000000
+ *     You can only ever migrate a WHOLE TU rodata block.
+ *
+ * (2) THE WHOLE-BLOCK ESCAPE HATCH IS CLOSED BY THE SEGMENT LAYOUT.  Doing the
+ *     whole block would normally be fine even with stubs, because splat's
+ *     `migrate_rodata_to_functions' (default true) writes each still-stubbed
+ *     function's rodata into its own asm/nonmatchings/<tu>/<func>.s, and
+ *     tools/asm-processor reserves the space in source order with a
+ *     `const char _asmpp_rodataN[N]' placeholder (asm_processor.py:844).  It
+ *     does not fire here.  splat only pairs a `.rodata' subsegment with a `c'
+ *     subsegment of the same name when they are SIBLINGS, and siblings are
+ *     assigned per parent code segment (segtypes/common/code.py:259-270).
+ *     conker.us.yaml puts every C text subsegment in segment `game'
+ *     (vram 0x15000000, line 238) and every rodata subsegment in segment
+ *     `game_data' (vram 0x80082B20, line 781).  They can never be siblings.
+ *     MEASURED: I set `- [0x23CD10, .rodata, game_64120]' (the whole block)
+ *     and ran a FULL `make -C conker extract'.  Result: conker.ld correctly
+ *     switched to `build/src/game_64120.c.o(.rodata);', every
+ *     asm/nonmatchings/game_64120/*.s was regenerated with .text ONLY (a grep
+ *     for `.section .rodata' over the entire nonmatchings tree still returns
+ *     zero files), and D_80098250 / D_8009862C / D_8009863C / jtbl_80098254
+ *     were all still in undefined_syms_auto.txt.  i.e. the stubs' rodata is
+ *     simply DROPPED.  Migrating the block therefore requires every one of its
+ *     rodata owners to be live C first.
+ *
+ * THE OWNERSHIP MAP OF THE BLOCK (0x23CD10..0x23D1AF = 0x80098250..0x800986EF,
+ * 0x4A0 bytes, 16-aligned at both ends, 27 symbols, all owned by this TU and
+ * laid out in exact function order):
+ *     func_15036C70  LIVE    D_80098250
+ *     func_15036CE8  stub    jtbl_80098254(0x100) D_80098354/58/5C
+ *     func_15036F34  stub    D_80098360 jtbl_80098364(0x2C4) D_80098628
+ *     func_15037880  LIVE    D_8009862C
+ *     func_150379DC  stub    D_80098630/34/38
+ *     func_150380C0  <-- us  D_8009863C/40/44
+ *     func_15038468  stub    D_80098648
+ *     func_15038620  stub    D_8009864C/50/54/58/5C
+ *     func_1503A830  stub    jtbl_80098660(0x7C) D_800986DC/E0/E4/E8
+ *     func_1503B708  stub    D_800986EC
+ * So the price of this function is: decompile func_15036CE8, 15036F34,
+ * 150379DC, 15038468, 15038620, 1503A830, 1503B708 (three of them jump-table
+ * functions), AND convert func_15036C70's D_80098250 and func_15037880's
+ * D_8009862C from `extern f32' to literals in the same edit.  Nothing less
+ * links.  That is a whole-TU campaign, not a one-line yaml change.
+ *
+ * (The yaml experiment was fully reverted: conker.ld, undefined_syms_auto.txt,
+ * undefined_funcs_auto.txt, asm/data/23CD10.rodata.s and every file under
+ * asm/nonmatchings/game_64120/ all compare IDENTICAL to their pre-experiment
+ * snapshots after a second full re-split, and the code bin still links to
+ * 842e3d348e3c8ae0039e2ab367ad492f9b5266d8.)
  *
  * RULED OUT, each measured:
  *   extern const f32 D_8009863C;                        -> 1220 (no change;
@@ -92,7 +185,8 @@
  *   1472  first draft (self/other as locals, decl order self,other,i,best,...)
  *    635  + frame decode decl order + in-place squares + chained triple store
  *   1220  + plain triple store  (frame becomes EXACT 0x80; parked form)
- *    410  + inlinable-literal probe (semantically wrong, evidence only)
+ *    410  + inlinable-literal probe -99840.0f (semantically wrong, evidence)
+ *      0  + the TRUE literals -99999.0f / 1600000000.0f -- correct C, unlinkable
  *
  * BRANCH SENSES read off golden (IDO reverses: source `X == Y' -> `beq Y,X',
  * and the RIGHT operand's load is emitted first):
@@ -122,6 +216,11 @@
  *   real project symbol -- undefined_syms_auto.txt:7065).  Writing it as
  *   D_800CC2D0[best].pad139[2] relocates against D_800CC2D0+0x13B instead and
  *   shows as a two-instruction diff.
+ *
+ * TO SHIP THE DAY THE BLOCK IS MIGRATED: delete the three `extern f32
+ * D_800986xx' lines and substitute  D_8009863C -> -99999.0f,
+ * D_80098640 -> 1600000000.0f, D_80098644 -> -99999.0f.  That is the entire
+ * edit and it was measured at score 0 both with and without -R.
  *
  * NO shared header was edited.  struct127 from include/structs.h is used for
  * every field except the three s16 at 0x1A4/0x1A8/0x1AA, which structs.h has as

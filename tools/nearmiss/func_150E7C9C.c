@@ -1,7 +1,97 @@
 /* ===========================================================================
  * func_150E7C9C  --  game_113D60.c  --  848 B, frame 0xA8, 4 callees, 12 fp
  *
- * BEST SCORE: 1466 (asm-differ -R --max-lines 4096).  Cold start this wave.
+ * BEST SHIPPABLE SCORE: 1466 (asm-differ -R --max-lines 4096).  Re-measured
+ * this wave from this exact file: 1466 with -R and 1466 without.  Unchanged.
+ *
+ * ###########################################################################
+ * ## THE RODATA MIGRATION IS IMPOSSIBLE.  DO NOT RE-PLAN IT.               ##
+ * ###########################################################################
+ * `- [0x245E10, .rodata, game_113D60]' (four bytes, D_800A1350 alone) cannot
+ * work, on two independent grounds, both measured this wave:
+ *   (1) IDO emits .rodata with sh_addralign 16 and pads sh_size to a multiple
+ *       of 16 -- all 14 objects in this tree that have a .rodata are align 16,
+ *       size 0x10/0x20/0x30, no exceptions.  Building this TU with the literal
+ *       inlined gives
+ *           .rodata PROGBITS 00000000 00de40 000010 01  A  0  0 16
+ *           0000 3edcee77 00000000 00000000 00000000
+ *       i.e. FOUR bytes of content in a SIXTEEN byte section.  0x800A1350 is
+ *       16-aligned, so the start is fine, but the twelve pad bytes would land
+ *       on ROM 0x245E14..0x245E1F, which is
+ *           00245e10: 3edcee77 442ec000 43ff8000 3f483128
+ *       -- D_800A1354 / D_800A1358 / D_800A135C, all owned by func_150E81A8
+ *       and func_150E8470.  The ROM breaks.  A migrated range must be
+ *       16-aligned, a multiple of 16, AND end in bytes that are zero in the
+ *       ROM; only a COMPLETE original-TU rodata block satisfies that, which is
+ *       exactly what conker.us.yaml's two existing migrations (0x247780 and
+ *       0x24F480) are.
+ *   (2) The whole-block alternative is closed by the segment layout.  splat's
+ *       `migrate_rodata_to_functions' would put each still-stubbed function's
+ *       rodata into its own asm/nonmatchings/*.s (asm-processor reserves it in
+ *       source order via `const char _asmpp_rodataN[N]', asm_processor.py:844)
+ *       -- but splat only pairs `.rodata' with `c' when they are SIBLINGS, and
+ *       siblings are assigned per parent code segment
+ *       (splat/segtypes/common/code.py:259-270).  conker.us.yaml puts C text in
+ *       segment `game' (vram 0x15000000) and rodata in segment `game_data'
+ *       (vram 0x80082B20), so they never are.  MEASURED on the game_64120
+ *       block: after `- [0x23CD10, .rodata, game_64120]' and a FULL re-split,
+ *       every nonmatchings .s came back .text-only and the rodata symbols were
+ *       still in undefined_syms_auto.txt.  The stubs' rodata is dropped.
+ *   Migrating this TU's block (0x245C90..0x245EAF) therefore needs ~14 more
+ *   functions decompiled first: func_150E68B0, 150E6B84, 150E7290, 150E8470,
+ *   150E8B1C, 150E8D5C, 150E9178, 150E93DC (and the live func_150E81A8 /
+ *   150E6E34 / 150E70EC / 150E71E4 / 150E88C0 / 150E8A80 / 150E90DC switched
+ *   from `extern f32' to literals in the same edit).
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THE LITERAL PROBE ACTUALLY SAYS -- THE OLD 604 FIGURE WAS WRONG
+ * ---------------------------------------------------------------------------
+ * Re-run with the CORRECT value spelled inline (0.4315068424f == 0x3EDCEE77,
+ * the true D_800A1350), everything else identical to the code below:
+ *     score -R = 399, score without -R = 399   (not 604; 604 was 0.4375f,
+ *     which is a DIFFERENT constant and mismeasures the residual)
+ * At 399 the asm-differ output contains **no inserted, deleted or reordered
+ * instruction** -- every diff line is either a temp-register renumbering or a
+ * stack-frame constant.  Exactly two things are wrong:
+ *     13ec: addiu sp,sp,-0xa8   vs   addiu sp,sp,-0xa0     (8 bytes short)
+ *     1498: addiu s5,sp,0x98    vs   addiu s5,sp,0x90      (sp98 8 lower)
+ * plus a $t-register rotation running through the whole loop
+ * (golden lh t2 / t9 / t0 / t1 / t3 ... where mine has t0 / t8 / t9 / t0 / t1).
+ * Both symptoms are ONE cause: golden reserves 8 more bytes between the gp
+ * saves (which end at 0x80, identical in both) and sp98, i.e. it has two more
+ * 4-byte webs than my source creates.  Golden never touches 0x80..0x97: the
+ * only stack references above 0x80 in the golden .s are swc1/lwc1 0x98 and
+ * 0x9C.  They are DEAD HOLES -- the frame-decode lever's signature for
+ * declared-but-register-resident autos.
+ *
+ * !! CORRECTION TO THE OLD FRAME DECODE BELOW !!  The claim "the parked source
+ * reproduces this EXACTLY: frame 0xA8" is a FALSE POSITIVE.  The parked source
+ * only reaches 0xA8 because the `extern f32' hoist forces $s6 to be saved,
+ * which costs 8 bytes of save area.  Take the hoist away and the true frame is
+ * 0xA0.  The declaration list is 8 bytes SHORT of golden and always has been.
+ *
+ * TWO CANDIDATE DECLARATION LISTS TRIED AND MEASURED (both worse, both
+ * genuinely informative -- do not repeat them):
+ *   A. `s32 a; s32 b;' declared after sp98, carrying the two ternaries:
+ *          a = (func_150ADA20() & 1) ? 4 : 0;
+ *          b = (func_150ADA20() & 1) ? 2 : 0;   ... func_150E75A0(..., a | b, ...)
+ *      -> 399 becomes 409, frame STILL 0xa0 (a and b land in $s1/$s2, which are
+ *      callee-saved, so IDO gives them no home), AND it introduces a new error
+ *      golden `or a3,s1,s2' vs mine `or a3,s2,s1'.  Since the inline-ternary
+ *      form gets that `or' operand order RIGHT, this measurement CONFIRMS the
+ *      inline ternaries are golden's form.  Naming them is wrong twice over.
+ *   B. `s32 idc; s32 typ;' declared after sp98 for the last two arguments
+ *          idc = obj->unkC; typ = obj->unk1;  ... func_150E75A0(..., idc, typ)
+ *      -> 1694, frame 0xB0 (these DO get homed, +8, and IDO then also hoists
+ *      into $s6/$s7 costing another 8) and s5 becomes s7.  Far worse.
+ *   So the missing 8 bytes are NOT the ternary results and NOT the two byte
+ *   loads.  Whatever they are, they are two webs that IDO keeps in CALLER-saved
+ *   registers (that is what earns a home) and that add no instruction of their
+ *   own.  Next wave should hunt there, using the literal probe (0.4315068424f)
+ *   as the measuring instrument, because the `extern f32' form's frame is
+ *   contaminated by the $s6 save and cannot see this at all.
+ *
+ * OLD FIGURE, RETAINED FOR THE RECORD: 1466 was and is the shippable score.
  *
  * RESIDUAL CLASS: **rodata float literal** (NOT allocation / scheduling /
  * basic-block / as1-peephole).  The whole 1466 is the downstream cascade of a
@@ -31,18 +121,17 @@
  * is where the 1466 comes from.
  *
  * PROOF (single-variable experiment, everything else identical):
- *     (sp98[0] * D_800A1350) + 64.0f          -> 1466   ($s6 hoist present)
- *     (sp98[0] * 0.4375f)    + 64.0f          ->  604   ($s6 hoist GONE;
- *         0.4375f = 0x3EE00000, low16 == 0, so it inlines as lui+mtc1 with no
- *         rodata.  Every branch target and every saved-reg offset in the
- *         prologue/epilogue then matches golden exactly -- diff lines 3,5,
- *         8..19, 199..214 all disappear.  0.4375f is semantically WRONG, it is
- *         only a probe.)
- * => needs_rodata_migration = YES.  Unblocking needs the 0x800A130C..0x800A1364
- *    literal run migrated into game_113D60's own .rodata (conker.us.yaml
- *    `[0xADDR, .rodata, game_113D60]` + splat --modes ld), which cannot be done
- *    while the other ~20 functions of this TU are still #pragma GLOBAL_ASM and
- *    own literals interleaved in the same block.
+ *     (sp98[0] * D_800A1350)      + 64.0f     -> 1466   ($s6 hoist present)
+ *     (sp98[0] * 0.4375f)         + 64.0f     ->  604   (wrong constant; the
+ *         hoist is gone but this figure understates how close the C is)
+ *     (sp98[0] * 0.4315068424f)   + 64.0f     ->  399   (the TRUE constant;
+ *         0x3EDCEE77 goes to the TU's own .rodata, IDO treats it as a literal
+ *         again, the $s6 hoist disappears and NOT ONE instruction differs from
+ *         golden -- only the frame size and the $t rotation.  See the block at
+ *         the top of this comment.)
+ * => needs_rodata_migration = YES, and the migration is IMPOSSIBLE; the two
+ *    independent proofs are at the top of this comment.  This function is
+ *    blocked behind a whole-TU campaign, not behind a yaml line.
  *
  * RULED OUT for the hoist, each measured:
  *   extern const f32 D_800A1350;                       -> 1466 (no change)

@@ -1813,3 +1813,70 @@ parameter types and the callee prototypes were already correct**.
 **Two rodata entries holding the same value are a tell.** `D_8009863C` and `D_80098644` are both
 `.float -99999` — IDO emits one constant-pool entry per source-level literal, so duplicates in a
 block mean literals, not shared globals.
+
+# ================================================================================
+# RODATA MIGRATION: THE GRANULARITY IS A WHOLE TU BLOCK. NARROW SPLITS ARE IMPOSSIBLE.
+# ================================================================================
+
+A wave was planned around migrating 12 bytes and 4 bytes out of shared rodata blocks, on the
+reasoning that only the target function's own constants needed to move. That plan was WRONG, and
+the reason is worth knowing before anyone re-plans it.
+
+## Law 1 - a migrated range must be 16-aligned, a multiple of 16, and zero-padded in the ROM
+
+IDO emits .rodata with sh_addralign 16 and pads sh_size to a multiple of 16 - measured on 14 of 14
+objects in this tree that have any rodata. ld honours that alignment. So a 12-byte range starting
+at a vram address congruent to 0xC mod 16 gets padding inserted BEFORE it and four bytes of zero
+padding written AFTER it, on top of the next function's constants.
+
+Both migrations that already exist in conker.us.yaml are complete original-TU blocks ending in that
+TU's own natural zero padding - that is the rule, not a coincidence:
+
+    0x247780: 38c90fdb 00000000 00000000 00000000   [0x247780, .rodata, game_138520]
+    0x24F480: 459c4000 3dcccccd 00000000 00000000   [0x24F480, .rodata, game_1ED0F0]
+
+PRE-FLIGHT TEST for any proposed migration: confirm range_start % 16 == 0, and dump the ROM at
+range_end to confirm zeros up to the next 16-byte boundary. Both candidates in that wave failed it -
+one sat at 0xC mod 16 with a real constant (42652EE0) four bytes past its end, the other had three
+live constants immediately after it.
+
+## Law 2 - the obvious workaround is permanently off in this repo
+
+Letting still-stubbed functions carry their own rodata in their nonmatchings .s is supported in
+principle: splat has migrate_rodata_to_functions, and asm-processor emits const char _asmpp_rodataN
+placeholders for exactly this. It can NEVER fire here. splat pairs a .rodata subsegment with a c
+subsegment only when they are SIBLINGS, and siblings are computed per parent code segment
+(splat/segtypes/common/code.py lines 259-270). Conker's yaml puts all C text in segment "game"
+(vram 0x15000000) and all rodata in segment "game_data" (vram 0x80082B20), so nothing is ever a
+sibling.
+
+Proved by experiment rather than by reading: setting a whole-block migration produced a correct
+conker.ld line and intact symbol files - and DROPPED every stubbed function's rodata (a grep for
+".section .rodata" under asm/nonmatchings returned 0 files). Turning it on would mean merging the
+two top-level segments, i.e. rewriting the linker script.
+
+## Consequence: rodata-blocked functions unlock in TU-LEVEL CLUSTERS, not individually
+
+To migrate a block you must first decompile EVERY function that owns a constant in it, and in the
+same commit convert every already-live consumer in that TU from extern f32 to a literal.
+For game_64120's block that is a cluster of seven: func_15036F34, func_150379DC, func_150380C0,
+func_15038468, func_15038620, func_1503A830, func_1503B708.
+
+So when the inlinable-literal probe says "the C is right and only the literal blocks me", the next
+question is not "how do I migrate this symbol" but "how big is the cluster that shares its block,
+and is that cluster worth a campaign?"
+
+### A finished function that cannot ship
+func_150380C0 with its true literals scores 0 - byte-exact against golden both with and without -R -
+and the object's own .rodata comes out as c7c34f80 4ebebc20 c7c34f80, golden's exact values in
+golden's exact order. The C is DONE. It is unshippable only because those twelve bytes cannot be
+linked to 0x8009863C. Park such a function with the literals in place and the reason recorded; it
+costs one yaml line the day its cluster closes.
+
+### Two corrections to a parked file, both from measuring rather than assuming
+* func_150E7C9C's note claimed "frame 0xA8 reproduced EXACTLY". Wrong: 0xA8 only arises from the s6
+  save that the extern hoist itself forces. The true frame is 0xA0.
+* Its probe figure of 604 was measured with the WRONG constant (0.4375f). With the true literal
+  0.4315068424f the residual is 399, and at 399 there is not one inserted, deleted or reordered
+  instruction - only the frame size, one addiu offset, and a t-register rotation.
+ALWAYS PROBE WITH THE TRUE VALUE; a convenient nearby constant measures a different function.
