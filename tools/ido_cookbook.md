@@ -2987,3 +2987,14 @@ What the wave is actually worth:
  3. an incidental confirmation that the screened-clean pool is real: with zero callees and zero
     float, three of the four targets had genuinely nothing left to get wrong, which is why they were
     already finished.
+
+## Reconciling the stubbed-function count (do this whenever a tool disagrees with grep)
+`grep -rc GLOBAL_ASM conker/src/ --include=*.c` gives 1741, but only **1737** are live
+`#pragma GLOBAL_ASM("...s")` lines. The other four are: one `#pragma GLOBAL_ASM_DISABLED`
+(game_18D770.c:176, func_151606A8 - deliberately NOT stubbed), two comments that merely mention
+the macro, and one commented-out pragma (init_B1B0.c:687).
+**PLUS a mechanism the pragma scan cannot see:** game_DAFA0.c:57 uses asm-processor's INLINE
+`GLOBAL_ASM(` block form, with the assembly written directly in the C file and no `.s` reference at
+all (func_150AE280). There is exactly ONE of these in the tree.
+So the true count of still-stubbed functions is **1738**. Any tool that enumerates remaining work
+must handle both forms, and its total should be reconciled against the grep before use.
