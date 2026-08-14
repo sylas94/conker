@@ -65,6 +65,7 @@ struct header151A3504 {
     u8 unk14;
     u8 unk15;
     u8 pad16[0x2];
+    s32 unk18;
 };
 
 struct260 *func_151A3504(struct frame151A3504 *, u8);
@@ -134,7 +135,6 @@ void func_151A3390(void *arg0, u8 arg1) {
 }
 
 struct260 *func_151A3504(struct frame151A3504 *arg0, u8 arg1) {
-    s32 pad_dummy;
     struct header151A3504 sp8C;
     struct frame151A3504 sp3C;
     struct260 *temp_v0;

@@ -2556,3 +2556,132 @@ target with the same emitter shape, the same early-outs, the same timer idiom, t
 call and the same `s8 count; do{}while(count>0)` loop. Reusing its declaration list VERBATIM gave a
 byte-exact frame on BUILD #1, at score 140 out of a possible ~22,000. Cost: fifteen minutes of
 grepping. Mine the corpus before writing anything.
+
+# ================================================================================
+# THE ACTOR-ARRAY UNLOCK: STRENGTH REDUCTION FIRES ON A LOCAL, NOT ON A MEMORY LOAD
+# ================================================================================
+
+**This is the widest-reaching law found this session. 268 still-stubbed functions reference
+D_800CC2D0**, the actor array, whose stride is 812 == 0x32C. Every one of them multiplies an index
+by 812 somewhere, and every one of them can be got wrong in exactly the way below.
+
+    arg0->field_0x10 * 812        (u8 load)   -> li t0,0x32c ; multu ; mflo
+    s32 i = arg0->field_0x10;  i * 812        -> IDO's 9-instruction sll/subu/addu chain
+                                                 (4x-x, *4+x, *4-x, *4-x, *4  ==  812x)
+
+C integer promotion makes those two expressions IDENTICAL in meaning. IDO's strength reducer simply
+refuses to fire when the multiplicand is a MEMORY LOAD, and fires when it is a LOCAL. Cross-checked
+against the already-matched func_151557FC in the same TU, which multiplies an s32 parameter and does
+emit the chain.
+**SO: if golden shows the sll/subu/addu ladder, hoist the index into a local. If golden shows
+`multu`, feed the field load directly.** Reading which form golden used tells you whether the
+original source had an index variable.
+
+## Its companion: TWO SPELLINGS OF THE SAME ADDRESS KEEP A POINTER LOCAL ALIVE ACROSS A SWITCH
+Golden computed `obj` once before a switch (spilling it to its OWN home) and then RE-COMPUTED the
+identical `base + 812*i` four more times for the `.unk31C` member loads. Written the same way in C,
+IDO unifies all five, DELETES the entry computation and rematerialises the pointer in every arm.
+The fix is to spell the two uses DIFFERENTLY:
+    pointer:      &D_800CC2D0[arg0->field_0x10]     (raw field index)
+    member loads:  D_800CC2D0[i].unk31C             (local index)
+Worth **6370 -> 1960**, and the frame snapped from 0x58 to golden's 0x50 in the same build.
+**IMPORTANT NEGATIVE:** making them differ in any OTHER way is strictly worse - a byte-pointer cast
+on either side, `D_800CC2D0 + i`, and `*(T**)((u8*)base + i*812 + 0x31C)` all scored 8740 with frame
+0x60. This REFINES the earlier "2-D subscript vs pointer cursor" entry: **the distinguishing axis is
+raw-field-vs-local INDEX, not the addressing syntax.**
+
+# ================================================================================
+# HOW TO READ A TERNARY OFF GOLDEN: THE REDUNDANT BRANCH TO THE NEXT LABEL
+# ================================================================================
+
+    id = (p != NULL) ? p->f : 0;   ->  move v0,zero / beqz / nop / b <next label> / lbu
+    id = 0; if (p != NULL) id = p->f;   ->  beqzl + a duplicated successor instruction
+
+**A `b` whose target is the immediately-following label is the SIGNATURE OF A TERNARY** - it is the
+ternary's empty join block. When you see one in golden, write a ternary; when you see `beqzl` plus a
+duplicate, you wrote a ternary where golden had an if. Worth 6370 -> 2405 on its own.
+
+# ================================================================================
+# SPLITTING `t = a->field - GLOBAL;` INTO TWO STATEMENTS IS A REAL LEVER
+# ================================================================================
+
+    one statement:   lw <global> ; lh <field> ; subu v0,tX,tY
+    two statements:  lh v0,0xe(s0) ; lw t7,0(v1) ; subu v0,v0,t7
+Split into `t = a->field; t -= GLOBAL;` the field load goes **straight into the result register** and
+the operand order follows source order. One edit applied at two sites took a function 1460 -> 400.
+GENERALISATION: when golden's binary op writes its result into the register that already held one
+operand, that operand was loaded by a SEPARATE STATEMENT.
+
+# ================================================================================
+# SEVEN UNNAMED FRAME-SHAPING LOCALS: SIX REMOVED, ONE HONESTLY UNEXPLAINED
+# ================================================================================
+
+ROOT CAUSE - one type, five wrong copies. func_15147A80 is itself decompiled (game_174BF0.c:169)
+and does `memcpy((u8 *)temp_v0 + 0x10, arg0, 0x1C)` - it reads **0x1C** bytes from the header. Five
+callers declared that header as 0x18 and made up the 4-byte difference with a dummy local.
+Corroborated twice independently: game_105FC0.c already spells the same type correctly (with
+`u8 pad16[2]; s32 unk18;` and no dummy), and func_151D7830 already declares `s32 unk18` and writes
+it. NOTE the callee's `arg2` is NOT the header size - it varies (0x18/0x1C/0x24/0x60), so it is a
+stride; that was checked rather than assumed.
+
+**PLACEMENT LAW: the dummy sits IMMEDIATELY ABOVE the struct it belongs to.** First-declared ==
+highest address, so a local declared just before an aggregate is that aggregate's TRAILING PADDING.
+All five fixed sites match that shape.
+
+**THE ONE LEFT IN PLACE, and why leaving it is the right answer.** game_204660.c's `s32 pad_dummy[2]`
+is the only site where the dummy is declared LAST - i.e. BELOW every aggregate - so no struct exists
+for it to belong to. Ruled out with evidence: both aggregates are proven exactly 0x1C (by
+func_15147A80's own memcpy and by their member offsets); leading padding is impossible because
+golden pins both bases with `addiu a0,sp,0x4C` / `addiu a1,sp,0x68`; trailing padding is impossible
+by the placement law. It is compiler-TEMP space at sp+[0x44,0x4C), dead in our object. Measured with
+a FIRING CONTROL: deleting it gives frame 0x80 and breaks the match, while a 4-byte `s32 pad_dummy`
+gives frame 0x88 with .text BYTE-IDENTICAL - so the true shortfall is 4 bytes, not 8. Left as-is and
+documented in a code comment.
+ACCEPTANCE TEST APPLIED THROUGHOUT: all six TUs byte-identical before and after (.text/.rodata/.data),
+verified independently on a clean rebuild, and a baseline compare was run BEFORE any edit so the
+post-patch pass could not be a pre-existing one.
+
+## CRLF is worse than recorded: TWO of those six TUs are CRLF
+game_1E37D0.c AND game_204660.c. The safe pattern that worked: a bytes-mode patcher that detects the
+file's EOL, converts LF-authored patterns to it, asserts each pattern occurs EXACTLY ONCE, and
+post-asserts that no dummy survived. Resulting diff: 7 changed lines, zero line-ending churn.
+
+# ================================================================================
+# AUDIT FINDING: BANNED CONSTRUCTS ARE LIVE IN SHIPPED CODE
+# ================================================================================
+
+Surveying for the dummies turned up more. In live C, EXCLUDING libultra:
+  * **61 `volatile` occurrences in game/init code** (libultra has only 2, and those are legitimate
+    hardware-register access). Game-code examples are the classic pin form:
+    `*(volatile f32 *)&arg0->unk38 = arg0->unk38 + temp_f0;`
+  * **`do { } while (0)` wrappers**, including EMPTY ones (game_1D43B0.c:52, and one sitting
+    unreachable between switch cases in game_16EE20.c).
+This project's rules ban `volatile`-to-pin and empty `do {} while` for NEW work; these predate the
+current pipeline and are byte-perfect and ROM-gated, so they are DEBT, not fake matches shipped
+knowingly. They still matter: each is an unresolved question about what the original source said.
+**Handle them the way the dummies were handled** - find the honest spelling, accept ONLY a
+byte-identical result, and where no honest spelling exists, document it in place rather than
+silently reverting a shipped match. Do not delete a working match to satisfy a lint.
+
+# ================================================================================
+# WAVE 39 NEAR-MISS STATE
+# ================================================================================
+
+func_1515589C  COLD -> 400 in 10 builds (first build 9459). Every one of ~278 instructions and every
+    register matches except a 2-instruction tail: golden fills a delay slot from the TARGET, ours
+    from the PRECEDING instruction, absorbing an mfc1 hazard nop. Golden itself uses the
+    steal-the-preceding form at a byte-identical case-3 arm, so the two arms saw different input;
+    the only structural asymmetry is that case 1's arm is at switch-body top level while case 3's is
+    nested inside an `else`.
+func_150F64DC  still 120 (two reordering penalties). Count spelling is now exhausted, including
+    `% 2U`. Two corrections to earlier notes: conker/Makefile:146-149 documents IDO ITSELF
+    scheduling at -g3, so this is a ugen ucode-shape lever rather than an as1 hazard; and the
+    supposed ground-truth sibling func_150DFEFC does NOT actually contain the adjacency in question.
+func_151B7328  still 279. Part 1 did NOT hand over the answer (this function defines its own header
+    type, already 0x1C). DECISIVE NEGATIVE: a build-up ladder of nine probe functions with identical
+    locals and the same 11-arg call - each adding one construct, then all combined - ALL produced
+    frame 0x80 with TEMP == 0. With three waves of removal probes that never got below 0x108, the
+    STATEMENT LEVEL IS NOW RULED OUT IN BOTH DIRECTIONS. The 8-byte reserve is a register-pressure
+    artefact of the whole 233-instruction body, not any construct. Next step is pressure reduction
+    or the permuter, not construct enumeration.
+    Also measured: the known-wrong u8 RNG declaration is NOT a lever here (byte-identical at 279).

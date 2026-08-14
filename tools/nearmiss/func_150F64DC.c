@@ -127,6 +127,43 @@
  *      700   `func_15143134(..., src->obj->unk1D4)` instead of `obj->unk1D4`
  *      222   declaring header2 BEFORE header (confirms header is declared first)
  *
+ * ================= WAVE N+1 (this session): 5 MORE MEASURED NEGATIVES =======
+ * Base re-verified at 120 after re-applying the parked source to game_1228D0.c
+ * (bounded --max-lines 221).  Sweep harness carried a CONTROL that fired, so the
+ * uniform readings below are real, not the CRLF/no-op harness trap:
+ *      base       120     count = (func_150ADA20() & 1) + 2;
+ *      mod2U      120     count = (func_150ADA20() % 2U) + 2;
+ *      u32mod2    120     count = ((u32)func_150ADA20() % 2U) + 2;
+ *      mod2Uadd   120     count = 2 + (func_150ADA20() % 2U);
+ *      mod2       585     count = (func_150ADA20() % 2) + 2;     <- CONTROL fired
+ *      CTRLand3   125     count = (func_150ADA20() & 3) + 2;     <- CONTROL fired
+ * WHY `% 2U` WAS WORTH TESTING AND WHY IT IS NOW DEAD: every other RNG use in
+ * this function and in the matched sibling func_150DFEFC is spelled `% NU`
+ * (`% 9U`, `% 0x3DU`, `% 0x65U`, `% 0x2BU`, `% 0x12U`, `% 0x5BU`), so `& 1` was
+ * the odd one out and `% 2U` strength-reduces to the same `andi`.  It is a
+ * DIFFERENT ucode operation reduced at a different point in the pipeline, which
+ * is exactly the class of change that moved func_1515589C by 1000 points this
+ * wave -- and here it is byte-identical.  The count expression is now exhausted.
+ *
+ * ALSO SETTLED THIS WAVE:
+ *  -- The interleave is NOT introducible/removable by the count spelling, so it
+ *     is not an operand-readiness effect on the chain's INPUT.
+ *  -- `cc -S` CANNOT be used to separate ugen from as1 here: the recompiled IDO
+ *     segfaults ("Fatal error in: /usr/lib/ugen  Signal 11 - core dumped") on
+ *     -S with `-32 -O2 -g3 -mips2 -o32` over the asm-processor output.  Do not
+ *     re-attempt; find another way to see the pre-as1 stream if that matters.
+ *  -- conker/Makefile:146-149 documents that **IDO ITSELF SCHEDULES at -g3**
+ *     (it hoists `addiu sp,sp,N` into the `jr ra` delay slot, which -g0 does
+ *     not).  So this residual is most likely ugen's scheduler, not as1's, and
+ *     the lever is therefore a ucode-shape change, not an as1 hazard.
+ *  -- Read the matched sibling func_150DFEFC in full (game_10CD70.c:265-310).
+ *     It does NOT contain the adjacency in question -- its `count = ...;` is
+ *     immediately followed by `do {`, never by a call whose first argument is a
+ *     %hi/%lo global -- so it is NOT ground truth for this ordering after all.
+ *     Its declaration order is also different (src, obj, header, header2, count;
+ *     count LAST), whereas this function's frame pins src, obj, count, pos,
+ *     header, header2.  Do not expect the sibling to settle the ordering.
+ *
  * NEXT THINGS TO TRY, in order:
  *   1. the TU-aware permuter is set up and selftested at $HOME/perm/func_150F64DC
  *      (permuter_tu.sh, base chained to the 120 source).  Selftest: (a) PASS,
@@ -146,7 +183,24 @@
  *      without changing the instruction multiset -- look for a matched function
  *      elsewhere in the corpus that has an s8 counter initialised from an RNG
  *      call IMMEDIATELY followed by a call whose first argument is a %hi/%lo
- *      global, and copy its spelling exactly.
+ *      global, and copy its spelling exactly.  (func_150DFEFC is NOT such a
+ *      function -- checked this wave, see above.  Widen the search to any
+ *      matched caller of func_15143134: game_11C2B0.c and game_14FF90.c both
+ *      call it, and whichever one has a live value spilled to a local home
+ *      immediately before the call will show whether golden's uninterleaved
+ *      form is normal or exceptional.)
+ *   3. THE UNTESTED CLASS.  Everything measured so far changes the count
+ *      statement or the call's spelling -- i.e. the two statements that are
+ *      being interleaved.  What has NEVER been varied is the code BEFORE the
+ *      block: the `func_10010F88` 10-argument call whose stack stores
+ *      (`sw t2,0x1c(sp)`, `sw t3,0x20(sp)`, `sw t4,0x24(sp)`) and the two
+ *      spills `sw v1,0x84(sp)` / `sw v0,0xc0(sp)` sit immediately above it.
+ *      `lw t7,0xc0(sp)` is a LOAD FROM THE SLOT ONE OF THOSE STORES WROTE, so a
+ *      store/load alias edge is the one mechanism that could pin it in place --
+ *      and that edge exists only if ugen's scheduler treats the region as one
+ *      scheduling unit rather than stopping at the `jal func_150ADA20`.  Vary
+ *      the func_10010F88 argument expressions (which of them are stack-passed,
+ *      and their evaluation order) and watch whether `lw t7,0xc0(sp)` moves.
  */
 
 /* ---- BEST MEASURED VERSION (120).  Paste over the pragma in game_1228D0.c ----

@@ -3,6 +3,49 @@
  * NOT SHIPPED: the #pragma in conker/src/game_1E37D0.c is RESTORED and that file
  * is pristine.
  *
+ * ############ WAVE N+1: BASE RE-CONFIRMED 279, EIGHT MORE HYPOTHESES DEAD ######
+ * The struct-padding prediction made at "CALIBRATION" below was CORRECT and is
+ * now SHIPPED: Header151B6320 is 0x1C and Payload151B6320 is 0x30, both dummies
+ * in func_151B6320 are GONE, and the TU is byte-identical.  The canonical
+ * spelling of the 0x1C header (confirmed by func_15147A80 itself, which does
+ * `memcpy((u8 *)temp_v0 + 0x10, arg0, 0x1C)` at game_174BF0.c:169, and by
+ * Header150D8B88 in game_105FC0.c which already spells it right) is
+ *      u8 unk14; u8 unk15; u8 pad16[2]; s32 unk18;
+ * NOT `u8 pad16[6]`.  Header151B7328 below should adopt it: MEASURED
+ * codegen-neutral, still 279, frame still 0x108.
+ *
+ * Re-measured after that change: BASE 279, frame 0x108. Control (unkC 0x12C ->
+ * 0x12D) moved the score to 284, so the harness is live.  New negatives, all
+ * frame 0x108 and all siblings byte-identical:
+ *      header-first declaration order                279 -> 668
+ *      params u8 -> s32 (arg1, arg3)                 737
+ *      emit.unk3C/48 = header.unk0 (reuse the vec)   854
+ *      `obj = NULL; return (void *)obj;`             279 (byte-identical)
+ *      func_150ADA20 shadowed u8 -> s32 TU-wide      279 (byte-identical!)
+ * That last one MATTERS: the project's known-wrong `u8 func_150ADA20(void)` in
+ * functions.h is NOT a lever for this function.  Do not spend another wave on it.
+ *      no `tbl` local, index D_800AA460 directly     frame 0xF8, score 2737
+ * (0xF8 = 0x40 + 0xB0 + 8, i.e. T is STILL 8 -- removing an aggregate does not
+ * touch the reserve, it just moves everything down.)
+ *
+ * ---- THE BUILD-UP LADDER: THE 8 BYTES ARE NOT ANY CONSTRUCT (decisive) ----
+ * Every previous wave probed by REMOVAL from the full function and everything
+ * stayed 0x108.  This wave inverted the instrument: nine probe functions in this
+ * same TU, each with IDENTICAL locals (`Blk40 loc; s32 t;`) and the same 11-arg
+ * func_15147A80 call to hold argbuild at 0x2C, differing ONLY in one added
+ * construct.  ALL NINE came out at frame 0x80, i.e. TEMP == 0:
+ *      bare / memcpy(var size) / memcpy(const 0xC) / indirect call through
+ *      D_8008FB90[] / the f32 chain (func_150ADA68()*800.0f + D_800AA480) /
+ *      struct-rvalue copy from a cast global / a 6-arg call / D_800AA460[rng&3]
+ *      / AND ALL OF THEM COMBINED IN ONE FUNCTION.
+ * => No individual construct in this function reserves a compiler temp, and no
+ * combination of them does either.  Combined with the removal probes (nothing you
+ * take OUT gets it back to 0x100) this rules out the statement level ENTIRELY in
+ * both directions.  The reserve is a REGISTER-PRESSURE artefact of the whole
+ * 233-instruction body -- IDO plans a spill slot, coalesces the spill away, and
+ * keeps the reserve.  Attack register pressure or run the permuter; stop
+ * enumerating constructs.
+ *
  * ############ THE WIN THIS WAVE: 668 -> 279, DECLARATION ORDER ############
  * Declaring the two POINTER scalars FIRST
  *      Obj151B7328 *obj;  u8 *payload;  Header151B7328 header;  Data151B7328 data;
@@ -129,17 +172,17 @@
  * func_151B6320 (top of conker/src/game_1E37D0.c, LIVE C, scores 0) has the same
  * `func_15147A80(<11 args>)` + `memcpy(obj->unk98, &payload, N)` shape and gets
  * TEMP == 0:  framesize 0x90 = argbuild 0x2C + pad 0xC + saved 8 + locals 0x50.
- * Its declaration list is currently written as
+ * Its declaration list USED to be written as
  *      s32 top_dummy; Header151B6320 header; s32 pad_dummy;
  *      Payload151B6320 payload; s32 *temp_v0;
- * The two "dummy" locals are almost certainly NOT dummies: 4 + 0x18 + 4 + 0x2C
- * is numerically identical to header 0x1C + payload 0x30, i.e. Header151B6320 is
- * really 0x1C bytes (6 bytes of trailing pad, not 2) and Payload151B6320 is
- * really 0x30.  That is the SAME "the struct is 4-8 bytes bigger than you think"
- * trap that Header151B7328's `u8 pad16[6]` already encodes in this function.
- * Worth fixing there (it removes two unnamed frame-shaping locals from shipped
- * code, which the project's own rules call an open question), and worth
- * remembering as a general law: TRAILING STRUCT PADDING, NOT A DUMMY LOCAL.
+ * DONE, SHIPPED, AND CONFIRMED: the two "dummy" locals were not dummies.
+ * 4 + 0x18 + 4 + 0x2C is numerically identical to header 0x1C + payload 0x30, so
+ * Header151B6320 is really 0x1C and Payload151B6320 really 0x30.  Both dummies
+ * are now deleted and game_1E37D0.c is byte-identical to expected/.
+ * General law, now proven five times over: TRAILING STRUCT PADDING, NOT A DUMMY
+ * LOCAL -- and the tell is that the dummy sits IMMEDIATELY ABOVE the struct it
+ * belongs to (first-declared == highest address, so a local declared just before
+ * an aggregate is that aggregate's trailing padding).
  *
  * The other calibration siblings (all pool == 0):
  *   func_15131EE4 (game_15D730.c:370) -- SAME emitter struct (Struct15131EE4Local,
@@ -277,7 +320,9 @@ typedef struct {
     s32 unk10;
     u8 unk14;
     u8 unk15;
-    u8 pad16[6];
+    u8 pad16[2];
+    s32 unk18;      /* real member: func_15147A80 copies 0x1C from here, and
+                     * func_151D7830 (game_204660.c) writes this field. */
 } Header151B7328;
 
 /* The block func_15147A80 hands back in obj->unk98: a 0x10 byte descriptor with

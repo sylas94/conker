@@ -182,6 +182,16 @@ void func_151D7830(s32 *arg0) {
         u8 pad16[2];
         s32 unk18;
     } sp4C;
+    /* NOT a struct-size artefact -- deliberately LEFT IN PLACE.  Both aggregates
+     * above are proven to be exactly 0x1C: the header sp4C by func_15147A80's own
+     * memcpy((u8 *)temp_v0 + 0x10, arg0, 0x1C) (game_174BF0.c:169) and by its
+     * member offsets, and sp68 by its members plus memcpy(..., &sp68, 0x1C).
+     * Golden pins BOTH bases with `addiu a0,sp,0x4C` and `addiu a1,sp,0x68`, so
+     * neither can carry leading padding, and nothing is declared below sp4C for
+     * trailing padding to belong to.  The gap is compiler-TEMP space at
+     * sp+[0x44,0x4C) and is dead in our object.  Measured: deleting it gives
+     * frame 0x80 (breaks the match); a 4-byte `s32 pad_dummy;` gives frame 0x88
+     * with .text byte-identical, so the true shortfall is 4 bytes, not 8. */
     s32 pad_dummy[2];
 
     sp68.unk0 = (s32)arg0;

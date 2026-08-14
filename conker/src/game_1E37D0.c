@@ -19,6 +19,7 @@ typedef struct {
     u8 unk14;
     u8 unk15;
     u8 pad16[2];
+    s32 unk18;
 } Header151B6320;
 
 typedef struct {
@@ -32,6 +33,7 @@ typedef struct {
     f32 unk20;
     f32 unk24;
     s32 unk28;
+    s32 unk2C;
 } Payload151B6320;
 
 typedef struct {
@@ -60,9 +62,7 @@ typedef struct {
 } struct151B76CCArg0;
 
 void func_151B6320(f32 *arg0, u8 arg1, s32 arg2) {
-    s32 top_dummy;
     Header151B6320 header;
-    s32 pad_dummy;
     Payload151B6320 payload;
     s32 *temp_v0;
 

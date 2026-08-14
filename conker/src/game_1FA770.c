@@ -189,7 +189,6 @@ s32 func_151CEA20(f32 *arg0) {
 }
 
 struct260 *func_151CEAAC(void *arg0, void *arg1, u8 arg2, u8 arg3, s32 arg4) {
-    s32 pad_dummy;
     struct {
         f32 unk0;
         f32 unk4;
@@ -200,6 +199,7 @@ struct260 *func_151CEAAC(void *arg0, void *arg1, u8 arg2, u8 arg3, s32 arg4) {
         u8 unk14;
         u8 unk15;
         u8 pad16[2];
+        s32 unk18;
     } sp6C;
     struct {
         void *unk0;

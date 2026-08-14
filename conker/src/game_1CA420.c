@@ -54,6 +54,7 @@ typedef struct {
     u8 unk14;
     u8 unk15;
     u8 pad16[2];
+    s32 unk18;
 } Header1519D030;
 
 typedef struct {
@@ -168,7 +169,6 @@ void func_1519D000(struct s_1519CFA0 *arg0) {
 }
 
 s32 func_1519D030(void *arg0, s32 arg1, s16 arg2, u8 arg3, u8 arg4, s32 arg5) {
-    s32 pad_dummy;
     Header1519D030 header;
     Payload1519D030 payload;
     s32 temp_v0;
