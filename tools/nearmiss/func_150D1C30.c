@@ -212,6 +212,108 @@
  *     text assembly -- as1 itself errors with `binasm: No such file or
  *     directory' when run bare.  Snapshotting /tmp during a compile confirms
  *     there is no text .s stage to inspect or hand-edit.
+ *
+ * ############################################################################
+ * ############ WAVE 5 -- THE MINING IS DONE; BAIL AT 400, WITH A #############
+ * ############ CONSTRUCTIVE PROOF THAT THE GATE IS NOT LOCAL   ##############
+ * ############################################################################
+ *
+ * The brief's "one route with real information in it" -- mine the sites where
+ * as1 declined to convert -- has now been run to the end.  It is CLOSED, and
+ * closed by a counterexample rather than by inconclusive statistics.
+ *
+ * (A) THE CORPUS.  Disassembled all 464 objects of expected/build/src (i.e.
+ *     every golden function, not just the 2387 asm/nonmatchings ones), and
+ *     classified every conditional branch three ways:
+ *        FILL  14692  non-likely branch, delay slot NOT a nop
+ *        CONV   8451  likely branch whose delay-slot WORD == word at (target-4)
+ *                     -- the fingerprint of "copy the insn at L into the
+ *                        taken-only slot and point the branch at L+4"
+ *        DECL   2503  non-likely branch, nop slot, target a plain instruction
+ *     (scanner: scratchpad w5-m3p8vq/mine.py, mine2.py, mine3.py, an1.py, an4.py)
+ *
+ * (B) TWO THIRDS OF THE 2503 DECLINES ARE NOT EVIDENCE AT ALL.  They are as1's
+ *     OWN macro expansions, which it never revisits:
+ *        797  div/divu/rem guards -- `div zero,x,y / bnez y,L / nop / break 7'
+ *        541  target is `lui' (the %hi half of a lui/%lo relocation pair)
+ *        137  multu   47 mflo   20 div   9 mfhi   2 divu
+ *     Wave 4's headline number ("708 of 5121 target a plain lw, so the gate is
+ *     not duplicability") survives but shrinks: the honest population is
+ *        CLEAN: CONV 8308 / DECL 950  ->  as1 declines 10.3% of the time,
+ *        of which 422 sites are in LIVE C we compile ourselves.
+ *     ~175 of those 422 are in TUs the Makefile builds at `-g' or `-O1'
+ *     (init_1AAE0 66, game_221290 49, init_20000 26, init_1C060 24), so the
+ *     real -O2 -g3 decline population is roughly 250 sites.
+ *
+ * (C) NO FEATURE IS DETERMINISTIC.  Decline rate on the CLEAN population:
+ *        cand mnemonic      lw 14.5%  sw 17.0%  lwc1 10.4%  move 9.5%
+ *                           lbu 6.6%  li 3.9%   addiu 3.3%  lb 4.7%
+ *        block length       2 -> 5.9%   3 -> 9.1%   4 -> 9.9%   >=8 -> 15.6%
+ *        tested reg defined in the branch's own basic block:
+ *                           yes 10.9%   no 5.4%   (LIVE C: 12.6% / 5.0%)
+ *        forward 23.7% / backward 12.7%; label predecessor count: flat
+ *     Every candidate discriminator the brief listed was tested and every one
+ *     is a weak correlation, not a gate.  In particular `def_in_block' -- the
+ *     one this wave derived from the function itself (see (D)) -- comes out
+ *     BACKWARDS on the clean data.
+ *
+ * (D) THE 2x2 THAT KILLS THE "FILLED FROM ABOVE FIRST" MODEL.
+ *     FILL / CONV / DECL against (prev insn independent of the branch) x
+ *     (prev insn immovable, i.e. sitting on a label or in a delay slot):
+ *        indep=T immovable=T   FILL 2706  CONV  909  DECL  133   3.5% decl
+ *        indep=T immovable=F   FILL 5509  CONV 1581  DECL 1027  12.7% decl
+ *        indep=F immovable=T   FILL 2421  CONV 1148  DECL  353   9.0% decl
+ *        indep=F immovable=F   FILL 4056  CONV 4813  DECL  990  10.0% decl
+ *     Wave 4's "sharpest clue" (guard 2 is the only guard with a spare
+ *     NON-DEFINING instruction between the join label and the branch) predicts
+ *     the top-left cell should be the decline cell.  It is the LOWEST at 3.5%.
+ *     The clue is real about this function and false as a game-wide rule.
+ *
+ * (E) THE COUNTEREXAMPLE -- THIS IS THE RESULT.  You CAN drive the peephole
+ *     directly: compile a standalone probe with the repo's exact IDO flags
+ *     (scratchpad w5-m3p8vq/probe.sh, p1.c, p2.c).  Undo the conversions in
+ *     both listings and golden's guard 2 and probe fA's guard 2 are the SAME
+ *     WINDOW, instruction class for instruction class:
+ *
+ *         Lprev:  lw   RD, off(RB)      <- a label MOVED here by the preceding
+ *                 li   RC, 1               guard's own conversion
+ *                 beqz RD, L
+ *                 nop
+ *                 lw   RT, 0x14(RD)
+ *                 sb   RC, 0x9(RT)
+ *         L:      lw   RD, off2(RB2)
+ *
+ *       golden 150D1ED0  RD=v0 RC=s4 RB=v1 RB2=s1 off=0x28 off2=0x24  DECLINED
+ *       probe fA 0x18    RD=v0 RC=v1 RB=a0 RB2=a0 off=4    off2=8     CONVERTED
+ *
+ *     Same as1, same flags, same window, opposite decisions.  Sub-hypotheses
+ *     that die with it, each refuted by a probe rather than by a correlation:
+ *       * "the moved label pins the spare instruction"      -- fA has it too
+ *       * "the tested reg must be defined in the block"     -- fA's is not
+ *       * "the target's base register must be caller-saved" -- probe fC's
+ *         guard 2 duplicates `lw v0,0(s0)', s0 callee-saved, and CONVERTS
+ *       * "the peel/unrolled-body seam is special"          -- fC/fD have the
+ *         identical 2-peel + 4x-unrolled else arm under an outer if, and their
+ *         seam guard CONVERTS
+ *     Therefore the decision is NOT a function of the local instruction
+ *     pattern.  It depends on state that is not recoverable from the emitted
+ *     stream -- and our object and golden's are BYTE-IDENTICAL except for the
+ *     two words in question, so there is no local edit that can address it.
+ *
+ * (F) WHAT WOULD STILL BE A ROUTE, for anyone who returns here.  Only two:
+ *       1. a global change to the if arm's internal scheduling state that
+ *          leaves its ~700 bytes of output identical -- unsearchable by hand,
+ *          and the permuter's selftest FAILS on this TU (see above), so it
+ *          cannot be searched mechanically either;
+ *       2. an IDO driver flag not on the OPT_FLAGS axis.  Note the Makefile
+ *          line 221 already interpolates an EMPTY `$(LOOP_UNROLL)' into the
+ *          GLOBAL_ASM compile path and never sets it anywhere in the repo.
+ *          Nothing here suggests it is the answer; it is simply the only
+ *          untested knob left.
+ *
+ * BAIL: leave the #pragma in place at 400 / 828 B.  Two rows, both from one
+ * assembler decision, with a proof that the decision is not addressable from
+ * the C.  Do not spend another wave on the CFG, the spelling, or the flags.
  * ============================================================================ */
 
 #include <ultra64.h>

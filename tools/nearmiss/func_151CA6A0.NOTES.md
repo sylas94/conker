@@ -1,5 +1,108 @@
 # func_151CA6A0 — 1068 B, game_1F4650.c — parked at **asm-differ 517** (honest)
 
+## WAVE 2026-08-13 (e) — BAIL RE-CONFIRMED a SIXTH time. **The residual is now MEASURED, not
+## inferred**, and the "extra web" framing every previous wave used is WRONG in an important way.
+
+Base re-verified through `make` + `tools/buildlock.sh`: **517 with -R and 517 without -R** at 267
+instructions; pragma-in TU rebuilds to **0/0**. A private parallel scorer was calibrated against
+both (parked reproduces `.text` sha1 `2f773a84222dd706`) before any variant was believed.
+
+### THE HARD MEASUREMENT: golden does NOT have an extra temp *definition*
+
+Every previous wave described the residual as "golden spent one more temp web and emitted no
+instruction". Counting directly, out of golden's and the parked object's disassembly:
+
+| | golden | parked |
+|---|---|---|
+| instructions | 267 | 267 |
+| instructions **defining a `$t` register** | **59** | **59** |
+| instructions defining `$v0/$v1` | 13 | 13 |
+| instructions defining `$a0..$a3` | 35 | 35 |
+| leading instructions **textually identical** | — | **138** |
+
+The two objects agree on *every count*. Listing the 59 `$t` definitions in address order and
+pairing them, **definitions #1..#38 are register-for-register identical** (the last is `li t4,1`
+at instruction 122, block 2's third call constant) and **every definition from #39 on is offset by
+exactly one step of a single 10-cycle**:
+
+```
+t6 -> t9 -> t0 -> t2 -> t4 -> t3 -> t5 -> t7 -> t1 -> t8 -> t6      (mine -> golden)
+```
+
+Verified on all 21 differing definitions; the permutation is one 10-cycle covering every `$t`,
+with no exceptions. So the correct statement is: **IDO's temp ring pointer is one step further
+along in golden from definition #39 onward, with the same number of definitions.** The slot is
+consumed between instruction 138 (`li a2,0x58`, block 2's `memcpy` size) and instruction 139
+(block 3's `andi`) — i.e. exactly at block 3 — and it produces *no instruction at all*.
+
+That rules out the family of explanations a future wave might otherwise chase: it is not an extra
+computation hiding in a non-`$t` register, not a CSE difference (that would change a count), and
+not a scheduling artefact (the prefix is byte-identical). **A construct that consumes a ring slot
+and emits nothing is, by definition, a statement whose whole codegen folds away** — which is the
+banned no-op the previous two waves correctly refused. The N-NO-OPS TEST still fires: seven
+mutually-exclusive spellings all reach 172 with one byte-identical object.
+
+### THE ONE STRONG UNTRIED CONSTRUCT — the arg0 ALIAS — and the LAW that kills it
+
+The sibling near-miss `func_1516C934` was moved 1836 -> 1723 by giving a parameter a **second
+source-level name** (`Struct1516C934 *p = arg1;`), which reproduced golden's `move t0,s2` and
+created a real second web. That construct had never been tried here. It is now, in 13 forms:
+
+| variant (6th local, frame stays 248) | score |
+|---|---|
+| `void *obj = arg0;` used at all three arg0 sites | **517**, byte-identical |
+| used at the `sp44.unk0` store only / the first `0x23D` read only / the block-5 read only | **517 / 517 / 517**, all byte-identical |
+| used at both reads / declared but unused | **517 / 517**, byte-identical |
+| initialised in the declarator / initialised late (just before block 5) | **517 / 517**, byte-identical |
+| `u8 *obj` with `(s32)obj + 0x23D` and with `obj[0x23D]` | **517 / 517**, byte-identical |
+| `obj` declared in the `temp_v0` slot / the `temp_type` slot | **517 / 517**, byte-identical |
+| `s32 flag = arg1;` (alias the *other* parameter), all four `if` sites | 1779 @ **269** |
+
+**All thirteen produce the identical object `2f773a84222dd706`.** The reason is a general law worth
+carrying to other functions:
+
+> **An alias only creates a second web if the aliased value is register-resident.** In
+> `func_1516C934`, `arg1` lives in `s2` for the whole function, so `p = arg1` emits a real
+> `move`. Here `arg0` is **stack-homed** — golden does `sw a0,0xf8(sp)` once and then reloads it
+> with a *fresh* `lw` at every use (`lw t6,0xf8(sp)`, `lw t1,0xf8(sp)`, `lw t8,0xf8(sp)`, each
+> already its own temp web). There is no register value to copy, so IDO folds the alias into the
+> existing reloads and no web is created.
+
+This also retro-explains why the previous wave's seven address-taken-local variants were inert:
+same law, same reason.
+
+### Also measured this wave
+
+| variant | score | insns | `$t` defs | identical prefix |
+|---|---|---|---|---|
+| parked base | 517 | 267 | 59 | 138 |
+| block 3 as `spA0.unk14 &= ~0x4; spA0.unk14 &= ~0x2;` | 527 | 267 | **60** | 135 |
+| block 3 as `spA0.unk14 = spA0.unk14 & 0xFFF9;` | 517 | 267 | 59 | 138 |
+
+The middle row is instructive: it is possible to reach **60** `$t` definitions at 267
+instructions — and golden has **59**. So golden's ring advance genuinely corresponds to no
+definition, and any construct that supplies a *real* extra temp overshoots.
+
+### Axes varied vs axes not varied (the seven-axis rule)
+
+Varied this wave: **7 REFCOUNT** (the alias family — a construct class no previous wave tried,
+crossed over its use sites), **4 TYPE** (`void *` vs `u8 *` alias, subscript vs cast-add),
+**5 SCOPE/DECL** (alias in three declaration slots, declarator-initialiser vs statement),
+**2 ORDER** (alias initialised early vs late), **3 SHAPE** (block-3 two-step mask, explicit
+read-modify-write). **Not varied and still not varied:** the callee prototypes and the struct
+layouts (fixed by the byte-perfect sibling `func_150CF680` and by the frame/offset decode).
+
+### Verdict
+
+Six waves, ~950 measured variants. The residual is now *quantified*: identical instruction count,
+identical `$t`-definition count, an identical 138-instruction prefix, and a uniform one-step
+rotation of a single 10-cycle thereafter, plus the block-5 group permutation (which golden emits
+in exact source order while IDO canonicalises mine — 409 orderings, all >= 517). **Stop spending
+waves on func_151CA6A0.** The parked file is honest, semantically correct, instruction-count exact,
+frame- and offset-exact.
+
+---
+
 ## WAVE 2026-08-13 (d) — BAIL RE-CONFIRMED a FIFTH time. The two levers this wave was aimed at
 ## are now CLOSED BY MEASUREMENT, and the "what real value does the missing web hold?" question
 ## has an answer: **the binary cannot tell a named variable from `+= 0`.**

@@ -1731,3 +1731,41 @@ lone unconverted guard is the ONLY one in its function with a spare, non-definin
 **You cannot inspect `as1`'s input.** `cc -S` and `cc -K` both kill the recompiled `ugen` with
 SIGSEGV, and the intermediates are not kept. The assembler's behaviour has to be inferred from
 matched objects.
+
+## The as1 peephole gate is NOT a function of the local instruction pattern — closed by counterexample
+
+func_150D1C30 is a DOCUMENTED BAIL at 400, and it is closed constructively rather than by fatigue.
+
+The route was to mine the sites where `as1` declined to convert `beqz X,L / nop` into a
+branch-likely with the target duplicated. Mined across all 464 golden objects:
+
+    FILL 14,692   CONV 8,451   DECL 2,503
+
+**Two thirds of the declines are not evidence at all** — they are `as1`'s own macro expansions,
+which it never revisits: 797 div/divu `break` guards, 541 `lui` `%hi` halves, 137 `multu`, plus
+`mflo`/`mfhi`. The honest population is **950 declines against 8,308 conversions, a 10.3% decline
+rate**, and only ~250 of those sit in TUs built at the real `-O2 -g3` (init_1AAE0, init_20000,
+init_1C060 and game_221290 carry `-g`/`-O1` overrides).
+
+**No candidate discriminator is a gate.** Each is a weak correlation: candidate mnemonic spans
+3.3%–17.0%, block length 5.9%–15.6%, forward vs backward 23.7% vs 12.7%, label predecessor count
+flat. The "sharpest clue" from the previous wave — that the declining guard is the only one with a
+spare *non-defining* instruction between the join label and the branch — comes out **backwards**:
+that bucket has the LOWEST decline rate in the corpus (3.5%), not the highest.
+
+**And then the counterexample, which is what actually closes it.** A hand-built probe compiled with
+the real IDO and the repo's flags produces a guard whose window is the same instruction-class for
+instruction-class as golden's — a label moved onto a spare `li` by the preceding guard's own
+conversion, then `beqz RD,L / nop / lw RT,0x14(RD) / sb RC,0x9(RT) / L: lw RD,off(RB)`. The same
+`as1` with the same flags **CONVERTS the probe and DECLINES golden**.
+
+So the decision is not a function of the local instruction pattern. And since our object is
+byte-identical to golden apart from those two words, **no local edit can reach it**. That is a
+mechanism-backed bail, not a plateau.
+
+### Method note worth keeping
+When a corpus scan is meant to find a gate, first separate the tool's OWN artefacts from real
+decisions — here two thirds of the population was macro expansion and would have produced a
+confident wrong answer. Then, before trusting a correlation, build the 2×2 and check the predicted
+cell really is extreme; a clue that is true of one function can be the *opposite* of the corpus
+trend.
