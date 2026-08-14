@@ -1679,3 +1679,55 @@ golden's. The fix is to restore the boundary, which is a source-level control-fl
 Recognise the shape: an isolated `beqz`/`nop` pair in golden where you emit `beqzl` plus a
 duplicated instruction, with every register already correct, means look at where golden's basic
 blocks begin — not at the branch.
+
+## BOUNDARY CONDITION on "an unused parameter is free int-width storage"
+
+The law is real but narrower than it first looked, and the difference is worth stating because it
+cost a wave to establish.
+
+A parameter's home sits in the CALLER's frame — `sw a1,0xB8(sp)` where framesize is 0xB8 — so it is
+outside `sum(sizeof(locals))` entirely. That is exactly why it is free storage, and it is also why
+it **cannot make the local area BIGGER**.
+
+* Use it when you need an int-width carrier and the frame says no local fits. It adds storage
+  without moving the frame. (func_150825C0: 230 → 30.)
+* It does NOT help when the frame proves you need MORE declared-local bytes than you can account
+  for. func_151B65D4's frame demands 96 bytes of locals while every named value totals 88; a
+  parameter contributes nothing to that sum, so it cannot supply the missing 8. Six builds
+  spending or removing those two words all scored worse (865, 873, 2900, 3003, 3108).
+
+Diagnostic: work out whether your shortfall is in the LOCAL AREA (frame arithmetic) or in
+INT-WIDTH CARRIERS (codegen wants a word). The parameter lever answers only the second.
+
+## The `as1` branch-likely peephole: mechanism, and two refuted theories
+
+Following on from the fourth residual class. Read off the object rather than guessed:
+
+**Mechanism.** `as1` rewrites `beqz X,L / nop` by COPYING the instruction sitting AT `L` into the
+branch-likely (taken-only) delay slot and moving the label to `L+4`. The copy at `L` remains for
+the fall-through path, so both paths execute it exactly once and **no instruction is added** — which
+is why a converted and unconverted object are the same size, differing only in a `beqz`→`beqzl` row
+and a `nop`→duplicate row.
+
+**REFUTED: "a label with more than one predecessor is a block boundary as1 respects."** Disproved
+inside the same function — golden's epilogue join has THREE predecessors and `as1` still moved the
+label and duplicated `lw ra,0x74(sp)` into both delay slots. Hunting for a second reference to a
+join is a dead end.
+
+**REFUTED: "express the peel/main-body seam in C."** Writing an unrolled loop as an explicit 2+4
+pair of loops scores 8214 at 864 bytes — 36 bytes larger — because it destroys the unroller's own
+peel. The seam is the unroller's property; expressing it changes it.
+
+**The transform is SELECTIVE, so refusal is the common case.** Across every golden `.s`: 5,121
+conditional branches carry a `nop` delay slot, and **708 of those target a plain `lw`** — trivially
+duplicable, yet left unconverted. So the gate is not "is the target duplicable". Mining those 708
+sites against matched C is the one remaining route with real information in it.
+
+**Sharper statement of one open case**, for whoever picks it up: undo every conversion, and the
+lone unconverted guard is the ONLY one in its function with a spare, non-defining instruction
+(`li s4,1`) between the join label and the branch. Every other guard has only the load, which
+*defines* the register being tested. Any explanation must account for that shape.
+
+**You cannot inspect `as1`'s input.** `cc -S` and `cc -K` both kill the recompiled `ugen` with
+SIGSEGV, and the intermediates are not kept. The assembler's behaviour has to be inferred from
+matched objects.

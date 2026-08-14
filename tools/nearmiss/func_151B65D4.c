@@ -14,6 +14,91 @@
  * ############################################################################
  *
  * ============================================================================
+ * WAVE 4 (2026-08-13): THE PARAMETER LAW DOES **NOT** DISSOLVE THIS.  REFUTED
+ * FROM THE BINARY, AND THE 8 MISSING BYTES ARE NOW PROVED MODEL-FREE.
+ * ============================================================================
+ * Base re-verified first: 754 with -R and without, 848 B vs golden 852, frame
+ * 184 -- unchanged from the parked revision.
+ *
+ * (a) WHERE GOLDEN HOMES ITS PARAMETER.  golden 151B66A8:
+ *         sw  $a1, 0xB8($sp)          (and reloads it at 151B66D8)
+ *     0xB8 == framesize.  sp+framesize+0 is the FIRST INCOMING ARGUMENT SLOT
+ *     IN THE CALLER'S FRAME, i.e. arg0's home is OUTSIDE this function's stack
+ *     frame entirely.  Our build emits the identical `sw a1,184(sp)'.  So an
+ *     extra parameter -- read or unread -- contributes EXACTLY ZERO bytes to
+ *     the local area.  The law that took another function 230 -> 30 is about
+ *     getting free int-width storage WITHOUT growing the frame; here we need
+ *     the frame's LOCAL area to be 8 bytes BIGGER, which is the opposite
+ *     problem, and no parameter list can supply it.  Converse direction is
+ *     worse still: moving a local into a parameter shrinks L by 4 and deepens
+ *     the deficit.  Do not spend another wave on the parameter list.
+ *     (Golden's entry stores also show only ONE incoming register touched:
+ *     `or $a1,$a0,$zero' and nothing else -- no evidence of further params.)
+ *
+ * (b) THE 8 BYTES ARE PROVED WITHOUT ANY FRAME MODEL AT ALL.  Two locals have
+ *     their addresses taken by golden itself:
+ *         151B665C  addiu $a0, $sp, 0xA0     -> delta at 160..171
+ *         151B66F0  addiu $a0, $sp, 0x84     -> pos   at 132..143
+ *     and framesize is 0xB8 = 184, with `sw $t1,0xB0' / `sw $a2,0xB4' fixing
+ *     trail at 176 and payload at 180.  Locals END at framesize and run
+ *     downwards in declaration order, so:
+ *         bytes above `pos'  = 184 - 132 - 12 = 40
+ *         payload 4 + trail 4 + delta 12      = 20 ...  plus one word at 172
+ *         obj 4 + dist 4                      =  8
+ *         40 - 4 - 4 - 4 - 12 - 4 - 4         =  8 BYTES UNACCOUNTED
+ *     The hole is [144,160) (4 words) plus [172,176) (1 word) = 5 word slots
+ *     for the 3 named words `e', `obj', `dist'.  This argument uses only two
+ *     golden `addiu $a0,$sp,N' instructions and the frame size; it does not
+ *     depend on the temp-area size at all, so it cannot be argued away by
+ *     re-modelling the temp region.  Regrouping the named locals never helps:
+ *     the named set is 22 words however you arrange it, and 24 are required.
+ *
+ * (c) THE FRAME LAW ITSELF, RE-DERIVED ON SIX FRESH BUILDS THIS WAVE (the
+ *     previous revision's calibration was right; here it is with the pad made
+ *     explicit, since the pad is what made "L=92" look refutable):
+ *         framesize = roundup8(72 + 16 + L)      (72 = args16 + f20..f30 + ra)
+ *         locals    = [framesize - L, framesize)
+ *         temps     = [framesize - L - 16, framesize - L)   -- ALWAYS 16 bytes
+ *         any roundup slack sits BELOW the temps, at [72, framesize-L-16)
+ *     measured (L, frame, memory-resident sp slots):
+ *         96 -> 184, slots 72/84/88        <- the shipped base
+ *         88 -> 176, slots 72/84/88
+ *         84 -> 176, slots 76/96           (temp_base 76, pad at 72..75)
+ *         84 -> 176, slots 76/88/92
+ *         80 -> 168, slots 72/88
+ *         92 -> 184, slots 76/96
+ *     GOLDEN writes slot 72 (`swc1 $f8,0x48($sp)') and has framesize 184, so
+ *     72 >= 184 - L - 16  =>  L >= 96, and framesize 184 => L <= 96.  L = 96
+ *     EXACTLY.  L=92 IS dead after all -- not because 72 is unreachable in
+ *     principle, but because with L=92 temp_base is 76 and golden writes 72.
+ *
+ * (d) WHAT WAS TRIED THIS WAVE AND SCORED (whole-TU builds through buildlock,
+ *     stale-object guard on, score read off the real asm-differ):
+ *         parked base (2 unknowns, both step vars declared) ..... 754  848 B
+ *         unknowns deleted (L=88) .............................. 865  848 B
+ *         unknowns deleted + stepAngle written inline in the
+ *           loop so LICM makes it a temp (L=84) ................ 3003  844 B
+ *         unknowns deleted + stepRadius inline (L=84) .......... 873  848 B
+ *         unknowns deleted + both inline (L=80) ............... 3108  844 B
+ *         2 unknowns + stepAngle inline (L=92) ................ 2900  844 B
+ *     i.e. every attempt to spend the two words on a real construct, or to do
+ *     without them, is worse.  754 stands and the two words stand.
+ *
+ * (e) NO SIBLING TO CRIB THE NAMES FROM.  The only other golden functions that
+ *     carry both 0x47000000 (32768.0f) and a `, 0x9B' immediate are
+ *     func_150C6460 (game_F3270) and func_150C6D90 (game_F3BA0); both were
+ *     read and are a DIFFERENT algorithm (they call func_15045800/func_151D8E20
+ *     and build a matrix), not a second copy of this trail-append loop.  No
+ *     matched TU in src/ contains `unk2E++' other than this one.
+ *
+ * VERDICT: still blocked, and now blocked for a REASON THAT IS PROVED rather
+ * than assumed.  The two words are declared locals in the original that the
+ * emitted code never touches; nothing in the binary can name them.  Do not
+ * ship this file.  The next honest move is external evidence (a sibling
+ * effect handler in another version/build, or the ECTS/debug ROM's symbols),
+ * not another search over this function's source.
+ *
+ * ============================================================================
  * RESULT 1 OF THIS WAVE: 1398 -> 754, from ONE statement move.
  * ============================================================================
  *   `age = payload->unk18 + D_800BE9A4;`  moved ABOVE  `pos = payload->unk8;`

@@ -6,6 +6,13 @@
  * through buildlock.  Calibration: with the #pragma in place the harness
  * prints CURRENT (0).  400 with -R and 400 without -R.
  *
+ * WAVE 4 (2026-08-13) DID NOT MOVE IT.  Base re-verified at 400 / 828 B before
+ * anything else.  Sixteen further variants across five NEW axes all reproduce
+ * the SAME two rows -- see "WAVE 4" below.  The one real result of wave 4 is
+ * NEGATIVE and structural: the "restore a block boundary at the join" theory in
+ * the brief is REFUTED for two of its four listed boundary kinds, and the flag
+ * axis is closed.  Read WAVE 4 before spending another wave on the CFG.
+ *
  * ============ THE GAIN: THE ELSE ARM NEEDS ITS OWN POINTER LOCAL ============
  * Wave 2's residual was eleven rows, nine of them the $v0/$v1 swap between the
  * loaded pointer and the unrolled cursor copy.  ALL NINE ARE NOW GONE.  The
@@ -108,6 +115,103 @@
  * NOT A ROUTE: conker/permuter_tu.sh SELFTEST FAILS on this TU (compile.sh's
  * IDO invocation dies with `as1: Error: <tmp>/tu.c, line 255: No such file or
  * directory'), so every score it would report is meaningless.
+ *
+ * ############################################################################
+ * ###################### WAVE 4 -- ALL NEGATIVE ##############################
+ * ############################################################################
+ *
+ * (1) THE PEEPHOLE'S PRE-CONDITION, READ OFF THE OBJECT RATHER THAN GUESSED.
+ * The transform is: for `beqz X,L / nop', COPY the instruction that sits AT L
+ * into the (branch-likely, taken-only) delay slot and move the label to L+4.
+ * The copy at L stays for the fall-through path, so both paths execute it once
+ * and NO instruction is added -- which is why our object is the same 828 bytes
+ * as golden with one row `beqz->beqzl' and one row `nop->lw'.  Verified on all
+ * six guards; e.g. guard 6 `beql v0,zero,30c / lw ra,0x74(sp)' has its copy at
+ * 308 and the label at 30c.
+ *
+ * (2) "A LABEL REACHED FROM MORE THAN ONE PLACE" IS **NOT** A BOUNDARY FOR as1.
+ * REFUTED inside this very function.  Golden's epilogue join 30c has THREE
+ * predecessors -- `b 30c' at 278 (from the if arm), guard 6's branch, and the
+ * fall-through -- and as1 still moved the label and duplicated `lw ra,0x74(sp)'
+ * into BOTH branch delay slots.  So multi-predecessor does not inhibit it, and
+ * hunting for a second reference to the join at 2b8 is a dead end.
+ *
+ * (3) THE TRANSFORM IS SELECTIVE, SO THE *REFUSAL* IS THE COMMON CASE.
+ * Scanned every /* addr word *\/ line of conker/asm/nonmatchings (all golden):
+ *     5121 conditional branches in golden have a `nop' delay slot;
+ *     of those, 708 target a plain `lw', 330 an `addiu', 82 a `lbu', 75 an
+ *     `or', 42 an `lwc1' -- i.e. hundreds of golden sites where the target
+ *     instruction was trivially duplicable and as1 declined.
+ * Whatever gates it is therefore NOT "is the target duplicable".  A scanner
+ * script is at scratchpad w4-k7x2q9/scan_nop.py if a later wave wants to mine
+ * those 708 sites against MATCHED C.  That is the one route left that has real
+ * information in it, and it is a whole wave's work on its own.
+ *
+ * (4) THE STRUCTURAL DIFFERENCE BETWEEN GUARD 2 AND GUARDS 3..6, EXACTLY.
+ * Undo every conversion and the else arm reads:
+ *     LA: lw v0,0x28(v1)        <- guard 1's ORIGINAL join
+ *         li s4,1
+ *         beqz v0,LB            (guard 2)   <- TWO instructions above it, and
+ *         nop                                  the nearer one does NOT define
+ *         lw t9,0x14(v0)                       the tested register
+ *         sb s4,0x9(t9)
+ *     LB: lw v0,0x24(s1)        <- 4x main-body head
+ *         beqz v0,LC            (guard 3)   <- ONE instruction above it, and it
+ *         nop                                  DOES define the tested register
+ * Guard 2 is the only guard in the function that has a spare, non-defining
+ * instruction (`li s4,1') between the join label and the branch.  After guard
+ * 1 converts, that `li' is itself sitting on the moved label LA and is pinned.
+ * This is a better-specified statement of the residual than "the seam", and it
+ * is the shape any future explanation has to account for.
+ *
+ * (5) MEASURED NEGATIVES, WAVE 4, all on the 400 base, all 828 B / frame 0xf0
+ *     unless noted, and ALL with the identical two-row residual (the 2a8 row
+ *     was read straight out of objdump for each):
+ *   no local at all, `((Part **)sub)[i+9]' written TWICE so the pointer is a
+ *     pure CSE temp .......................................... 445  (828 B)
+ *     -- and 445 with `!= 0' instead of `!= NULL' too; this is wave 2's score,
+ *        i.e. the $v0/$v1 swap comes back.  The DECLARED local is load-bearing.
+ *   `Part150D1C30 *q;' declared in the ELSE BLOCK's own scope (C89 block-head
+ *     declaration), function-level `p' deleted ............... 400  (828 B)
+ *     -- byte-for-byte the same object as the shipped form, same two rows.
+ *        This is a MORE PLAUSIBLE original spelling than "declared last" and
+ *        it explains the placement (a block-scope local is laid out after all
+ *        function-scope locals, i.e. in the temp slack).  Kept out of the
+ *        shipped source only because it changes nothing measurable.
+ *   same, with no blank line after the declaration .......... 400
+ *   extra nested `{ }' around the whole else-arm loop ....... 400
+ *   extra nested `{ }' around the store statement ........... 400
+ *   `if (p != NULL) { ... }' folded onto one physical line ... 400
+ *   `p = ...;' and `if (...) {' folded onto one line ........ 400
+ *   if arm's `i++; if (i == 6)' -> `if (++i == 6)' ........... 400
+ *   if arm's `i++; if (i == 6) { break; }' on one line ...... 400
+ *   else arm `i = 0; do { ... } while (++i != 6);' .......... 400
+ *   else arm `for (i = 0; i != 6; i = i + 1)' ............... 400
+ *   `void *p' + cast at the use ............................. 400
+ *   `for (i = 9; i != 15; i++)' with `[i]' .................. 930  (828 B)
+ *   separate `s32 j' for the else arm, declared in the else
+ *     block's scope ......................................... 811  (828 B)
+ *   ELSE ARM SPLIT INTO AN EXPLICIT 2 + 4 SEAM (`for (i=0;i!=2;i++)' then
+ *     `for (; i!=6; i++)') ................................. 8214  (864 B)
+ *     -- this is the direct test of the brief's "peel/main-body seam" idea and
+ *        it DESTROYS the unroll (36 bytes bigger).  You cannot hand IDO the
+ *        seam; the seam is the unroller's, and writing it out changes it.
+ *
+ * (6) THE FLAG AXIS IS CLOSED.  Whole-TU rebuilds with OPT_FLAGS overridden
+ *     (legitimate in this repo -- the Makefile already overrides per file):
+ *       -O2 -g3 ... 400 (828 B)      <- shipped
+ *       -O2 -g2 ... 27305 (816 B)    -O2 -g1 ... 27305 (816 B)
+ *       -O2 -g0 ... 2038 (824 B)     -O2 ...... 2038 (824 B)
+ *       -O1 -g3 ... 23460 (736 B)    -O3 -g3 .. 11547 (828 B)
+ *     -g3 is right and nothing else is close.  Note -O2 without -g3 emits 824
+ *     bytes: the guard-2 nop does not exist there at all.
+ *
+ * (7) NOT A ROUTE: you cannot see as1's input.  `cc -S' and `cc -K' both kill
+ *     the recompiled ugen (`Fatal error in: /usr/lib/ugen ... Signal 11'), and
+ *     the pipeline's kept intermediates (/tmp/ctm*) are binary "binasm", not
+ *     text assembly -- as1 itself errors with `binasm: No such file or
+ *     directory' when run bare.  Snapshotting /tmp during a compile confirms
+ *     there is no text .s stage to inspect or hand-edit.
  * ============================================================================ */
 
 #include <ultra64.h>

@@ -100,13 +100,6 @@ extern s32 D_800BE9C8[];
 extern s32 D_800BEBA4;
 extern u8 D_800859A0[];
 
-#define WGFX1516C934(pkt, a, b)     \
-{                                   \
-    Gfx *_g = (Gfx *)(pkt);         \
-    _g->words.w0 = (u32)(a);        \
-    _g->words.w1 = (u32)(b);        \
-}
-
 typedef struct {
     u8 pad_0x00[0x10];
     s32 *field_0x10;
@@ -144,7 +137,7 @@ Gfx *func_1516C934(Gfx *gfx, Struct1516C934 *arg1, u8 arg2, u8 arg3, u8 arg4, u8
     orig = gfx;
     dx = arg1->field_0x50 - arg1->field_0x30;
     y = arg1->field_0x54 - arg1->field_0x34;
-    WGFX1516C934(gfx++, 0xDE000000, D_800859A0);
+    gSPDisplayList(gfx++, D_800859A0);
     first = 1;
 
     while (p->field_0x24[i] == 0xA) {
