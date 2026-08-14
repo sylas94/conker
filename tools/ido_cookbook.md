@@ -1991,3 +1991,59 @@ twice" can cost four figures.
 **THIS IS THE FIRST TARGET FOR THE NEW FRAME LEVERS.** The frame is 8 bytes heavy = two 4-byte
 knobs, and the function calls several routines whose return values it ignores. Lever 2 above
 predicts exactly this shape.
+
+# ================================================================================
+# NEGATIVE, MEASURED: BOTH IMPORTED "FRAME LEVERS" ARE FALSE AT -O2 -g3. RETIRED.
+# ================================================================================
+
+Two claims were imported from OoT's "-O2 decompilation (for IDO 5.3)" guide and written up here
+as promising, on the grounds that this project had NO frame lever at all and the bail checklist
+contains a whole class ("stack-aggregate off-by-one-WORD") that was declared unreachable purely
+for want of one. Both are now MEASURED FALSE at our flags. Do not spend a wave on them.
+
+    L1   `void f(void)` uses 4 more bytes of stack than `void f()`      -> FALSE
+    L1b  same, applied to the DEFINED function's own declaration        -> FALSE
+    L2   calling a function that RETURNS a value costs stack even when
+         the result is ignored                                          -> FALSE
+
+## The measurement (scratchpad/framelever2.sh, run outside conker/src so the ROM is untouched)
+
+Real IDO 5.3 via `../ido/ido5.3_recomp/cc`, the Makefile's exact CFLAGS, `-mips2 -o32`, `-O2 -g3`.
+Framesize read from the prologue `addiu sp,sp,-N`.
+
+THE DESIGN POINT THAT MAKES THE NEGATIVE TRUSTWORTHY: a single test function proves nothing here,
+because IDO rounds the frame to 8 bytes and that padding can absorb a 4-byte delta. So the number
+of live-across-a-call locals was SWEPT 0..8, which walks the frame through 24/32/40/48/56/64. A
+real +4 must push at least one of those across a boundary and surface as +8. It never did.
+
+    N locals      0    1    2    3    4    5    6    7    8
+    (void)       24   32   32   40   48   56   56   64   64
+    ()           24   32   32   40   48   56   56   64   64
+    delta         0    0    0    0    0    0    0    0    0
+
+L1b (probe(void) vs probe(), N = 0,2,4,6): leaf/32/40/48 on both sides, delta 0 throughout.
+L2 (ignored int return vs void callee vs captured, N = 0..6): 24/32/32/48/48/56/56 on ALL THREE
+columns. An ignored return costs exactly what a void callee costs.
+An earlier noisy run also measured plain `-O2` with the same result, so this is not a -g3 artefact.
+
+## What this means, and the correction it forces
+
+* The "stack-aggregate off-by-one-WORD" BAIL CLASS DOES NOT RE-OPEN. It was written up here as
+  re-openable on the strength of these levers. That was premature; it stands as a bail.
+* This project still has NO cheap frame lever. The frame responds to the DECLARATION LIST (the
+  stack-home law) and to assigning through a parameter instead of a shadow local - and, per the
+  strongest measured result in this file, to DELETING an unnecessary local (6320 -> 3360 on
+  func_1000CEAC). That remains the whole toolkit.
+* GENERAL LESSON ABOUT IMPORTED LORE. The OoT guide is credible - it independently confirms six
+  laws derived from scratch here - and it still shipped two claims that do not hold at our flags.
+  Its own text marks the stack claim "TODO: verify". CONFIRMED-ELSEWHERE IS NOT CONFIRMED-HERE:
+  measure every imported law in this tree before ranking a wave around it. Cost of measuring: one
+  script and two minutes. Cost of not measuring: a wave.
+
+## What SURVIVES from the same source (unaffected by this negative)
+
+The allocation-order correction still stands and is still worth using: the full order is
+**v0, v1, a0-a3, t0-t5, then stack**, where this file previously recorded only v0, v1, a1, a2.
+Those agree - ours was derived on functions WITH parameters, where a0 (and often a3) is already
+occupied - but our truncated list can make a register look unreachable when it is merely further
+down the table. Re-check any bail that concluded "unreachable" while counting only four slots.
