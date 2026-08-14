@@ -1,6 +1,72 @@
 /* func_15084044  --  conker/src/game_AEB40.c   (221 asm lines, 0 fp, 3 callees)
  * PARKED AT 70.  max_score 81400.  Residual: ALLOCATION (one virtual register).
  *
+ * ############################################################################
+ * ### 2026-08-14 WAVE 2.  STILL 70.  THE SEARCH SPACE BELOW IS NOW CLOSED. ###
+ * ############################################################################
+ * Baseline re-confirmed in my own build before any change: 70 with -R, frame 0x60,
+ * 13 differing rows -- byte-for-byte the 13 rows the previous wave listed.
+ *
+ * NEW TOOL, USE IT FIRST NEXT TIME: tools/fastscore.py gives the EXACT same row
+ * count in 0.7 s instead of ~60 s (asm_processor + IDO cc into a private dir, then a
+ * relocation-masked word compare against the golden .s; it never touches conker/build/
+ * so it needs no buildlock).  Verified against asm-differ on this very function:
+ *     python3 tools/fastscore.py game_AEB40 func_15084044 cand.c   ->  mism=13
+ * That is what made the 720-case sweep below affordable (466 s total).
+ *
+ * === THE MIS-DECLARED-GLOBAL LAW DOES NOT APPLY HERE.  CLEAN NEGATIVE. ===
+ * The wave brief asked to check whether `base`'s global is mis-declared in variables.h.
+ * THERE IS NO GLOBAL IN THE ADDRESS CHAIN.  `base` is derived entirely from the
+ * PARAMETER arg0:  base = (s32 *)((u8 *)arg0 + (arg1 * 8)), and golden's access is a
+ * plain `lw $a3,0x28C($s4)` -- one register plus an immediate, which every spelling
+ * produces identically.  The shadow idiom has nothing to bite on.  No change made,
+ * score before = 70, score after = 70.
+ *
+ * === THE 13 ROWS ARE ONE DEFECT, AND THE OPERAND FLIP IS NOT A SECOND ONE ===
+ * Confirmed from the raw words: ours 14820025 = bne $a0,$v0 ; golden 14e40025 =
+ * bne $a3,$a0.  BOTH put the HIGHER-NUMBERED register in rs (ours a0=4 > v0=2,
+ * golden a3=7 > a0=4).  So IDO canonicalises the compare by register number and the
+ * operand order is a pure consequence of the colour.  Fix the colour, fix all 13.
+ *
+ * === WHAT THE COLOUR ACTUALLY IS (read this before theorising again) ===
+ * Golden's caller-saved pseudos:  v0=obj, v1=mode, a0=tmpl, a1=arg1, a2=arg0, a3=P1
+ * (P1 = the CSE of *(s32 *)((u8 *)base + 0x28C)).  All six are used.
+ * Ours:                           v0=obj THEN RECYCLED FOR P1, v1=mode, a0=tmpl,
+ * a1=arg1, a2=arg0, a3 never used as a pseudo.
+ * So the single question is: why does golden NOT recycle $v0 for P1 after `obj` dies?
+ * Everything else -- frame 0x60, ret spilled at 0x48 (ordinal 6), the 0x30 address-CSE
+ * temp, every branch, every call site -- already matches.
+ *
+ * === NEGATIVE: DECLARATION ORDER IS COMPLETELY INERT.  ALL 720 CASES MEASURED. ===
+ * This retires parked lever #2 ("reorder the five pre-`ret` locals").  With `ret`
+ * pinned at ordinal 6, every one of 5! x 3! = 720 orderings of the other eight locals
+ * was built and scored:  best = 13, and in fact EVERY SINGLE ONE scored exactly 13,
+ * with frame -96 throughout.  466 s, tools/fastscore.py.  DO NOT REPEAT THIS SWEEP.
+ *
+ * === NEGATIVES: ~25 SOURCE-SHAPE VARIANTS, ALL EXACTLY 13 (base 13) ===
+ * nested ifs instead of the `&&` in the early return; if/else instead of the `mode`
+ * ternary; `!tmpl` for `tmpl == 0`; `base` declared `u8 *`; reversed `||` operands in
+ * the mode-1 guard; `idx` and `mode` statements swapped; `base` computed later; blank
+ * line before the mode chain; truthiness (`if (a && b)` with no `!= 0`); `arg1` as u32;
+ * `ret` as u32; `size` via `<< 4`; `p` cast through u8 * instead of s8 *; `0 ==` on the
+ * allocate_memory result test; `obj` typed `u8 *`; `mode` typed u8; `tmpl` typed `s32 *`;
+ * capturing arg0[0x65] into a new `u8 kind` local in each of 9 declaration slots.
+ * WORSE, with scores: `switch (mode)` 177 rows + frame 0x68; `p = base` 203 (192 instrs,
+ * two short -- golden really does recompute p from arg0/arg1); `arg1 << 3` for `base`
+ * 203 (same 192-instr collapse, so the `* 8` spelling is REQUIRED); `arg0` typed `u8 *`
+ * 15; reversing the `(&D_800D19A0)[idx] ==` compare in the loop 14; passing bcopy's dst
+ * as `*(void **)` 47; moving the `mode` computation after the early returns 13 rows but
+ * it re-colours `base` s4 -> s5 (a WORSE shape that my first metric mistook for a win --
+ * count the register in `lw ?,0x28C(?)`, never grep for a fixed base register).
+ *
+ * === WHAT IS LEFT TO TRY (nothing cheap remains; this needs the permuter) ===
+ * Every source-level lever I can name is now measured and inert, and the residual is a
+ * single virtual-register colour with the instruction stream already exact.  That is
+ * precisely the decomp-permuter's job, and with tools/fastscore.py the iteration cost is
+ * 0.7 s, so a long run is finally affordable:  import the TU, PERMUTER_TU_REQUIRE_FRAME
+ * =0x60, and drive on the 13-row metric.  If a wave cannot run the permuter, DO NOT
+ * hand-search this function again -- the hand-search space is exhausted.
+ *
  * Baselines measured (all `-o func_15084044 -R --max-lines 4096`, expected/ seeded
  * from a clean pragma build of the TU):
  *     721   build #1, natural transcription, 9 locals with `ret` declared last

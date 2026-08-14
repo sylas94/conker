@@ -3330,3 +3330,180 @@ constructs, grep GLOBAL_ASM 1739 -> 1738.
 PARKED: func_15010880 @210 (pure scheduling, exhaustively bounded above), func_15162B28 @10
 (register-colouring wall, verdict restored with better evidence), func_150144B8 @207 (zero
 instruction differences; the whole score is the 8-byte f32-CSE frame temp above).
+
+# ================================================================================
+# THE f32-CSE LAW WAS RIGHT ABOUT THE MECHANISM AND WRONG ABOUT THE FIX:
+# SPLAT'S D_ NAMES FOR ANONYMOUS LITERAL POOLS ARE NOT GLOBALS AT ALL
+# ================================================================================
+
+Wave 46 was launched to cash in the f32-CSE law on func_150144B8 @207 (a function with ZERO
+instruction differences). The law reproduced exactly. **The fix it implied was wrong, and the
+reason is systemic enough to change how this project reads .rodata.**
+
+`D_80096688` is NOT a global variable. It is **splat's minted name for an anonymous IDO literal
+slot**. Golden's source contains no symbol there at all — it multiplies by the FLOAT LITERAL
+`0.01745329238f` (pi/180), and IDO minted that constant into the TU's literal pool.
+
+    named extern, read twice   -> frame 200      <- what we were building
+    float literal, read twice  -> frame 192      == GOLDEN, byte-identical instruction stream
+
+**HOW TO RECOGNISE AN ANONYMOUS POOL WITHOUT BUILDING ANYTHING — DUPLICATE VALUES.**
+A named shared global appears ONCE. An anonymous per-function literal pool repeats itself,
+because each function mints its own copy:
+
+    D_80096688  .float 0.01745329238      <- pi/180
+    D_80096690  .float 0.01745329238      <- pi/180 AGAIN, different address
+    D_80096694  .float 0.01745329238      <- and AGAIN
+    D_8009664C  .float -10000
+    D_8009667C  .float -10000             <- -10000 twice
+    D_800966B4  .float -10000             <- three times
+    D_80096698 / D_8009669C / D_800966A8  .float 1.525902189e-05   <- x3
+
+Three copies of pi/180 at three addresses is not a program with three constants. It is one
+constant minted three times by three functions. **When you see a repeated value in a D_ run,
+stop treating those names as variables.**
+
+## THE CONSEQUENCE FOR THE `extern f32` ESCAPE, WHICH THIS FILE PREVIOUSLY CALLED FREE
+It is free **only when the constant is read ONCE**. Read once, `extern f32 G` and a literal emit
+the same `lui at,%hi / lwc1 %lo` pair with the same relocation, so the escape is invisible.
+Read TWICE, IDO homes the named-extern CSE (+8 frame bytes) but pools the literal CSE for free.
+That is the whole of func_150144B8's 207. The escape has a documented cost now, not a blanket
+licence.
+
+## WHY IT STILL CANNOT BE SHIPPED: THE POOL MUST BE MINTED, AND MINTING IS ALL-OR-NOTHING
+To get the literal to land at 0x80096688 the whole game_40490 pool must come from C, and IDO
+mints literals in the order the functions using them appear. Verified this wave:
+
+  * The region **is contiguous and exclusively owned** — grep over src/ and asm/nonmatchings/
+    finds ZERO foreign references to D_800966xx. It therefore does NOT hit the contiguity law
+    that permanently killed game_12C1E0.
+  * The region is **jtbl -> float pool -> jtbl**: func_150130B4's jump table sits immediately
+    below 0x80096630, and jtbl_800966C0 immediately above 0x800966B4 (after two zero-float
+    alignment slots). Since the jtbl unlock and the rodata migration are THE SAME conker.us.yaml
+    line, one edit addresses both.
+  * **THE TRUE COST, and it is larger than the pool's stubbed functions:** ELEVEN functions use
+    this pool, not five. Five are stubbed (func_150130B4 which also needs its jtbl, func_15013778,
+    func_150144B8, func_1501474C, func_15014B60). **The other six are already byte-perfect live C**
+    reaching the pool through sixteen `extern f32` declarations (game_40490.c lines 9-23 and 661).
+    A migration must rewrite those six to literals as well, because the names cease to exist once
+    the section is emitted from C.
+
+**So the campaign risks SIX matching functions to gain FIVE.** That is a legitimate trade only if
+the six can be held at 0 under the literal spelling, which is a measurable precondition, not a
+hope. Run it as a staged spike with that as the kill switch — never as an open-ended rewrite.
+Until then **207 is a hard floor on func_150144B8; do not respell the multiply again.**
+
+# ================================================================================
+# NEW VARIANT OF THE RELOCATION-NAMING FLOOR: LOOP BOUNDS SPELLED AS THE *NEXT* SYMBOL
+# ================================================================================
+
+On func_1501BBB8, golden bounds three of four loops with `%hi/%lo(D_800BE760)`, `(D_800BE930)`,
+`(D_800BE708)` at **addend 0**, where the natural `for (i = 0; i < 4; i++)` produces
+`%hi/%lo(D_800BE748)+24`, `(D_800BE918)+24`, `(D_800BE700)+8`.
+The LINKED words are identical — base+24 IS the next symbol's address, and these are absolute
+linker-script constants from undefined_syms_auto.txt. Only the OBJECT relocation differs.
+
+This is a HARDER variant than the known floor: there the instruction words matched and only the
+reloc symbol NAME differed; **here the words differ too and only the linked result agrees.**
+Root cause: in the original these were file-statics whose relocs were section-relative with the
++24 folded into the addend; splat resolved each final address to whatever symbol sits there.
+
+TWO RULES FALL OUT:
+  (a) An array-walk loop whose end lands exactly on another D_ symbol must be bounded by
+      `(T *)D_<next>`, not by a count.
+  (b) It must be a **do/while**. Written as a `for` with an address bound, IDO emits an entry
+      guard golden does not have — measured 11555 (`for`) vs 10190 (`do/while`), same bound.
+
+# ================================================================================
+# IDO 5.3 AT -O2 -g3 HAS NO ACTIVE LOOP UNROLLER: A 2x-UNROLLED LOOP IS *SOURCE*
+# ================================================================================
+
+func_1501BBB8's middle loop steps `i` by 2 and handles players i and i+1 per iteration. That is
+how the original was written; it is not a compiler artifact. Proved two ways:
+  * The other three loops in the same function are also 4-trip and are NOT unrolled — an active
+    unroller would have taken those first.
+  * Through the Makefile's dangling `LOOP_UNROLL` hook (referenced line 221, never defined):
+    `-Wo,-loopunroll,2`, `,200` and bare all left the function at exactly 248 instructions, while
+    `-Wo,-nounroll` produced "uopt: Warning: unrecognized option" — so `-loopunroll` IS recognised
+    and simply has no effect here.
+  * Opt sweep: -O2 -> 247, -O1 -> 460, -g -> 487, none unrolled. (-O3 is unreachable:
+    asm_processor.py rejects it.)
+**If golden's loop is unrolled, unroll the SOURCE.**
+
+# ================================================================================
+# NEW READING-GOLDEN RULE: `slti at,X,K` + `bnez at` MEANS THE *ELSE* HOLDS THE ZERO
+# ================================================================================
+
+`slti at,X,K` followed by `bnez at` where the taken side stores ZERO means the source is
+`if (X >= K) { compute } else { 0 }` — NOT `if (X < K) { 0 } else { compute }`.
+Flipping four dead-zone tests on that reading alone (with the loop-bound fix) moved func_1501BBB8
+from 8920 to 6520 in ONE build.
+RELATED, also confirmed: a ternary whose true-value is a constant that golden materialises far
+earlier is not a ternary in source — it is `n = 4; if (cond != K) n = other;`. The ternary emits
+an extra `b`/`li` pair where golden has a bare `beq ... join`.
+
+# ================================================================================
+# DECLARATION ORDER CAN BE COMPLETELY INERT -- MEASURED OVER ALL 720 ORDERINGS
+# ================================================================================
+
+This file has repeatedly listed declaration order as the top untried lever. On func_15084044 it is
+worth NOTHING: **all 5! x 3! = 720 orderings scored exactly 13** at frame -96 (466 s, affordable
+only because of the new scorer). Roughly 25 further structural/type/statement-order variants also
+scored 13. The residual is ONE virtual register — golden uses all six caller-saved pseudos and
+gives the CSE `$a3`; ours recycles the dead `obj`'s `$v0`.
+Also resolved from the raw encodings: the accompanying `bne` operand flip is **not a second
+defect** — both builds put the higher-numbered register in `rs`, so the flip follows from the
+colour. One defect, not two.
+
+# ================================================================================
+# NEW TOOL: tools/fastscore.py -- 0.7 s PER VARIANT, ~85x FASTER
+# ================================================================================
+
+asm_processor + IDO cc into a PRIVATE directory, then a relocation-masked word compare against the
+golden .s. Cross-validated to reproduce asm-differ's row count exactly on func_15084044 (13 = 13).
+It never touches conker/build/, so it needs no buildlock and **cannot read a stale object**.
+This is what made the 720-case sweep affordable at all.
+
+**IT IS A SEARCH METRIC, NOT A VERDICT — the tool's own docstring says so.** Relocation symbols are
+masked out, so `mism == 0` still has to be confirmed on the real `make` + asm-differ loop before
+anything is called a match. Two cautions measured while building it:
+  * Grepping the disassembly for a fixed base register is a TRAP — one variant looked like a win
+    but had merely re-coloured `base` s4->s5.
+  * A raw word compare WITHOUT relocation masking reports ~125 false mismatches on an otherwise
+    perfect build.
+
+TOOLING GAP worth closing: asm-differ refuses `end` together with `-o` ("end address not supported
+together with -o"), and clamping `--max-lines` to the symbol's instruction count silently triggers
+the truncation walk-back (trap 1). There is currently **no supported way to get a symbol-bounded
+score**; both agents hand-rolled readelf+objdump+difflib beside every score.
+
+# ================================================================================
+# OPEN QUESTION, HANDED OVER WITH THIRTEEN NEGATIVES ENUMERATED
+# ================================================================================
+
+What C makes IDO emit a **symbolic store** (`lui at,%hi(SYM)` + `s* rt,%lo(SYM)(at)`) to a global
+while a base register holding `&SYM` is live and is being used for the LOADS in the same statement?
+Golden emits 4 instructions per site for `D_800BE740 |= K`; every spelling we can produce emits 3.
+Ruled out, each built with the project's exact flags: `|=`; `x = x | K`; `A[0] |= K`; read hoisted
+into an int local; `G = *(u8*)&G | K`; `*(u8*)&G = G | K`; struct member at offset 0; s32-typed
+global; OR of a variable; `= 0` moved after the blocks; three `u8 *f = &G` pointer-local variants;
+and `extern volatile u8`. **So it is not the |= spelling, not the width, not volatile, not a cast,
+not statement position — it is how the original TU declared that byte.**
+It is a 4-instruction-per-site systematic that cascades into a wrong register class (s0) and a
+wrong frame size downstream, so it is worth real effort.
+
+# ================================================================================
+# WAVE 46 RESULT
+# ================================================================================
+
+CLOSED: NOTHING. Four functions parked, every negative recorded with its score, both TUs reverted
+to pristine with their pragmas live and their stale objects deleted.
+  func_150144B8 @207   cause SOLVED (literal, not global); blocked on the game_40490 pool migration
+  func_15084044 @70    hand-search space provably exhausted (720 orderings + ~25 variants); permuter
+  func_150D5124 @105   100% register naming, t6<->t7 exchanged on 20 of 199 rows; permuter
+  func_1501BBB8 @6520  cold, whole CFG + frame + all four loops reproduced; blocked on the
+                       symbolic-store construct above
+A screen failure worth noting: func_150D5124 was briefed as "never attempted" but carried a parked
+attempt as a comment block at game_100810.c:111-179 claiming best 105. The agent rebuilt it from
+scratch and reproduced exactly 105, so the baseline is confirmed rather than inherited — but
+**pick_clean.sh should screen for parked comment blocks inside live TUs, not just pragmas.**

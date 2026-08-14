@@ -2,6 +2,63 @@
  * PARKED STATE: func_150144B8 (game_40490.c) -- score 207, REPRODUCED 2026-08-14.
  * Baseline confirmed in my own build before any change: 207 with -R and 207 without.
  *
+ * ############################################################################
+ * ###  2026-08-14 WAVE 2: CAUSE SOLVED AND PROVEN.  207 IS A HARD FLOOR    ###
+ * ###  UNTIL game_40490's .rodata IS MIGRATED.  DO NOT RESPELL FURTHER.    ###
+ * ############################################################################
+ *
+ * THE ANSWER: golden's source does NOT reference a named global here at all.
+ * It multiplies by the FLOAT LITERAL 0.01745329238f (= pi/180, degrees->radians).
+ * `D_80096688' is not a variable -- it is splat's minted name for IDO's ANONYMOUS
+ * .rodata literal pool slot for this TU.  Two reads of a NAMED extern cost an
+ * 8-byte homed CSE temp; two uses of a LITERAL cost ZERO, and both emit the
+ * identical one-`lui`/one-`lwc1`/two-`mul.s` stream.
+ *
+ * MEASURED (standalone IDO harness, same flags; frame in decimal, target 192):
+ *     tmp.unk1C *= D_80096688;  tmp.unk20 *= D_80096688;        200   <- current
+ *     tmp.unk1C *= 0.01745329238f;  tmp.unk20 *= 0.01745329238f; 192  <- GOLDEN
+ * and the literal build's stack offsets are golden's exactly:
+ *     addiu a0,sp,56(0x38)=&x | a1,sp,164(0xA4) | a2,sp,168(0xA8) | sw t3,144(0x90)
+ * i.e. the literal build is byte-identical to golden, frame included.
+ *
+ * MINIMAL SYNTHETIC PROOF (~2 s/build, in $HOME/nmwave/syn3):
+ *     int p(void){ float a[2], big[14]; snk(&a[0],&a[1]); a[0]*=X; a[1]*=X;
+ *                  snk2(big,a,8); return 0; }
+ *     X = extern float G (same symbol twice)      frame 96   (+8 CSE temp)
+ *     X = 0.017453292f  (same literal twice)      frame 88   <- free
+ *     X = 0.015625f     (power of two, inlined)   frame 88
+ *     a[0]*=G; a[1]*=H; (two different externs)   frame 88
+ *     extern CONST float / static const float     frame 96   (const does NOT help)
+ * SPELLINGS SWEPT THIS WAVE, ALL 96 (i.e. all still +8) -- DO NOT REPEAT:
+ *   block-scoped `float g = G;`; comma operator; `a=a*G` explicit; swapped order;
+ *   array-symbol `Ga[0]` twice; `*(float *)&G` twice; the two statements separated
+ *   by an unrelated statement; both uses inside ONE expression; the whole thing
+ *   with no surrounding call at all; and an integer double-read `(int)G+(int)G`
+ *   (also 96, so it is the READ not the float-ness).
+ *
+ * === WHY IT CANNOT BE SHIPPED YET: THE POOL IS INTERLEAVED WITH 4 PRAGMAS ===
+ * game_40490's anonymous literal pool is asm/data/23B040.rodata.s 0x80096630..0x800966B4,
+ * contiguous, referenced by NO other TU (verified by grep over asm/nonmatchings + src),
+ * and laid out in SOURCE ORDER of the functions that use it:
+ *     0x80096630..3C  func_150130B4   <-- STILL #pragma (and needs a jump table)
+ *     0x80096640,44   func_15013778   <-- STILL #pragma
+ *     0x80096648..84  func_150139AC .. func_150142EC   (already live C)
+ *     0x80096688,8C   func_150144B8   <-- THIS FUNCTION
+ *     0x80096690,94   func_1501474C   <-- STILL #pragma
+ *     0x80096698..B0  func_15014B60   <-- STILL #pragma
+ *     0x800966B4      func_150151D4   (already live C)
+ * (0x80096610..0x8009662C immediately before the pool is func_150130B4's JUMP TABLE.)
+ * Emitting only THIS function's two literals from C would shift every later pool
+ * address, so the migration is all-or-nothing: the four pragma'd functions must be
+ * decompiled (with their constants as literals, in this order) and the whole pool
+ * moved to C in ONE commit, plus the conker.us.yaml `[0x23B0F0, .rodata, game_40490]`
+ * line and a splat --modes ld regeneration.
+ * => func_150144B8 is a WHOLE-TU CAMPAIGN, not a near-miss.  Its 207 is a floor.
+ * DO NOT spend another wave respelling the multiply; the spelling is already known
+ * and is blocked purely on rodata placement.
+ * The same reasoning retires the "PARADOX THAT IS STILL OPEN" section below --
+ * golden pays no 8 bytes because golden has no memory CSE, because it has no global.
+ *
  * === THE SHADOW HYPOTHESIS WAS TESTED FIRST AND IS A CLEAN NEGATIVE HERE ===
  * The wave brief said this function "reaches D_80082E30 / D_80082EA0 / D_80082ECC".
  * IT DOES NOT.  Those three are touched by func_15013000 / func_1501370C / func_1501396C,
