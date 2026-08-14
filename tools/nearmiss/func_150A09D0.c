@@ -1,6 +1,35 @@
+/* PARKED STATE: func_150A09D0 -- MATCHED, score 0 (-R and no -R); .text of the whole
+ * game_CDE80.c.o byte-IDENTICAL to expected/build/src/game_CDE80.c.o (12448 bytes).
+ * This file IS conker/src/game_CDE80.c verbatim.
+ *
+ * HISTORY: parked at 20 for a long time; residual was exactly two rows,
+ *     0x108  golden `addu a1,s0,t4`   build `addu a1,t4,s0`
+ *     0x11c  golden `addu a0,s0,t5`   build `addu a0,t5,s0`
+ * i.e. the SAME two registers, SWAPPED, in the two `jal` delay slots that pass
+ * `&D_800D3098[i]` as a VALUE.  It was recorded as "residual = ALLOCATION, 4 instructions".
+ * It was NOT allocation.
+ *
+ * FIX (one build, 20 -> 0): variables.h line 1138 declares `extern struct178 D_800D3098[73]`
+ * but the symbol holds a POINTER.  The reconstruction used the cast-through-address idiom
+ * `(*(struct178 **)&D_800D3098)[i]`, which makes IDO evaluate BASE-then-OFFSET.  Replacing it
+ * with the sanctioned file-local shadow plus the real pointer type gives OFFSET-then-BASE at
+ * address-as-VALUE sites, which is what golden does.  The eleven load-BASE sites in the same
+ * function were unaffected -- they are identical under either spelling.
+ *
+ * CONFIRMING WITNESS INSIDE THE SAME FUNCTION: D_800DBFF0 is CORRECTLY declared
+ * `extern struct108 *D_800DBFF0;` in variables.h, and its value site `(D_800DBFF0 + j)` was
+ * ALREADY matching as `addu v0,a0,t3` (offset,base) back at score 20.  Same construct, two
+ * spellings, opposite operand order -- the declaration is the entire cause.
+ *
+ * The other eleven D_800D3098 users in this TU keep the `*(s32 *)&D_800D3098` cast idiom and
+ * are unaffected by the shadow (`&SYM` is the symbol address under either declared type), as
+ * proven by the whole-.text byte compare.
+ */
 #include <ultra64.h>
 #include "functions.h"
+#define D_800D3098 D_800D3098_array_decl_in_variables_h
 #include "variables.h"
+#undef D_800D3098
 
 extern f32 D_8009F5A0;
 extern f32 D_8009F5A4;
@@ -29,7 +58,7 @@ struct Func150A09D0Camera {
 };
 
 /* struct178 with the fields past 0x6 named (structs.h has them as a blob). */
-struct Func150A09D0Entry {
+typedef struct {
     /* 0x00 */ s16 unk0;
     /* 0x02 */ s16 unk2;
     /* 0x04 */ s16 unk4;
@@ -43,7 +72,11 @@ struct Func150A09D0Entry {
     /* 0x1C */ u32 unk1C;
     /* 0x20 */ u32 unk20;
     /* 0x24 */ u8  pad24[0x10];
-};
+} ObjRec; /* size 0x34 */
+
+/* variables.h declares D_800D3098 as `struct178 D_800D3098[73]`; the symbol really
+   holds a POINTER to the object table.  Shadowed above so this file sees the real type. */
+extern ObjRec *D_800D3098;
 
 void func_1000FC18(u16 arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4);
 s32 func_150A1DA0(u8 *arg0, struct178 *arg1, s32 arg2);
@@ -55,73 +88,71 @@ void func_150A09D0(s32 arg0) {
 
     arg0 = arg0;
     for (i = 0; i < (u32)D_800D3094; i++) {
-        switch ((s32)(*(struct Func150A09D0Entry **)&D_800D3098)[i].unk15 >> 2) {
+        switch ((s32)D_800D3098[i].unk15 >> 2) {
         case 2:
-            if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 == 1) {
-                (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 ^= 3;
-            } else if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 == 2) {
-                func_1000FC18((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C >> 16,
-                              (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk0,
-                              (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk2,
-                              (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk4,
-                              (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk18);
-                (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 = 0;
+            if (D_800D3098[i].unk20 == 1) {
+                D_800D3098[i].unk20 ^= 3;
+            } else if (D_800D3098[i].unk20 == 2) {
+                func_1000FC18(D_800D3098[i].unk1C >> 16,
+                              D_800D3098[i].unk0,
+                              D_800D3098[i].unk2,
+                              D_800D3098[i].unk4,
+                              D_800D3098[i].unk18);
+                D_800D3098[i].unk20 = 0;
             }
             if (D_800C35EA == 1) {
-                if (func_150A1DA0((u8 *)D_800CC2D0, &(*(struct178 **)&D_800D3098)[i], 0) == 0) {
-                    func_150A23E4(&(*(struct178 **)&D_800D3098)[i]);
+                if (func_150A1DA0((u8 *)D_800CC2D0, (struct178 *)&D_800D3098[i], 0) == 0) {
+                    func_150A23E4((struct178 *)&D_800D3098[i]);
                 }
             }
             break;
         case 7:
-            if (((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk15 & 3) == 3) {
-                (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 = 0;
+            if ((D_800D3098[i].unk15 & 3) == 3) {
+                D_800D3098[i].unk20 = 0;
             } else {
-                if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 == 1) {
-                    (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 = 2;
-                } else if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 == 2) {
-                    if (func_1000E46C((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk17, 0,
-                                      (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk18, 0)) {
-                        if (func_1000E46C((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk17, 100,
-                                          (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C, 0)) {
-                            (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk20 = 0;
+                if (D_800D3098[i].unk20 == 1) {
+                    D_800D3098[i].unk20 = 2;
+                } else if (D_800D3098[i].unk20 == 2) {
+                    if (func_1000E46C(D_800D3098[i].unk17, 0, D_800D3098[i].unk18, 0)) {
+                        if (func_1000E46C(D_800D3098[i].unk17, 100, D_800D3098[i].unk1C, 0)) {
+                            D_800D3098[i].unk20 = 0;
                         }
                     }
                 }
             }
             break;
         case 4:
-            if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk17 != 9) {
-                count = (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C & 0xFF;
+            if (D_800D3098[i].unk17 != 9) {
+                count = D_800D3098[i].unk1C & 0xFF;
                 if (count != 0) {
-                    if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk14 == 0) {
+                    if (D_800D3098[i].unk14 == 0) {
                         count--;
                     } else {
                         count = 0;
                     }
-                    (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C = ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C & ~0xFF) | count;
+                    D_800D3098[i].unk1C = (D_800D3098[i].unk1C & ~0xFF) | count;
                     if (count == 0) {
-                        count = (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C;
+                        count = D_800D3098[i].unk1C;
                         D_800DDF5C[(count >> 8) & 0xFF] = 0;
-                        (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk1C &= 0xFFFF0000;
+                        D_800D3098[i].unk1C &= 0xFFFF0000;
                     }
                 }
             }
             /* fallthrough */
         case 0:
-            if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk17 == 0xC) {
-                if ((*(struct Func150A09D0Entry **)&D_800D3098)[i].unk14 == 0) {
+            if (D_800D3098[i].unk17 == 0xC) {
+                if (D_800D3098[i].unk14 == 0) {
                     s32 j;
 
                     for (j = 0; j <= D_80082FA0; j++) {
                         struct Func150A09D0Camera *cam;
 
                         cam = (struct Func150A09D0Camera *)(D_800DBFF0 + j);
-                        cam->unk93C = (f32)(*(struct Func150A09D0Entry **)&D_800D3098)[i].unk0;
-                        cam->unk940 = (f32)(*(struct Func150A09D0Entry **)&D_800D3098)[i].unk2;
-                        cam->unk944 = (f32)(*(struct Func150A09D0Entry **)&D_800D3098)[i].unk4;
-                        cam->unk938 = (f32)(*(struct Func150A09D0Entry **)&D_800D3098)[i].unk6;
-                        cam->unk949 = (*(struct Func150A09D0Entry **)&D_800D3098)[i].unk18;
+                        cam->unk93C = (f32)D_800D3098[i].unk0;
+                        cam->unk940 = (f32)D_800D3098[i].unk2;
+                        cam->unk944 = (f32)D_800D3098[i].unk4;
+                        cam->unk938 = (f32)D_800D3098[i].unk6;
+                        cam->unk949 = D_800D3098[i].unk18;
                         cam->unk948 = 1;
                     }
                 }

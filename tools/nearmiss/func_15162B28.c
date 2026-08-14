@@ -196,6 +196,56 @@
  * Spellings, merges, orders, joins, case order, dispatch form and storage class are all
  * now measured dead.
  *
+ * ========== WAVE 2026-08-13: THE MIS-DECLARED-GLOBAL HYPOTHESIS -- CLEAN NEGATIVE ====
+ * This wave's brief filed func_15162B28 as "a parked near-miss reaching a global through
+ * the cast-through-address idiom", on the strength of a sister function that went 20 -> 0
+ * when `*(s32 *) &SYM` was replaced by a file-local shadow of the REAL type.  The brief
+ * also listed D_800886F0 / D_800886F4 / D_800886F8 as the globals to audit.
+ *
+ * BASELINE RE-DERIVED FIRST, INDEPENDENTLY: 10, with -R and without.  Exactly as parked.
+ * Residual re-confirmed as the same TWO rows and nothing else:
+ *       golden  lbu v1,0x3c(a0)   /  beq a1,v1,+0x374
+ *       mine    lbu a2,0x3c(a0)   /  beq a1,a2,+0x374
+ *
+ * THE PREMISE IS FACTUALLY WRONG ON THIS FUNCTION, ON EVERY POINT:
+ *
+ *  1. func_15162B28 CONTAINS NO CAST-THROUGH-ADDRESS IDIOM.  There is no `*(s32 *) &`
+ *     anywhere in it.
+ *
+ *  2. IT TOUCHES EXACTLY TWO GLOBALS, not the three named in the brief.  Grepping every
+ *     %hi() in asm/nonmatchings/game_18D770/func_15162B28.s returns precisely:
+ *         %hi(D_8008B364)     %hi(D_800BE9A4)
+ *     D_800886F0/F4/F8 are NOT REFERENCED BY THIS FUNCTION AT ALL.  They belong to
+ *     func_15164644 further down the TU, they are absent from variables.h (this file
+ *     declares them itself), and golden uses all three as `lui/addiu` ADDRESSES, which
+ *     is what `extern u8 D_800886F0[]` already says.  Their declarations are correct.
+ *
+ *  3. BOTH GLOBALS IT DOES TOUCH ARE ALREADY DECLARED CORRECTLY, and golden proves it:
+ *       D_8008B364:  `sll t1,v1,2 / lui t9,%hi / addu t9,t9,t1 / lw t9,%lo(t9)`
+ *                    -- array base plus scaled index, i.e. a REAL ARRAY.  The file-local
+ *                    `extern void (*D_8008B364[])(void)` is right.  Contrast the
+ *                    mis-declared case, where golden loads the WORD AT the symbol.
+ *       D_800BE9A4:  `lui at,%hi / lwc1 f10,%lo(at)` -- a plain scalar f32 load, and
+ *                    variables.h says `extern f32 D_800BE9A4`.  Right.
+ *
+ *  4. EMPIRICAL NEGATIVE CONTROL, so this is measured and not merely argued.  Applying
+ *     the retype the hypothesis proposes -- `extern void (**D_8008B364)(void)`, i.e.
+ *     treating the array as a mis-declared pointer -- costs 390 points:
+ *          10  base, `extern void (*D_8008B364[])(void)`   <- correct
+ *         400  retyped to `extern void (**D_8008B364)(void)`
+ *     because it inserts the extra pointer load golden does not have.
+ *
+ *  5. THE OTHER HALF OF THE BRIEF'S TELL DOES NOT FIRE EITHER.  It says to look for
+ *     "the SAME two registers as your build but SWAPPED".  Here the registers are not
+ *     swapped, they are DIFFERENT: golden $v1 where mine has $a2, and $v1 is not used
+ *     for anything else at that point in my build.  That is a colouring disagreement,
+ *     not an operand-order one.
+ *
+ * SO THE TERMINAL VERDICT BELOW STANDS, AND NOW RESTS ON BETTER EVIDENCE THAN BEFORE:
+ * the residual is not a mis-declared global, not an operand order, and not a value-site
+ * vs load-base distinction.  It is the register-colouring wall, exactly as recorded.
+ * Re-open ONLY with a model of IDO's colouring ORDER, per the note above.
+ *
  * ------------------------------------------------------------------ PERMUTER STATUS
  * conker/permuter_tu.sh selftest PASSES on game_18D770 (all five checks).  Note that
  * it used to FAIL check (b2) here; that was a harness bug (a `| head -5` SIGPIPE-killing

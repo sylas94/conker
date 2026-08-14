@@ -1,3 +1,112 @@
+/* ============================================================================
+ * PARKED STATE: func_150144B8 (game_40490.c) -- score 207, REPRODUCED 2026-08-14.
+ * Baseline confirmed in my own build before any change: 207 with -R and 207 without.
+ *
+ * === THE SHADOW HYPOTHESIS WAS TESTED FIRST AND IS A CLEAN NEGATIVE HERE ===
+ * The wave brief said this function "reaches D_80082E30 / D_80082EA0 / D_80082ECC".
+ * IT DOES NOT.  Those three are touched by func_15013000 / func_1501370C / func_1501396C,
+ * which are OTHER functions in this same parked TU.  func_150144B8 itself reaches only:
+ *     D_80082FA0   variables.h:371  `extern s32  D_80082FA0;`  -- CORRECT, scalar; golden
+ *                  does lui/lw %hi/%lo of it as a scalar, which is what this decl gives.
+ *     D_80096688   f32, file-local extern, read TWICE
+ *     D_8009668C   f32, file-local extern, read once
+ * None of the three is an array-declared-but-really-a-pointer symbol, none of them uses
+ * the cast-through-address idiom, and there is no address-as-VALUE site in the function.
+ * So there is NO shadow to apply.  Score before = 207, score after = 207 (no change made,
+ * because there is nothing to change).  RECORDED AS A NEGATIVE, as asked.
+ *
+ * === WHAT THE RESIDUAL ACTUALLY IS: ONE 8-BYTE FRAME DELTA, NOTHING ELSE ===
+ * ZERO instruction differences.  Every opcode, every register, every ordering matches
+ * golden.  The whole 207 is that golden's frame is 0xC0 and this build's is 0xC8, so all
+ * 22 sp-relative offsets and the two `addiu sp,sp,+/-N` read 8 too high:
+ *     golden  addiu sp,sp,-0xc0 ... addiu a0,sp,0x44 ... addiu a1,sp,0x88
+ *     build   addiu sp,sp,-0xc8 ... addiu a0,sp,0x4c ... addiu a1,sp,0x90
+ * asm-differ marks them `i` (immediate) and `s` (stack) only; no `r`, no inserted or
+ * deleted rows.  DIFFROWS = 22 of 165 instructions (660 bytes / 4).
+ *
+ * === THE LOCALS ARE ALREADY RIGHT.  DO NOT RE-DERIVE THEM. ===
+ * Golden's home area is [0x38, 0xC0) = 0x88 bytes, laid out top-down in declaration order,
+ * and this reconstruction reproduces it EXACTLY, just shifted +8:
+ *     tmp (0x38) @0x88 | temp_v0 (4) @0x84 | mtx (0x40) @0x44 | z @0x40 | y @0x3C | x @0x38
+ * (proved from golden: `addiu a0,sp,0x44` = &mtx, `addiu t9/t0/t1,sp,0x38/0x3C/0x40` =
+ * &x/&y/&z, `sw s0,0x88(sp)` = tmp.unk0, memcpy size 0x38, frame 0xC0.)
+ * Saved regs are s0@0x30 / ra@0x34 in BOTH.  So the 8 bytes sit strictly between the saved
+ * registers and the home area: it is a COMPILER TEMP, not a mis-counted local.
+ * Removing or adding a local moves mtx/x/y/z off golden's offsets -- verified, don't.
+ *
+ * === THE TRIGGER IS ISOLATED: THE TWICE-READ f32 GLOBAL D_80096688 ===
+ * Bisected with a standalone IDO harness (../ido/ido5.3_recomp/cc, same flags, ~8 s/build;
+ * it reproduces the in-project frame exactly: frame=200, x_at=64).  Measured, frame in
+ * decimal, target is frame=192 / x_at=56:
+ *     full function                                              200 / 64
+ *     drop `tmp.unk1C *= D_80096688;`   (leaves ONE read)        192 / 56   <-- golden's frame
+ *     drop `tmp.unk20 *= D_80096688;`   (leaves ONE read)        192 / 56   <-- golden's frame
+ *     drop BOTH                                                  192 / 56
+ *     `tmp.unk1C *= D_80096688; tmp.unk20 *= D_8009668C;`        192 / 56   (2 DIFFERENT globals)
+ *     `tmp.unk1C = D_80096688; tmp.unk20 = D_80096688;`          200 / 64   (no arithmetic at all!)
+ *     `tmp.unk24 *= D_80096688; tmp.unk28 *= D_80096688;`        200 / 64   (other destinations)
+ *     three or four such multiplies                              200 / 64   (does NOT keep growing)
+ * So it is not the multiply, not the destination, not address-taken-ness: it is READING THE
+ * SAME f32 GLOBAL TWICE.  IDO CSEs the two `lwc1 %lo(D_80096688)(at)` into one live value
+ * and gives that CSE a homed compiler temp, costing 8 bytes of frame.
+ * NOTE the contrast: the constant 0.015625f is ALSO used twice (tmp.unk14/tmp.unk18, one
+ * `lui at,0x3c80; mtc1` feeding two mul.s) and costs ZERO -- deleting both those lines
+ * leaves the frame at 200.  An IMMEDIATE CSE is free; a MEMORY-LOAD CSE is 8 bytes.
+ *
+ * === THE PARADOX THAT IS STILL OPEN ===
+ * Golden ALSO reads D_80096688 once and uses it twice:
+ *     lui at,%hi(D_80096688) / lwc1 $f0,%lo(D_80096688)(at)
+ *     lwc1 $f4,0xA4(sp) / lwc1 $f8,0xA8(sp) / mul.s $f6,$f4,$f0 / nop / mul.s $f10,$f8,$f0
+ *     swc1 $f6,0xA4(sp) / swc1 $f10,0xA8(sp)
+ * ...yet pays no 8 bytes for it.  So golden's source produces that single load WITHOUT
+ * creating a homed CSE temp.  Finding that spelling is the whole remaining problem.
+ *
+ * === SPELLINGS ALREADY TRIED AND MEASURED (ALL 200/64 -- DO NOT REPEAT) ===
+ *   tmp.unk1C = tmp.unk1C * D_80096688;      | tmp.unk1C = D_80096688 * tmp.unk1C;
+ *   *(f32 *)&tmp.unk1C *= D_80096688;        | *(&tmp.unk1C) *= D_80096688;
+ *   ((struct17 *)&tmp.unk1C)->unk0 *= ...;   | ((f32 *)&tmp)[7] *= ...;
+ *   tmp.unk1C *= *(f32 *)&D_80096688;        | tmp.unk1C *= (f32)D_80096688;
+ *   both on one source line; each in its own { } block; the two swapped; a `;` between
+ *   them; an unrelated statement between them; both moved later in the function (just
+ *   before func_15149130, and just after `tmp.unk0 = arg0;`);
+ *   `f32 scale; scale = D_80096688; ... *= scale;` with `scale` declared LAST (200/64 --
+ *      note `scale` is NOT homed, uopt folds it straight back into the same CSE) and
+ *      declared FIRST (200/60 -- homed, breaks the layout);  `register f32 scale;` (200/64);
+ *   `{ f32 t; t = tmp.unk20 * D_80096688; tmp.unk20 = t; }`;
+ *   redeclaring the global as `extern f32 D_80096688[]` + `[0]`, as a struct member `.v`,
+ *      and as `D_80096680[2]` -- all 200/64.
+ * Also negative (each still 200/64, i.e. not the cause): removing func_150A8050,
+ * func_150A7960, func_15145974, func_150484A0, the `%` modulo, the `1.0f /` division, the
+ * unk14/unk18 pair, the unk2C/unk30/unk34 trio, unk24, unk28, unk10/unk12, unk8/unkC, the
+ * early return; x/y/z regrouped as one `struct17 vec;`; x/y/z on one declarator line; `mtx`
+ * as a flat `f32 mtx[16]`; `temp_v0` moved in the declaration order; the anonymous payload
+ * struct hoisted to a named typedef; a struct ASSIGNMENT instead of memcpy (1832, worse --
+ * IDO inlines it); memcpy with sizeof(tmp), with `(void *)((s32)temp_v0 + 0x28)`, with
+ * `&((u8 *)temp_v0)[0x28]`, with a `(void *)` source cast, and at sizes 0x30/0x34/0x3C/
+ * 0x40/0x54 -- all 200.  Dropping the memcpy entirely also gives 192/56, but memcpy is
+ * spelled identically in NINE already-matched functions of this same TU (func_150139AC,
+ * func_15014094, func_15014220, func_150142EC, func_15014F6C, func_15015104, func_150151D4,
+ * func_15015354, func_15015644), so the memcpy spelling is not the lever.
+ *
+ * === FRAME MODEL CALIBRATION (from three MATCHED functions in this TU, for the next agent) ===
+ *   func_15014220 frame 0x40: homes 0x10 @0x30, ra@0x2C
+ *   func_15014F6C frame 0x98: homes 0x5C @0x3C, s0@0x30 ra@0x34
+ *   func_150156F4 frame 0xB0: homes 0x7C @0x34, s0@0x28 ra@0x2C
+ *   func_150144B8 golden 0xC0: homes 0x88 @0x38, s0@0x30 ra@0x34
+ * Layout low->high is [outgoing args][compiler temps][saved regs][align pad][homes], homes
+ * anchored at framesize and filled top-down in declaration order.
+ *
+ * === NEXT MOVES, IN PRIORITY ORDER ===
+ * 1. Find the C spelling that yields one `lwc1` of a global feeding two `mul.s` with NO
+ *    homed CSE temp.  A permuter run scoped to just these two statements is the right tool;
+ *    the search space is small and the target is a single 8-byte frame delta.
+ * 2. Grep the already-matched corpus for any function that reads one f32 global twice in a
+ *    single basic block and check its frame against the model above.  If such a function
+ *    exists and pays 0, diff its source shape against this one -- that is the answer.
+ *    If EVERY such function pays 8, then the 8 bytes here is coming from somewhere else and
+ *    the multiplies are only the marginal consumer, and the search should move on.
+ * DO NOT re-run the shadow hypothesis, the local-count probe, or the memcpy spellings.
+ * ============================================================================ */
 #include <ultra64.h>
 
 #include "functions.h"

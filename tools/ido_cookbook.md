@@ -3214,3 +3214,119 @@ GLOBAL_ASM block rather than inline C. Table position does not affect linking.
 PARKED: func_1508BC20 @785 (basic-block + allocation, both families documented with scores),
 func_15084044 @70 (one CSE register substitution: golden holds it in $a3, ours in $v0),
 func_1000A03C @2570 (frame now exactly 0x78 with all three observable offsets matching).
+
+# ================================================================================
+# THE MIS-DECLARED-GLOBAL UNLOCK: CONFIRMED, SCOPED, AND ONE OF ITS TARGETS CLOSED
+# ================================================================================
+
+Wave 45 tested last wave's hypothesis on four parked near-misses. **Scorecard: one closed, two
+clean negatives, one brief that was factually wrong.** The law survives, but with a precise limit.
+
+## CONFIRMED: func_150A09D0, 20 -> 0 in ONE build, from the spelling alone
+This was a member of the "<= 20 unreachable allocation tie" cluster that this file calls a terminal
+state. Its recorded residual was two `addu`s in `jal` delay slots emitted as (base, induction) where
+golden has (induction, base) — and eleven pointer spellings had all canonicalised the same way.
+**It really was not allocation.** The two divergent sites are exactly the two that pass
+`&D_800D3098[i]` as a VALUE; the eleven load-BASE sites in the same function were identical under
+either spelling. That is why it sat at 20 for so long: 11 of 13 sites agreed.
+
+## THE LIMIT, measured: THE LAW NEEDS A RUNTIME INDEX
+On func_15010880 the shadow moved nothing (210 -> 210, a clean negative recorded as instructed).
+The reason is exact: its value sites use CONSTANT indices —
+    0xEA0 = 72 * 0x34   ->  &D_800D3098[72]
+    0xED4 = 73 * 0x34   ->  &D_800D3098[73]
+and a constant index folds to a single `addiu rD,base,K`, so base-then-offset and offset-then-base
+are **BIT-IDENTICAL**. Four spelling variants all scored 210.
+**RULE: the operand-order law only bites where the index is a RUNTIME value.** With a constant
+index, do not bother.
+(Incidental proof the declaration really is wrong: index **73** is one PAST the declared
+`struct178 D_800D3098[73]`.)
+
+## THE CHEAPEST TEST, and it needs no build: LOOK FOR AN IN-FUNCTION CONTROL
+func_150A09D0 touches TWO pointer globals. `D_800DBFF0` is CORRECTLY declared in variables.h as
+`extern struct108 *D_800DBFF0;`, and its address-as-value site was ALREADY emitting golden's operand
+order (`addu v0,a0,t3`) back at score 20. `D_800D3098` is mis-declared as an array, and its value
+sites emitted the reverse. **Same construct, two declarations, opposite operand order, inside one
+function.** So when a near-miss shows swapped `addu` operands, find a correctly-declared pointer
+global elsewhere in the SAME function and compare — that tells you which spelling is right before
+you build anything.
+
+## THE SHADOW IS SAFE TU-WIDE, PROVED BY BYTES NOT ARGUMENT
+game_CDE80.c has ELEVEN other `D_800D3098` users that keep the `*(s32 *)&D_800D3098` cast idiom.
+The shadow does not disturb them, because `&SYM` is the symbol address under either declared type
+and the cast overrides the type anyway — confirmed by the whole-.text byte compare, with all 19
+siblings still scoring 0. The pattern is now live in two TUs (game_16EE20.c, game_CDE80.c) and
+should be the DEFAULT fix for a mis-declared global, not a last resort.
+
+# ================================================================================
+# NEW LAW: READING THE SAME f32 GLOBAL TWICE IN ONE FUNCTION COSTS 8 FRAME BYTES
+# ================================================================================
+
+This is the whole of func_150144B8's residual of 207 — a function with **ZERO instruction
+differences**, where the entire score is one 8-byte frame delta making all 22 sp-relative offsets
+read 8 too high (`addiu sp,sp,-0xc8` vs golden's `-0xc0`; no 'r' rows, no inserts, no deletes).
+
+IDO CSEs two `lwc1 %lo(G)(at)` of the same global into one live value and gives that CSE a **HOMED
+compiler temp**. Measured on the standalone compiler:
+    two reads of D_80096688                              -> frame 200
+    either read removed, or the second pointed elsewhere -> frame 192
+**It is the READ, not the arithmetic** — two bare assignments `tmp.unk1C = G; tmp.unk20 = G;` still
+cost the 8. **It does not accumulate**: three or four such reads still cost exactly 8.
+**THE CONTRAST MATTERS:** an IMMEDIATE CSE is FREE — the same function uses 0.015625f twice from one
+`lui at,0x3c80; mtc1` with no frame cost.
+CONSEQUENCE for the frame law: an 8-byte surplus between the saved registers and the home area is
+NOT always a mis-counted local. Check for a repeated f32 GLOBAL read first; that space is a homed
+CSE temp, and the locals may already be perfect (they were here — the home layout reproduced golden
+exactly, just shifted by 8).
+
+# ================================================================================
+# MY OWN BRIEF WAS FACTUALLY WRONG ON func_15162B28, AND THE AGENT CAUGHT IT
+# ================================================================================
+
+I told the agent that function's parked notes list D_800886F0/F4/F8 and to check each against
+variables.h. **Those symbols are not referenced by that function at all.** It touches exactly two
+globals — D_8008B364 and D_800BE9A4 — and the three I named appear in func_15164644, a DIFFERENT
+function in the same TU. My grep had pulled symbols from the whole parked file, including notes
+about other functions, rather than from the function's own references.
+The agent audited every `%hi()` in the golden .s, refuted the premise from the binary, and said so.
+**Lesson for briefing: extract a function's symbols from ITS OWN golden .s, never from a parked
+file that may discuss neighbours.**
+Its verdict is unchanged and now better evidenced: exactly TWO rows, the same row twice, 100%
+register-only — golden coalesces the local into `$v1` (the register it later recycles) where ours
+gets `$a2`. The register-colouring wall stands.
+
+# ================================================================================
+# func_15010880: A PURE SCHEDULING RESIDUAL, EXHAUSTIVELY BOUNDED
+# ================================================================================
+
+Instruction MULTISET is identical — same 84 instructions, same registers, same immediates, same
+relocations, verified by objdump rather than by the differ. Twelve instructions in one straight-line
+window are permuted: golden runs a store chain to completion then loads the global; ours hoists the
+load above the store. Both are legal schedules of the same DAG covering an lw->addiu interlock.
+Axes exhausted with nothing ever below 210: **12/12 statement orders, 8/8 declaration orders, 7/7
+OPT_FLAGS settings, 13 global spelling/type variants, 12 line join/split variants, 3 alias-analysis
+probes, and a 3,906-iteration permuter run** (histogram bottomed out at the base).
+
+**A USEFUL BY-PRODUCT — THE SHIPPED FLAGS ARE OPTIMAL, MEASURED:**
+    -O2 -g3  (shipped)  210   <- best
+    -O2                 330
+    -O1 -g3            1204
+    -O2 -g             3899   (-g1/-g2 identical)
+    -O3 -g3            6864
+Anyone tempted to explain a residual by "maybe this TU used different flags" now has a number.
+
+# ================================================================================
+# WAVE 45 RESULT
+# ================================================================================
+
+CLOSED: func_150A09D0, 836 B, game_CDE80.c — a per-frame sweep of the game object table dispatching
+on the object kind field, handling a queued-sound retrigger with a proximity test, a two-stage state
+machine, a countdown that frees the slot it names, and a broadcast of the object's position into
+every active camera record.
+Verified independently: score 0 with and without -R, **all 19 siblings in the TU still 0**, .text
+IDENTICAL (12,448 bytes), .rodata/.data/.bss identical, symbol size 836 both sides, zero banned
+constructs, grep GLOBAL_ASM 1739 -> 1738.
+
+PARKED: func_15010880 @210 (pure scheduling, exhaustively bounded above), func_15162B28 @10
+(register-colouring wall, verdict restored with better evidence), func_150144B8 @207 (zero
+instruction differences; the whole score is the 8-byte f32-CSE frame temp above).
