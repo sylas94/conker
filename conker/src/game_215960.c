@@ -2,7 +2,11 @@
 #define func_1502B7F0 func_1502B7F0_5
 #include "functions.h"
 #undef func_1502B7F0
+/* variables.h types D_800CC2D0 as struct127[], whose 0x128 is inside `u32 pad128`;
+   func_151E9D18 needs a byte there, so shadow the declaration file-locally. */
+#define D_800CC2D0 D_800CC2D0_struct127_decl_in_variables_h
 #include "variables.h"
+#undef D_800CC2D0
 
 extern s32 D_800E0A74;
 extern u8 D_800E0B96;
@@ -135,8 +139,6 @@ Gfx *func_151E86E4(Gfx *gfx, s32 xl, s32 yl, s32 xh, s32 yh, s32 tile, s32 s, s3
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151E966C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_215960/func_151E9D18.s")
-
 typedef struct {
     /* 0x00 */ char pad0[0x42];
     /* 0x42 */ s8 unk42;
@@ -180,6 +182,107 @@ extern u8 D_843;
 extern u8 D_888;
 Gfx *func_151E9D18(Gfx *, s32, s32);
 Gfx *func_151E966C(Gfx *, s32, s32, s8, s32);
+
+typedef struct {
+    /* 0x000 */ char pad0[0x128];
+    /* 0x128 */ u8 unk128;
+    /* 0x129 */ char pad129[0x203];
+} ScoreObj; /* size 0x32C */
+
+extern ScoreObj D_800CC2D0[];
+extern u8 D_D10;
+extern u8 D_800ABAA0;
+extern u8 D_800ABAA4;
+
+Gfx *func_151E9D18(Gfx *gfx, s32 arg1, s32 arg2) {
+    u8 *tex;
+    s32 tOffset;
+    s32 image;
+    s32 width;
+    s32 amount;
+    s32 total0;
+    s32 total1;
+    s32 y;
+    s32 sOffset0;
+    s32 sOffset1;
+    s32 i;
+
+    y = arg1 - 0x10;
+    if ((D_8008FDC0 & 0x4000) || (D_8008FDD4->unk42 == 8)) {
+        tex = (D_8008FDD4->unk42 == 8) ? &D_D10 + 2 : &D_D10 + 1;
+        width = 0x10;
+        sOffset0 = 0;
+        sOffset1 = 0x200;
+    } else {
+        tex = &D_D10;
+        width = 0x20;
+        sOffset0 = 0x200;
+        sOffset1 = 0;
+    }
+
+    image = func_1510D0EC(tex, 0, 3, 0);
+    if (image == (s32)0x80000000) {
+        return gfx;
+    }
+    gDPPipeSync(gfx++);
+    gDPSetTextureImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_32b, 1, image);
+    gDPSetTile(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_32b, 0, 0, G_TX_LOADTILE, 0, G_TX_CLAMP, 5, 0, G_TX_CLAMP, 5, 0);
+    gDPLoadSync(gfx++);
+    gDPLoadBlock(gfx++, G_TX_LOADTILE, 0, 0, (width * 32) - 1, 0);
+    gDPPipeSync(gfx++);
+    gDPSetTile(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_32b, ((width * 2) + 7) >> 3, 0, G_TX_RENDERTILE, 0,
+               G_TX_CLAMP, 5, 0, G_TX_CLAMP, 5, 0);
+    gDPSetTileSize(gfx++, G_TX_RENDERTILE, 0, 0, (width - 1) << 2, 0x7C);
+    gDPSetOtherMode(gfx++, 0x000C3F, 0x504244);
+    gDPSetEnvColor(gfx++, 0xFF, 0xFF, 0xFF, 0xFF);
+
+    tOffset = 0;
+    total0 = 0;
+    total1 = 0;
+    if (arg2 != 0) {
+        if (D_8008FDC0 & 0x6040) {
+            total0 = func_150859AC(0, 6);
+            total1 = func_150859AC(1, 6);
+        } else if (D_8008FDC0 & 0x100) {
+            for (i = 0; i < D_8008FD8C; i++) {
+                amount = func_150859AC(i, 3);
+                if (amount < 0) {
+                    amount = 0;
+                }
+                if (D_800CC2D0[i].unk128 == 0) {
+                    total0 += amount;
+                } else {
+                    total1 += amount;
+                }
+            }
+        } else {
+            tOffset = 0x200;
+            for (i = 0; i < D_8008FD8C; i++) {
+                amount = D_8008FDD4->unk46[i];
+                if (amount < 0) {
+                    amount = 0;
+                }
+                if (D_800E0C00[i] == 0) {
+                    total0 += amount;
+                } else {
+                    total1 += amount;
+                }
+            }
+        }
+        D_800E0AA0[0] = total0;
+        D_800E0AA0[1] = total1;
+    } else {
+        total0 = D_800E0AA0[0];
+        total1 = D_800E0AA0[1];
+    }
+
+    gfx = func_151E86E4(gfx, 0x108, y, 0x148, y + 0x40, 0, sOffset0, tOffset, 0x400, 0x400);
+    gfx = func_151E86E4(gfx, 0x318, y, 0x358, y + 0x40, 0, 0, tOffset + sOffset1, 0x400, 0x400);
+    func_1504332C(0xC0, 0xC0, 0xC0, 0xFF);
+    func_15042D94(0x4F, (y >> 2) + 1, 0x80, &D_800ABAA0, total1);
+    func_15042D94(0xD3, (y >> 2) + 1, 0x80, &D_800ABAA4, total0);
+    return gfx;
+}
 
 Gfx *func_151EA15C(Gfx *gfx, s32 arg1, s32 arg2, s32 arg3) {
     s32 image;

@@ -2685,3 +2685,132 @@ func_151B7328  still 279. Part 1 did NOT hand over the answer (this function def
     artefact of the whole 233-instruction body, not any construct. Next step is pressure reduction
     or the permuter, not construct enumeration.
     Also measured: the known-wrong u8 RNG declaration is NOT a lever here (byte-identical at 279).
+
+# ================================================================================
+# expected/ IS NOT THE AUTHORITY. THE ROM GATE IS. AND expected/ HAS DRIFTED.
+# ================================================================================
+
+Wave 40 produced a scare that every future wave will hit, so the adjudication procedure is
+recorded here.
+
+**THE SYMPTOM.** After closing func_151E9D18, `-o func_151E9D18` scored **10**, not 0, and the
+whole-object `.text` compare said DIFFERS.
+
+**THE ADJUDICATION, in this order:**
+ 1. **Compare EVERY symbol separately, not the whole section.** The per-symbol compare showed
+    `1 symbol differs out of 40`, and it was **func_151EA15C** - a DIFFERENT function, already
+    matched and live C. func_151E9D18 itself was byte-identical.
+ 2. The score of 10 was therefore the UNBOUNDED-WINDOW TRAP biting the verification step: the
+    16,384-byte window from func_151E9D18's start swept into func_151EA15C's drifted byte.
+ 3. **Run the ROM gate.** Inner sha1 `842e3d34...` PASSED with the change live. The ROM is the
+    ground truth; if the linked image is byte-perfect then every function in it is byte-perfect.
+
+**CONCLUSION: the `expected/` object was the stale party, not our source.** The differing byte is a
+relocation addend (`addiu s0,s0,4` vs `addiu s0,s0,0`) inside a function this wave never touched.
+
+**CORROBORATION FROM THE FILESYSTEM, worth checking whenever this recurs:** `expected/` is a static
+golden snapshot, not regenerated as work proceeds - **462 of 464 objects are dated 2026-08-09**, and
+`game_215960.c.o` is one of only **TWO** dated 08-10. An object with an anomalous date is the
+signature of the known drift bug (stub_expand.py copying without deleting), not of normal work.
+
+**RULE.** `expected/` is a fast convenience reference and it can be WRONG. When a whole-object
+compare disagrees with a clean ROM gate, believe the gate. Never revert a match on the strength of
+an `expected/` diff alone: first compare per-symbol to find WHICH function differs, and if it is not
+the one you edited, check the object's date and gate the ROM.
+
+# ================================================================================
+# THE ACTOR-ARRAY LAW HAS A SECOND HALF: `div` BY 0x32C IS A POINTER DIFFERENCE
+# ================================================================================
+
+Wave 40 was planned around the prediction that these targets would show `base + 812*i`. **Both
+targets went the OTHER WAY and the prediction was wrong.** They RECOVER AN INDEX FROM A POINTER:
+
+    subu a3, ptr, &D_800CC2D0 ; addiu at, zero, 0x32C ; div zero, a3, at ; mflo a3
+
+In C that is simply `ptr - D_800CC2D0` on a `struct127 *`. **A `div` by 0x32C is the signature of a
+POINTER DIFFERENCE and needs no index local at all** - `D_800C3E78 = actor - D_800CC2D0;` (the
+game_49D30.c idiom) reproduces it verbatim. Note also that a lone `multu` near actor code may be
+unrelated to the array entirely: func_151DF1BC's was `D_800E0A94 * alpha`, an alpha blend.
+
+So the full reading of golden is a three-way decision, not a two-way one:
+    sll/subu/addu ladder  -> index was a LOCAL, multiplied
+    li 0x32C ; multu      -> index was a RAW FIELD LOAD, multiplied
+    div by 0x32C          -> there is no index; the source subtracted two POINTERS
+
+## AMENDMENT: the ladder also fires on a u8 field load
+The first statement of Law 1 ("reduction refuses on a memory load") is too strong. A caller
+(func_15186794) does `lbu t8,0x124(a0)` and then emits the identical 9-instruction ladder. The
+reliable half of the law is the READING DIRECTION - decide from golden which of the three forms to
+write - not a claim about what IDO will refuse.
+
+# ================================================================================
+# TWO CACHES OF ONE FIELD ARE HONEST SOURCE, AND YOU CANNOT FAKE THEM WITH A COPY
+# ================================================================================
+
+func_151D4DAC's golden has one `lbu v0,0x1ca` plus `move v1,v0`, with v1 feeding a `>= 3` test and
+v0 feeding a `- 1`. Measured:
+
+    one local                       30   (five register-only lines)
+    hp2 = hp;      (the copy)      650
+    hp2 = arg0->health;  (2nd read)  0
+
+**IDO's CSE turns the SECOND READ of the same field into the register copy.** So a redundant-looking
+pair of caches of one field is the HONEST reading of the machine code, not a register-shuffling
+trick - and the two locals must be initialised INDEPENDENTLY FROM THE FIELD, never from each other.
+This is the constructive converse of the fake-match rules: writing literally what the asm does
+(`hp2 = hp;`) is the WRONG answer; writing what the source must have said is the right one.
+
+# ================================================================================
+# A NARROWING CAST GETS FOLDED INTO A CALL ARGUMENT - HOIST IT TO ITS OWN STATEMENT
+# ================================================================================
+
+Writing `f(a, b, ((u16)(g(...) * K) - 0x4000) | 1, idx)` made IDO DROP the inner `andi 0xffff`
+(because the outer parameter is already u16) AND evaluate the argument list in a different order,
+costing an extra `mov.s $f2,$f0`. Hoisting the cast into its own statement - `u16 angle;
+angle = g(...) * K;` - restored BOTH `andi`s and golden's evaluation order, and the entire tail
+became byte-identical in one build (35 -> 30).
+**GENERALISATION: when golden materialises a narrowing cast as its own `andi` rather than folding it
+into the call, the cast was a separate ASSIGNMENT in the source.**
+
+# ================================================================================
+# FRAME LAW AMENDMENT: ONLY SPILLED LOCALS OCCUPY HOMES, BUT THE COUNT STILL SIZES THE AREA
+# ================================================================================
+
+Measured on two functions in the same wave, and it resolves an apparent contradiction with the
+existing entry:
+ * func_151D4DAC has FOUR declared locals, a 0x28 frame and a SINGLE spill slot at 0x24 - four
+   homes would have collided with `ra` at 0x1C.
+ * func_151DF1BC has THREE spilled locals and needed a FOURTH DECLARED local to push its homes from
+   0x24/0x28/0x2C down to golden's 0x20/0x24/0x28 (worth ~1000 points).
+So: **only spilled locals actually occupy home slots, but the home AREA is still sized by the
+DECLARED count.** That is why adding a local that never spills can still move every other home.
+
+# ================================================================================
+# WAVE 40 RESULT
+# ================================================================================
+
+CLOSED:
+  func_151E9D18  1092 B  game_215960.c  - HUD two-team score readout: builds the icon display list
+      (SETTIMG/SETTILE/LOADBLOCK/SETTILESIZE for a 32b RGBA tile), accumulates two team totals from
+      one of three sources depending on the mode flags, caches the pair, draws both icons and prints
+      both numbers.
+  func_151D4DAC   924 B  game_200930.c  - actor damage/impact dispatcher: fires the impact effect for
+      a whitelist of 47 actor ids, decrements or zeroes health, swaps the event code, and reports the
+      event with the source actor's array index (or -1).
+Verified independently: score 0 (func_151D4DAC, .text IDENTICAL 10768 B, 0 of 55 symbols differ),
+per-symbol compare clean for func_151E9D18 with the sole difference in an untouched neighbour, zero
+banned constructs in either TU, pragmas 1743 -> 1741, ROM gate passed.
+
+PARKED:
+  func_15184FA4 @15 - THREE instructions, register-name only, at the gSPViewport slot. The `Gfx *_g`
+      block-locals inside the gbi.h macros are handed out round-robin over {v0,v1,a0,a1,a2,a3};
+      golden's first block skips a2 and ours skips a3, and both then wrap to v0 - so it is NOT a
+      persistent counter offset. a2 is provably DEAD at that point in golden, so liveness does not
+      explain it either. Eleven source variants across two sweeps, EACH WITH A CONTROL THAT FIRED
+      (15 -> 20 both times), all returned 15 with the viewport register still a2. Its permuter
+      selftest fails check (b2) - round trip changes codegen - so permuter scores would be measured
+      on a different source and are not trusted. Structural selector, not reachable from this source.
+  func_151DF1BC @3866 - control flow, every constant, every mask and every callee argument list are
+      already EXACT across all 238 instructions. The whole residual is a register-vs-memory inversion
+      between two locals living across calls: golden keeps `alpha` resident in t0 and `actor` purely
+      in memory at 0x20(sp); ours does the opposite.

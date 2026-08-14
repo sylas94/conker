@@ -307,7 +307,71 @@ void func_151D4D58(void *arg0) {
     func_151D469C(arg0, 1, 0x50, 0xFF, 1);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_200930/func_151D4DAC.s")
+extern f32 D_800AB218;
+
+typedef struct {
+    u8 pad0[4];
+    f32 unk4;
+    u8 pad8[0x50];
+    u8 unk58;
+    u8 unk59;
+} S151D4DAC;
+
+void func_151C2050(struct127 *, f32 *, f32 *, s32, f32);
+void func_1507DE4C(struct127 *);
+void func_15138C80(struct127 *, s32, s32);
+void func_15137610(struct127 *, f32 *, f32 *, f32 *, u8, s32);
+s32 func_1505D024(struct127 *, s32, u16, s32);
+
+void func_151D4DAC(struct127 *arg0, struct127 *arg1, f32 *arg2, f32 *arg3, S151D4DAC *arg4, s32 arg5, f32 *arg6, u8 arg7, s32 arg8) {
+    s32 alreadyDead;
+    s32 health;
+    s32 hp;
+    u16 angle;
+
+    if ((arg0->id == 0x9) || (arg0->id == 0xF) || (arg0->id == 0x10) || (arg0->id == 0x12) ||
+        (arg0->id == 0x17) || (arg0->id == 0x1B) || (arg0->id == 0x1E) || (arg0->id == 0x28) ||
+        (arg0->id == 0x29) || (arg0->id == 0x2A) || (arg0->id == 0x2B) || (arg0->id == 0x2C) ||
+        (arg0->id == 0x2E) || (arg0->id == 0x38) || (arg0->id == 0x41) || (arg0->id == 0x42) ||
+        (arg0->id == 0x4B) || (arg0->id == 0x46) || (arg0->id == 0x47) || (arg0->id == 0x49) ||
+        (arg0->id == 0x4A) || (arg0->id == 0x4C) || (arg0->id == 0x4D) || (arg0->id == 0x4E) ||
+        (arg0->id == 0x4F) || (arg0->id == 0x52) || (arg0->id == 0x5D) || (arg0->id == 0x60) ||
+        (arg0->id == 0x61) || (arg0->id == 0x66) || (arg0->id == 0x67) || (arg0->id == 0x70) ||
+        (arg0->id == 0x73) || (arg0->id == 0x77) || (arg0->id == 0x7B) || (arg0->id == 0x89) ||
+        (arg0->id == 0x8C) || (arg0->id == 0x8E) || (arg0->id == 0x8F) || (arg0->id == 0x91) ||
+        (arg0->id == 0x9E) || (arg0->id == 0xA6) || (arg0->id == 0xAB) || (arg0->id == 0xAC) ||
+        (arg0->id == 0xB2) || (arg0->id == 0xB4) || (arg0->id == 0x5B)) {
+        func_151C2050(arg1, arg2, arg6, 9, (arg4 != NULL) ? arg4->unk4 : 0.0f);
+    }
+
+    health = arg0->health;
+    if (health == 0) {
+        alreadyDead = 1;
+    } else {
+        alreadyDead = 0;
+    }
+
+    arg5 |= 0x60000;
+    hp = arg0->health;
+    if ((arg4 != NULL) && (arg4->unk59 == 3) && (arg4->unk58 == 0xA)) {
+        if (health >= 3) {
+            arg0->health = hp - 1;
+        } else {
+            arg0->health = 0;
+            func_1507DE4C(arg0);
+            func_15138C80(arg0, 0xFF, 1);
+            arg5 = 0x100020;
+        }
+    }
+
+    func_15137610(arg0, arg2, arg3, arg6, arg7, arg8);
+
+    if (alreadyDead == 0) {
+        angle = func_150484A0(arg6[0], arg6[2]) * D_800AB218;
+        func_1505D024(arg0, arg5 | 0x80000, (angle - 0x4000) | 1,
+                      (arg1 != NULL) ? (arg1 - D_800CC2D0) : -1);
+    }
+}
 
 void func_151D5148(void *arg0) {
     s16 *p = *(s16 **)((u8 *)arg0 + 0x31C);
