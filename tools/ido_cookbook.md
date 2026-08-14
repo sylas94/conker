@@ -3085,3 +3085,132 @@ Notable: this is the function whose golden supplied the corpus evidence for the 
 (`andi 0xFFEF / andi 0xFFEF / addiu -0x11`). Knowing in advance that it masks with the same constant
 at least three times - and that all sites must be spelled identically - was handed to the agent in
 the brief and is the kind of pre-loaded fact that makes a cold start cheap.
+
+# ================================================================================
+# A WRONG-HEADER WORKAROUND WAS COSTING MATCHES, AND IT IS A SYSTEMIC UNLOCK
+# ================================================================================
+
+func_151438D8 was parked at 20 with the note *"residual = ALLOCATION, 4 instructions"*.
+**It was not allocation.** It was the spelling used to reach a mis-declared global, and the fix
+took it **20 -> 0**.
+
+variables.h declares `extern struct178 D_800D3098[73]`, but the symbol actually holds a **POINTER**.
+Twelve live TUs work around that with the cast-through-address idiom `*(s32 *) &D_800D3098`. The
+parked reconstruction copied the idiom. Replacing it with the sanctioned file-local shadow closed
+the function:
+
+    #define D_800D3098 D_800D3098_array_decl_in_variables_h
+    #include "variables.h"
+    #undef D_800D3098
+    extern ObjRec *D_800D3098;
+
+**THE RULE, and it explains why only 2 of 13 sites diverged:**
+`((T *) *(s32 *) &SYM)` makes IDO evaluate **base-then-offset**; a plain `extern T *SYM` evaluates
+**offset-then-base** wherever the address is produced as a VALUE (`&TBL[i]` assigned to something).
+At load-BASE sites the two are identical, which is why eleven sites matched either way and only the
+two `result = &OBJTBL[i];` sites differed:
+
+    golden  lw t6,0(a2) / mflo t8 / addu t0,t8,t6
+    cast    lw t8,0(a2) / mflo t6 / addu t0,t8,t6      <- same `addu` WORD, operands swapped
+
+Both spellings were built in the same tree to prove it (20 vs 0).
+
+## The corollary is the important half: A PARKED RESIDUAL CLASSIFICATION CAN BE WRONG
+The earlier note read the swapped `lw`/`mflo` destinations as register allocation *because the
+`addu` instruction word was byte-identical in both builds*. That reasoning is seductive and wrong.
+**When two operands land in the same two registers but SWAPPED, suspect the SOURCE OPERAND ORDER of
+the expression, not the allocator.** A misclassification does not merely fail to close a function —
+it pins it in the backlog under a label that discourages anyone from re-opening it.
+
+## FIVE PARKED NEAR-MISSES USE THE SAME IDIOM AND SHOULD BE RE-CHECKED WITH THE SHADOW FIRST
+    func_15162B28   parked @1      <- in the "<=20 unreachable allocation tie" cluster
+    func_150A09D0   parked @20     <- same cluster
+    func_150144B8   parked @207
+    func_150FA1B8   parked @1695
+    func_15010880   parked (score not recorded)
+The idiom reaches five distinct symbols across twelve live TUs: D_8002BD10, D_800A66B4,
+D_800BE9F4, D_800D3098, D_800DC2B0.
+**This matters most for the <=20 cluster**, which this file already describes as a terminal
+"the allocation is internal, there is nothing in the source to change" state. Two of its members
+reach a global through this idiom, so at least those two deserve one build with the shadow before
+that verdict stands.
+
+# ================================================================================
+# IDO HOMES A LOCAL ONLY IF IT SURVIVES uopt -- SINGLE-DEF SINGLE-USE IS DEMOTED
+# ================================================================================
+
+A refinement of the frame law with a real cost attached. In func_1508BC20, `step = 0xAA / n;` read
+once per loop iteration is FORWARD-SUBSTITUTED away: the div block SINKS into the loop preheader and
+the quotient lands in a compiler TEMP (0x48) instead of `step`'s own home (0x6C, declaration ordinal
+7). Rewriting the same value as a MULTI-DEF variable —
+
+    n = count >> 1;  if (n < 2) n = 2;  n = 0xAA / n;
+
+— makes IDO keep it: the store lands in home ordinal 7, the div stops sinking, and the loop guard
+becomes `blezl s3,<epilogue>` with `lw ra` annulled in the delay slot. **Three separate divergences
+fixed by one change.**
+THE CATCH, measured: IDO then ENREGISTERS it in `$a0` (caller-saved), adding `mflo a0` after the trap
+checks plus a redundant load/move/spill per iteration, where golden never enregisters it at all. No
+honest spelling got both, so 785 (single-def, right allocation, wrong block order) beat 1113
+(multi-def, right block order, wrong allocation). **A frame home that refuses to appear may mean the
+variable is being optimised out of existence, not that the declaration list is wrong.**
+
+# ================================================================================
+# `return <var>` VS `break` DECIDES WHETHER A SPILLED RESULT IS CONSTANT-PROPAGATED
+# ================================================================================
+
+Worth **685 -> 70** on func_15084044, from one keyword. The allocation-failure path sets a result
+and leaves the loop. Written as `return ret;` at that point, IDO folds it to `li v0,1` and jumps to
+a private tail. Golden instead stores `sw t3,0x48(sp)` in a branch delay slot and falls into the
+common `lw v0,0x48(sp)` tail — i.e. **the source `break`s out of the loop** so several values reach
+a single return and the constant cannot be propagated.
+GENERAL FORM: if golden spills a result and falls into ONE shared return, the source has one exit
+and `break`s to it. If golden folds a constant into `li v0,K` with its own tail, the source returned
+early at that point.
+
+# ================================================================================
+# IDO REVERSES COMPARISON OPERANDS -- BUT NOT UNIFORMLY (rs IS THE SECOND OPERAND)
+# ================================================================================
+
+Golden: `lw t6,0x64(sp); lw t8,0x10(s0); lw t7,8(t6); bnel t7,t8`.
+Written `mesg->dramAddr == node->unk10` the three loads land in the same registers but the branch is
+`bnel t6,t8`; written `node->unk10 == mesg->dramAddr` **all four instructions match**. So `rs` is the
+SECOND source operand.
+**CAVEAT, measured in the same wave:** the identical rewrite on func_15084044 changed nothing
+(70 -> 70). The normalisation reverses a compare of TWO FIELD READS but not one where an operand is
+already a live register. Do not treat it as unconditional.
+
+# ================================================================================
+# TWO AGENT CLAIMS I CHECKED AND ONE WAS FALSE
+# ================================================================================
+
+* **FALSE:** "expected/build/src/ held only THREE objects for the whole repo." Verified directly:
+  **464** objects present, all of the wave's TUs among them, with the usual 462-at-2026-08-09 /
+  2-at-08-10 split. The agent was almost certainly looking at its own private scorer directory
+  (a symlinked tree with its own build/), not conker/expected/. **Not a real trap — do not act on
+  it.** A private scorer needs its expected/ seeded; the repo's does not.
+* **TRUE and already known:** `-o <func>` is not bounded by the symbol. One agent's first reading of
+  685 was taken over a 16 KB window running through four later functions.
+* **TRUE:** a stale object silently scores. One agent's first verification of the closed function
+  read 20 against a STALE object; a forced rebuild gave 0. Always `rm` the object first.
+
+# ================================================================================
+# WAVE 44 RESULT
+# ================================================================================
+
+CLOSED: func_151438D8, 1088 B, game_16EE20.c — a masked linear search over the 0x34-stride global
+object table. It takes an index range BY ADDRESS (the callee clamps both ends in place), a u16
+field-selector mask and a key record; for each of eleven selectable field groups it accumulates a
+"checked" and a "matched" mask, with selector bit 0x1000 switching the accept test from any-match to
+all-match, and returns the LAST accepted record or NULL.
+Verified independently: score 0 with and without -R, **all 75 siblings in the TU still 0**, .text
+IDENTICAL (20,256 bytes), .rodata/.data/.bss identical, symbol size 1088 both sides, and **this
+wave's diff adds ZERO banned constructs** (the TU's pre-existing self-assignment at line 496 and
+`do{}while(0)` at line 1298 are already inventoried in tools/FAKEMATCH_AUDIT.md).
+A relocation-TABLE-POSITION difference was checked and dismissed: identical relocation SET at
+identical offsets, ordered differently because the golden object got them from an appended
+GLOBAL_ASM block rather than inline C. Table position does not affect linking.
+
+PARKED: func_1508BC20 @785 (basic-block + allocation, both families documented with scores),
+func_15084044 @70 (one CSE register substitution: golden holds it in $a3, ours in $v0),
+func_1000A03C @2570 (frame now exactly 0x78 with all three observable offsets matching).
