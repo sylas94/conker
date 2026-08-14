@@ -80,6 +80,64 @@
  *   325  + the func_150ADA20 file-local retype.
  *     5  + the pointer retypes.  CURRENT.
  *  1170  + respelling D_800A2170..D_800A2188 as float literals (rodata probe).
+ *
+ * ---------------------------------------------------------------------------
+ * WAVE 2 (2026-08-14).  BASE RE-CONFIRMED 5 / 816 B (golden 812).  ALL SCORES
+ * BOUNDED TO 203 WORDS.  Per-symbol byte compare of the whole TU re-run and
+ * ALL ELEVEN already-matched functions are still IDENTICAL to expected/.
+ * ---------------------------------------------------------------------------
+ * THE RESIDUAL, RE-READ FROM THE BUILD (the old note above was half right):
+ *   golden  c98 lbu   t2,0x12f(sp)   |  live  c90 lbu   t2,0x12f(sp)
+ *           c9c lui   at,%hi(217C)   |        c94 lwc1  $f14,0x110(sp)
+ *           ca0 lwc1  $f14,0x110(sp) |        c98 lui   at,%hi(217C)
+ *           ca4 beqz  t2,d78         |        c9c beqzl t2,d78
+ *           ca8  lwc1 $f16,0x11c(sp) |        ca0  lbu  t3,0x133(sp)   (annulled)
+ *           cac lwc1  $f0,%lo(217C)  |        ca4 lwc1  $f0,%lo(217C)
+ * and at the merge golden's branch TARGET *is* the `lbu t3,0x133(sp)`, while in
+ * live the lbu sits one slot ABOVE the target and is therefore emitted TWICE
+ * (annulled copy in the likely-branch slot + real copy at d74).  That duplicate
+ * is the whole 4-byte excess.
+ * MECHANISM (as1 delay-slot filler): golden's fall-through block begins with a
+ * plain, movable `lwc1 $f16,0x11c(sp)`, so as1 fills the slot from the
+ * fall-through and keeps a plain `beqz`.  In live the fall-through begins with
+ * `lwc1 $f0,%lo(D_800A217C)(at)` -- the second half of a lui/%lo MACRO PAIR,
+ * which as1 will not move into a delay slot -- so it falls back to filling from
+ * the TARGET, which forces the annulled `beqzl` and the duplicate.
+ * The upstream cause is a SCHEDULING difference: golden issues the three scale
+ * constants (217C/2180/2184) as a block at the top of the if-body and hoists
+ * BOTH operands of statement 1 (sp110.unk0 AND sp11C.unk0) above the branch;
+ * live hoists only sp110.unk0 and loads the constants lazily.
+ *
+ * MEASURED THIS WAVE (all bounded 203, all vs the 5 base):
+ *     5   `u8 arg1, u8 arg2, u8 arg3` params with plain `arg1`/`arg2`/`arg3`
+ *         instead of `s32 argN` + `((u8 *)&argN)[3]`.  816 B, IDENTICAL OUTPUT.
+ *         This is the BETTER-EVIDENCED form and is what is now live: IDO at
+ *         -g3 homes a sub-word register param with a full-word `sw` and gives
+ *         it DWARF offset +3, so `sw a1,0x12c(sp)` / `lbu t2,0x12f(sp)` is
+ *         exactly u8-param homing.  The address-taken cast idiom is not needed
+ *         and is not what blocks the delay slot.
+ *     5   `struct17 spCC[3]` replacing spE4/spD8/spCC (the three are contiguous
+ *         at 0xCC/0xD8/0xE4, so the array reproduces the frame exactly) with
+ *         &spCC[0..2] at the func_150FFB6C calls.  816 B, IDENTICAL OUTPUT.
+ *   175   naming the three scale constants in f32 locals (`f32 k0,k1,k2;`
+ *         assigned at the top of the if-body).  832 B -- +4 instructions.
+ *         f32 autos are NOT free here (unlike func_150FF2D4, which has no home
+ *         area at all): the home area grows and the frame moves.  HARD NEGATIVE.
+ *
+ * RULED OUT BY THE GOLDEN INSTRUCTIONS THEMSELVES (do not re-test):
+ *   `sp11C.unk0 + (sp110.unk0 * K)`  -- golden is `add.s $f6,$f4,$f16`, i.e.
+ *        (mul) + sp11C.unk0, so the mul is the LEFT operand.
+ *   `(K * sp110.unk0)`               -- golden is `mul.s $f4,$f14,$f0`, i.e.
+ *        sp110.unk0 is the LEFT operand.
+ *   column-major statement order     -- golden's stores run 0xcc,0xd0,0xd4,
+ *        0xd8,... i.e. strictly row-major spCC,spD8,spE4.
+ *   D_800A217C/2180/2184 as one array -- golden emits a SEPARATE
+ *        `lui at,%hi(D_800A2180)` per constant, so they are separate symbols.
+ *
+ * RESIDUAL CLASS: as1 PEEPHOLE (delay-slot filler source) driven by a
+ * SCHEDULING difference in the first four instructions of the if-body.  There
+ * is no register-allocation error anywhere in the function; the whole 203-word
+ * body is golden's apart from that one window.  BAILED at 5.
  * =========================================================================== */
 
 /* ---- parked source: this is the 5 build, verbatim ---- */
@@ -130,6 +188,13 @@ void func_15102B38(struct127 *, u8, struct17 *, struct17 *, Vec2_150FF840 *, s16
 void func_15081690(struct127 *, f32, f32, f32, f32, f32, f32, void *, f32, s32, s32, s32, s32, s32, s32);
 void func_15081E78(struct127 *, void *, s32);
 
+/* NOTE (wave 2): the `s32 argN` + `((u8 *)&argN)[3]` form below and the plain
+ * `u8 arg1, u8 arg2, u8 arg3` form with bare `arg1`/`arg2`/`arg3` both build to
+ * BYTE-IDENTICAL output (5 / 816 B).  The u8 form is the better-evidenced one
+ * (IDO at -g3 homes a sub-word register param with a full-word `sw` and gives it
+ * DWARF offset +3, which is exactly `sw a1,0x12c(sp)` / `lbu t2,0x12f(sp)`), and
+ * it also makes the func_151D3F14/func_15102B38 u8 parameters type-correct.
+ * Use whichever; the cast idiom is NOT what blocks the delay slot. */
 void func_150FF840(struct127 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
     struct17 sp11C;
     struct17 sp110;

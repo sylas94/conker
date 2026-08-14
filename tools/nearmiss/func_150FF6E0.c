@@ -63,6 +63,69 @@
  * + ALLOCATION (a single-slot temp-rotation offset with no instruction of its
  * own).  Do NOT close this with a no-op mask -- the N-no-ops test applies and
  * a rotation forcer here would be a fake match.
+ *
+ * ---------------------------------------------------------------------------
+ * WAVE 2 (2026-08-14).  BASE RE-CONFIRMED 180 / 348 B (golden 352), bounded 88.
+ * ---------------------------------------------------------------------------
+ * THE ROTATION IS NOW PINNED TO ONE SLOT.  Listing every temp web in the order
+ * the allocator hands out registers (it is NOT program order and it is NOT
+ * source order -- the four %hi addresses come first in BOTH builds):
+ *   golden  t6,t7,t8,t9 (the four src[] %hi) | t0=&dst | t1=arg2 |
+ *           **t2 = A WEB THAT EMITS NOTHING** | t3=which | t4=which*72 |
+ *           t5=&D_800A2080 | loop t6,t7,t8,t9,(t0/t1 live->skipped),t2,t3 |
+ *           tail t5,t6,t7
+ *   live    t6,t7,t8,t9                      | t0=&dst | t1=arg2 |
+ *           t2=which | t3=which*72 | t4=&D_800A2080 |
+ *           loop t5,t6,t7,t8,t9,(skip t0/t1),t2 | tail t4,t5,t6
+ * So the allocator is a round-robin over t0..t9 that skips live registers, and
+ * golden burns EXACTLY ONE extra slot between `t1 = arg2` and `t3 = which`.
+ * Everything downstream is that one slot, uniformly.  The four %hi webs are
+ * unaffected, which is why the offset does not look uniform in the raw diff.
+ *
+ * MEASURED THIS WAVE (bounded 88, vs the 180 base):
+ *  1405  `i = 0; while (i < 6) { ...; i++; }` instead of the `for`.  348 B.
+ *        The while form loses the rotated (bottom-test) loop shape entirely.
+ *        HARD NEGATIVE -- the `for` is required.
+ *   328  adding a DEDICATED `s32 ret;` declared LAST and returning it from an
+ *        if/else.  THE FRAME GOES 0x88 -> 0x90 and every home offset moves
+ *        (src 0x5c->0x64 etc.).  There is NO usable slack in the temp area:
+ *        the local list is EXACTLY which / src[10] / dst[10] / i and any
+ *        further auto is fatal.  This kills every "extra variable" theory.
+ *   185  reusing `which` as the return value:
+ *          `if (...) { ...; which = 1; } else { which = 0; } return which;`
+ *        352 B -- THE SIZE FINALLY MATCHES GOLDEN -- but REFUSED: it does not
+ *        produce golden's shape.  golden is `li v0,1` ... `b afc`/`move v0,zero`
+ *        (return value straight into v0, redundant branch kept); this variant is
+ *        `li v1,1` ... `move v1,zero` / `move v0,v1` -- the return web does NOT
+ *        coalesce into v0 because `which`'s earlier index range conflicts, so it
+ *        buys the right byte count with a `move v0,v1` that golden does not have.
+ *        Classic "better size, less like golden".  DO NOT SHIP THIS.
+ *        It does prove golden's `return 1;`/`return 0;` are DIRECT returns.
+ *   180  `which = func_150ADA20() % 2U;` (the TU's own RNG idiom, cf. `% 3U` in
+ *        func_150FF840 and `% 0x9CU` in func_150FED30).  IDENTICAL OUTPUT.
+ *   180  `which = func_150ADA20(); which &= 1;` as two statements.  IDENTICAL.
+ *   180  building the whole TU WITHOUT the func_150ADA20 s32 shadow (i.e. with
+ *        functions.h's u8 declaration, so the u8->s32 widening mask is present).
+ *        IDENTICAL OUTPUT -- the "extra folded mask consumes a rotation slot"
+ *        theory is DEAD for this function.  (For reference the same build takes
+ *        func_150FF840 from 5 to 99, so the shadow is still required TU-wide.)
+ *   180  `struct17 *src[10]; struct17 *dst[10];` (with `(struct17 *)` casts on
+ *        the four f32 externs) instead of `void *`.  IDENTICAL OUTPUT -- the
+ *        element type of the pointer table is not the missing web.
+ *
+ * STILL OPEN, AND THIS IS THE WHOLE PROBLEM: what source form mints one extra
+ * temp web between the src[] stores and the loop preheader while emitting no
+ * instruction?  It cannot be a new auto (the frame 0x88 is exact and pins the
+ * local list to which/src/dst/i), it cannot be a mask (`&1` at the use site is
+ * byte-identical), and it must not be a no-op forcer.
+ *
+ * RULED OUT BY THE GOLDEN INSTRUCTIONS THEMSELVES (do not re-test):
+ *   `dst[0..3] = ...` before the loop -- golden's four `sw` for dst[0..3] are
+ *        scheduled AFTER the loop, so they are after it in source too.
+ *   swapping the two loop-body statements -- golden stores src[i+4] (a68)
+ *        before dst[i+4] (a7c).
+ *   `i != 6` -- golden uses `slti at,a0,6`, a signed `<`.
+ *   func_1514654C returning u8 -- golden branches on v0 with no `andi`.
  * =========================================================================== */
 
 /* ---- parked source: this is the 280 build, verbatim ---- */

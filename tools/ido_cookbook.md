@@ -2422,3 +2422,137 @@ THE CAMPAIGN DID NOT CLOSE BUT IT LEFT THREE FUNCTIONS VERY CLOSE, all with EXAC
 
 Naming a reciprocal (`inv = 1.0f/sqrtf(...)`) instead of inlining it twice fixed both `mul.s`
 operand orders on func_150FF2D4 (525 -> 505) - another instance of the statement-form law.
+
+# ================================================================================
+# HARNESS TRAP: CRLF SILENTLY MAKES EVERY VARIANT SCORE IDENTICALLY
+# ================================================================================
+
+**This can FAKE the N-no-ops test, which is one of the load-bearing rules in this file.**
+
+conker/src/game_1E37D0.c has CRLF line endings (3 of 464 live .c files do). A Python variant
+harness matching `'\n'` patterns then matches NOTHING, `str.replace` returns the string unchanged,
+the "variant" is byte-identical to the base, and every build reports the base score. One agent got
+EIGHT consecutive identical readings this way, including two that were supposed to DELETE WHOLE
+STATEMENTS.
+
+Read against the N-no-ops rule ("if N mutually-exclusive no-ops all score identically, the binary
+evidences one extra folded temp web"), that is a false positive generator: a broken harness produces
+exactly the signature the rule treats as evidence.
+
+**MANDATORY WHENEVER A VARIANT SWEEP RETURNS UNIFORM SCORES:**
+ 1. `.replace('\r\n', '\n')` on read, or operate on bytes.
+ 2. ASSERT the pattern was found before writing the variant (fail loudly, never silently no-op).
+ 3. Include a CONTROL VARIANT THAT MUST CHANGE THE SCORE, and check it fired.
+**Treat "every variant scored identically" as a harness bug until the control fires.** Only after
+the control fires may uniform scores be read as evidence about the compiler.
+
+# ================================================================================
+# as1 WILL NOT MOVE THE SECOND HALF OF A lui/%lo MACRO PAIR INTO A DELAY SLOT
+# ================================================================================
+
+The exact mechanism behind func_150FF840's residual of **5** - one instruction in 816 bytes.
+
+Golden fills a plain `beqz t2,d78` from the FALL-THROUGH path with a movable
+`lwc1 $f16,0x11c(sp)`. Our fall-through begins instead with `lwc1 $f0,%lo(D_800A217C)(at)` - the
+second half of a `lui`/`%lo` MACRO PAIR, which as1 will not separate from its `lui`. Denied that
+filler, as1 falls back to filling from the BRANCH TARGET, which forces an annulled `beqzl` and
+DUPLICATES `lbu t3,0x133(sp)` (annulled copy plus real copy). That duplicate is the entire 4-byte
+excess. There is no register-allocation error anywhere in the 203-word body.
+
+UPSTREAM CAUSE, and this is the steerable part: golden issues the three scale constants as a BLOCK
+at the head of the if-body and hoists BOTH operands of statement 1 above the branch; ours hoists one
+operand and loads the constants lazily. So the lever is what is available at the top of the
+fall-through, not the branch itself.
+
+GENERAL FORM: **if golden has a plain branch where you emit `beqzl` + a duplicated instruction, look
+at what starts your fall-through block. A `%lo` half, or anything else as1 cannot move, denies the
+delay slot and forces the likely-branch form.**
+
+# ================================================================================
+# THE -g3 SOURCE-LINE LEVER IS FULLY DEAD - SECOND INDEPENDENT CONFIRMATION
+# ================================================================================
+
+Already qualified once (blank lines and absolute line number do nothing). Wave 38 killed the last
+surviving reading: three ADJACENT-PAIR LINE JOINS - the one form still believed live - were
+byte-identical on func_150F64DC. Combined with the earlier six variants on func_15160E30 and the
+blank-line controls in game_34F20, the lever is retired in all its forms.
+**Do not budget a wave on source-line placement.** Whatever closed func_15196748 is still
+unexplained, and the honest position is that we do not know what it was.
+(Note the CRLF trap above before trusting ANY uniform-score result, including this one - these
+particular measurements were on an LF file, which is why they stand.)
+
+# ================================================================================
+# THE (s16) CAST ASYMMETRY: STACK ARGUMENTS TRUNCATE FOR FREE
+# ================================================================================
+
+An `(s16)` cast on a STACK-passed argument costs ZERO instructions; the same cast on a
+REGISTER-passed argument costs `sll 16` / `sra 16`. Golden shows both halves in ONE call: `a3` gets
+the sll/sra pair while the arguments at sp+0x10 and sp+0x14 get nothing, because the callee re-reads
+the stack short with `lh` at offset+2.
+
+**CONSEQUENCE, and it is a trap in the prototype-verification step: a golden stack argument with no
+visible truncation does NOT disprove an s16 prototype.** Do not "correct" a prototype to s32 on that
+evidence - check the CALLEE's load width instead.
+
+# ================================================================================
+# SPILL DESTINATION DISTINGUISHES A DECLARED POINTER FROM AN ADDRESS CSE
+# ================================================================================
+
+A refinement of the frame law that reads real information out of golden:
+ * a POINTER LOCAL live across many calls spills to **its own declaration home**
+ * a pointer that is merely an ADDRESS CSE (`&arg0->field`) spills to a **compiler TEMP slot**
+Measured on both func_150F64DC (obj -> 0xC0, src -> 0x84) and its matched sibling func_150DFEFC
+(obj -> 0xA8, src -> 0x78). So the spill OFFSET tells you which candidate pointers were really
+DECLARED and which the compiler invented - decide the declaration list from that before guessing.
+
+# ================================================================================
+# TRAILING STRUCT PADDING, NOT A DUMMY LOCAL - AND WE HAVE SEVEN IN SHIPPED CODE
+# ================================================================================
+
+The matched func_151B6320 (game_1E37D0.c) ships TWO unnamed frame-shaping locals:
+    s32 top_dummy;  Header151B6320 header;  s32 pad_dummy;  Payload151B6320 payload;
+The arithmetic says they are not locals at all: 4 + 0x1C + 4 + 0x2C equals header 0x1C + payload
+0x30 with SIX bytes of trailing pad in the header rather than two. So `Header151B6320` has 6 bytes
+of trailing padding and `Payload151B6320` is 0x30, not 0x2C - and with the structs spelled correctly
+both dummies disappear.
+
+**THIS PROJECT'S OWN RULE SAYS AN UNNAMED FRAME-SHAPING LOCAL IS AN OPEN QUESTION, NOT A MATCH**, and
+a survey found SEVEN of them live in shipped, ROM-gated code across SIX TUs:
+    game_1CA420.c:171  game_1D0840.c:137  game_1E37D0.c:63,65
+    game_1FA770.c:192  game_204660.c:185 (s32 pad_dummy[2])  game_E1280.c:48
+The bytes are correct, so this is debt rather than a fake match - but each one encodes a WRONG
+STRUCT SIZE that will cost every future function touching the same type. Fix the struct, re-verify
+byte-identical, re-gate.
+
+# ================================================================================
+# WAVE 38: ZERO CLOSED, TWO STRONG BAILS, TWO REAL ADVANCES
+# ================================================================================
+
+func_150FF840 @5    - as1 peephole, mechanism fully explained above. Bailed per the peephole rule
+                      after five honest variants left it at 5 or worse.
+func_150FF2D4 @325  - one instruction short. Golden's instruction ORDER is the WORSE one by critical
+                      path (it puts `lw a2` immediately before its use), so it is NOT reachable by
+                      reordering the source; plus golden TAIL-DUPLICATES a `lui` (34.0f) into a
+                      delay slot, splitting an li.s macro across a merge. The C is positively
+                      CONFIRMED correct by a load asymmetry: golden loads arg5->unk0 once but
+                      arg5->unk8 twice, which is exactly the no-local-copies form - a
+                      `f32 dz = arg5->unk8;` local would be WRONG.
+func_150FF6E0 @180  - allocation is a ROUND-ROBIN over t0..t9 that SKIPS LIVE REGISTERS, and golden
+                      burns one extra slot on a web that emits no instruction. Two whole families of
+                      explanation are now dead: no extra auto can exist (a dedicated `s32 ret;`
+                      moves the frame 0x88 -> 0x90 and every home offset), and no extra folded MASK
+                      exists (building with the u8 RNG declaration is byte-identical at 180).
+func_151B7328 668 -> 279  - after a declaration-order win EVERY aggregate sits at golden's exact
+                      offset; one surplus 8-byte compiler-temp slot remains.
+func_150F64DC 0 -> 120 on a COLD start - two reordering penalties (60 each), frame exact, every
+                      register identical, every instruction present.
+
+A REFUSAL WORTH RECORDING: on func_150FF6E0 a variant scored 185 and hit golden's EXACT SIZE (352 B)
+by reusing `which` as the return value. It was REFUSED - it buys the byte count with a `move v0,v1`
+that golden does not contain. Matching the size is not matching the code.
+
+STEP ZERO PAID AGAIN, AND HARDER: func_150DFEFC (game_10CD70.c) is a matched sibling of the cold
+target with the same emitter shape, the same early-outs, the same timer idiom, the same 11-argument
+call and the same `s8 count; do{}while(count>0)` loop. Reusing its declaration list VERBATIM gave a
+byte-exact frame on BUILD #1, at score 140 out of a possible ~22,000. Cost: fifteen minutes of
+grepping. Mine the corpus before writing anything.

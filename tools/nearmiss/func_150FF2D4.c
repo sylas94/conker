@@ -53,6 +53,63 @@
  * outside any loop, so `extern f32` produces exactly golden's lui/lwc1 pair.
  *
  * RESIDUAL CLASS: SCHEDULING (a) + as1 PEEPHOLE (b).
+ *
+ * ---------------------------------------------------------------------------
+ * WAVE 2 (2026-08-14).  BASE RE-CONFIRMED 325 / 412 B (golden 416), bounded 104.
+ * ---------------------------------------------------------------------------
+ * THE TWO RESIDUAL WINDOWS, EXACT:
+ *  (a)  golden 608 move a1,s0 | 60c lui at,%hi(2120) | 610 lwc1 $f2,%lo |
+ *              614 lw a2,0x4c(sp) | 618 lwc1 $f14,0(a2)
+ *       live   608 move a1,s0 | 60c lw a2,0x4c(sp)   | 610 lui at,%hi |
+ *              614 lwc1 $f2,%lo | 618 lwc1 $f14,0(a2)
+ *       One adjacent-pair swap.  Note golden's schedule is the *worse* one by
+ *       critical path (it puts `lw a2` immediately before its use), so this is
+ *       not a priority-order effect I can reach from the source.
+ *  (b)  golden 678 mul.s $f18 | 67c nop | 680 b 698 | 684 lui at,0x4208
+ *              688 mtc1 at,$f16 | 68c mtc1 zero,$f18 | 690 nop |
+ *              694 lui at,0x4208 | 698 mtc1 at,$f0
+ *       live   678 mul.s $f18 | 67c b 690 | 680 nop |
+ *              684 mtc1 at,$f16 | 688 mtc1 zero,$f18 | 68c nop |
+ *              690 lui at,0x4208 | 694 mtc1 at,$f0
+ *       golden TAIL-DUPLICATES the merge block's leading `lui at,0x4208` into
+ *       the then-arm's branch delay slot (splitting the li.s macro across the
+ *       merge); live pulls the `b` up one slot and puts a nop in the slot,
+ *       sharing one lui.  That duplicate is the only missing instruction.
+ *
+ * MEASURED THIS WAVE (bounded 104, vs the 325 base):
+ *   325  `(D_800A2120 < fabsf(arg5->unk0)) || (D_800A2120 < fabsf(arg5->unk8))`
+ *        IDENTICAL OUTPUT (re-measured on the current base -- the old note that
+ *        this was byte-identical still holds after the wave-1 structural wins).
+ *   325  naming the threshold: `f32 eps; ... eps = D_800A2120;` at the top of
+ *        the `if (*arg0 == 0)` block, both compares against `eps`.
+ *        IDENTICAL OUTPUT, AND THE FRAME DID NOT MOVE.  Two facts banked:
+ *          - an f32 auto whose address is never taken costs ZERO frame here
+ *            (0x38 with 3 autos and with 4), confirming the "no home area"
+ *            reading; and
+ *          - IDO SINKS the constant load to its use, so source position of the
+ *            constant is not the lever for residual (a).
+ *
+ * THE SOURCE IS NOW CONFIRMED CORRECT BY THE ASYMMETRY OF THE TWO LOADS.
+ * golden loads arg5->unk0 ONCE (`lwc1 $f14,0(a2)` at 618, reused at 64c and
+ * 660) but arg5->unk8 TWICE (630 in the guard, 650 in the square).  That is
+ * exactly what you get with NO local copies: the 618 load dominates both arms,
+ * while the 630 load sits inside the short-circuit block that the first
+ * `bc1t 64c` skips, so it is not available at 650.  A `f32 dz = arg5->unk8;`
+ * local would collapse the second load and is therefore WRONG.  Likewise
+ * ruled out by the instructions: `(arg5->unk8*arg5->unk8)` first in the sqrt
+ * argument (golden squares unk0 first), `(34.0f*xdir)+x_position` (golden is
+ * `add.s $f8,$f4,$f6` = x_position + product), scaling by 34.0f inside the
+ * arms (golden's $f0=34.0 is materialised after the merge and used twice).
+ *
+ * RESIDUAL CLASS: SCHEDULING (a) + as1 PEEPHOLE (b).  BAILED at 325.
+ *
+ * FOOTNOTE -- THE ONE PLACE AN EXTRA AUTO IS FREE.  This function has NO home
+ * area (framesize 0x38 = arg-build 0x28 + temps 0x8 + s0/ra), so an f32 auto
+ * whose address is never taken costs nothing: adding a fourth (`f32 eps;`) left
+ * the frame at 0x38 and the output byte-identical.  That is NOT true of its two
+ * TU neighbours -- in func_150FF6E0 one extra s32 takes the frame 0x88 -> 0x90,
+ * and in func_150FF840 three extra f32s take it 0x128 -> +16 bytes of code.
+ * Do not generalise "f32 autos are free" beyond this function.
  * =========================================================================== */
 
 /* ---- parked source: this is the 325 build, verbatim ---- */

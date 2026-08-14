@@ -1,129 +1,274 @@
-/* func_151B7328  (game_1E37D0.c, 848 B, cold decompile)
- * BEST SCORE: 668 with -R and without -R (base: pragma-removed live C in
- * conker/src/game_1E37D0.c).  Progression: 1329 -> 684 -> 676 -> 668.
- * NOT SHIPPED: the pragma in conker/src/game_1E37D0.c is RESTORED and that file
- * is pristine (`git status --short -- conker/src/game_1E37D0.c` prints nothing).
+/* func_151B7328  (game_1E37D0.c, 848 B)
+ * BOUNDED SCORE (--max-lines 212 == 848/4): 668 -> 279, with -R and without -R.
+ * NOT SHIPPED: the #pragma in conker/src/game_1E37D0.c is RESTORED and that file
+ * is pristine.
  *
- * STATUS: every instruction matches golden 1:1.  The ONLY residual is that the
- * whole local block sits 8 bytes higher than golden:
- *      golden framesize 0x100, mine 0x108
- *      golden header@0xE4 data@0xD4 dst@0xD0 emit@0x60 tbl@0x50
- *      mine   header@0xEC data@0xDC dst@0xD8 emit@0x68 tbl@0x58
- * plus exactly two register picks that the shift drags with it:
- *      golden `lbu t6,0x107(sp)` / `li t7,0x14`  vs mine `lbu t7` / `li t6`
- *      golden `lw a3,0xD0(sp)`                   vs mine `lw v1,0xD8(sp)`
- * Residual class: FRAME (surplus compiler-temp reserve, 8 bytes).
+ * ############ THE WIN THIS WAVE: 668 -> 279, DECLARATION ORDER ############
+ * Declaring the two POINTER scalars FIRST
+ *      Obj151B7328 *obj;  u8 *payload;  Header151B7328 header;  Data151B7328 data;
+ *      Data151B7328 *dst; Emitter151B7328 emit; Tbl151B7328 tbl;
+ *      s32 temp_v0; s32 temp_v1;
+ * puts EVERY AGGREGATE AT GOLDEN'S EXACT OFFSET and puts temp_v1's spill at
+ * golden's 0x48:
+ *      header 0xE4, data 0xD4, dst 0xD0, emit 0x60, tbl 0x50, temp_v1 spill 0x48
+ * After that change the ONLY stack differences left in the whole function are
+ * the frame instruction itself and the INCOMING-ARGUMENT area:
+ *      addiu sp,sp,-0x100  vs  -0x108        (and the matching epilogue)
+ *      a0..a3 saved at 0x100/0x104/0x108/0x10C  vs  0x108/0x10C/0x110/0x114
+ *      lbu 0x107 / lbu 0x10F / lw 0x110      vs  0x10F / 0x117 / 0x118
+ * plus a one-step temp-register rotation (t2<-t8, t9<-t1, t4<-t9, t5<-t4,
+ * t0<-t5, t7<-t0, t6<-t7 and a3 <-> v1) which is the usual symptom of exactly
+ * one surplus web.  NOTHING ELSE DIFFERS: 233 instructions each, mnemonic-only
+ * diff EMPTY, every non-argument stack offset identical.
+ * Declaration-order sweep that found it (frame / header offset / score):
+ *      h,da,ds,e,t,o,p,v0,v1   0x108  hdr 0xEC  668   <- previous parked order
+ *      h,da,ds,e,t,o,p,v1,v0   0x108  hdr 0xEC  676
+ *      h,da,ds,e,t,p,v1,v0,o   0x108  hdr 0xEC  684
+ *      o,h,da,ds,e,t,v1,v0,p   0x108  hdr 0xE8  512
+ *      o,h,da,ds,e,t,p,v1,v0   0x108  hdr 0xE8  504
+ *      o,h,da,ds,e,t,p,v0,v1   0x108  hdr 0xE8  496  <- what the permuter found
+ *      p,h,da,ds,e,t,o,v0,v1   0x108  hdr 0xE8  496
+ *      o,p,h,da,ds,e,t,v0,v1   0x108  hdr 0xE4  279  <- KEEP
+ * CAVEAT, AND IT MATTERS: this is a COMPENSATING order, not proven ground truth.
+ * The two pointer scalars sitting ABOVE `header` occupy exactly the 8 bytes that
+ * the surplus temp reserve steals below, so the aggregates land right for the
+ * wrong reason.  Golden is equally consistent with
+ *      (A) 9 locals (0xC0) + 0 temp, header declared FIRST, or
+ *      (B) 7 locals (0xB8) + 8 temp, order header,data,dst,emit,tbl,obj,temp_v1
+ *          (this one also lands header@0xE4 and temp_v1@0x48 exactly)
+ * and in BOTH readings my build has 8 surplus bytes.  Do not treat the 279 order
+ * as settled; treat the 8 bytes as the blocker.
  *
- * =====================================================================
- * ==  CORRECTION: THE PREVIOUS PARKED BISECT DOES NOT REPRODUCE.     ==
- * =====================================================================
- * The earlier note claimed the pair
- *      dst->unk4 = (u8 *)dst + 0x10;
- *      memcpy(dst->unk4, arg0, arg2);
- * "cost FOUR pool webs vs golden's TWO", localised by a 9-build bisect.
- * I re-ran that bisect and EVERY STEP OF IT FAILED TO REPRODUCE.  Measured
- * this wave (all against the live-C base, framesize read off the prologue):
- *   - drop ONLY `dst->unk4 = payload;`            -> 0x108 (score 1158)
- *   - drop ONLY `memcpy(payload, arg0, arg2);`    -> 0x108 (score 1510)
- *   - drop ONLY the FIRST memcpy(dst,&data,0xC)   -> 0x108 (score 2171)
- *   - drop ONLY the callback if-block             -> 0x108 (score 3089)
- *   - gut the flags block to `emit.unk58=0xC000;` -> 0x108 (score 7004)
- * i.e. NO single statement removal moves the frame off 0x108.  The old
- * "flags gutted -> 0x100" and "unk4/memcpy2 cut -> 0x0F8" readings are wrong.
+ * ======================================================================
+ * ==  READ THIS FIRST: TWO EARLIER BISECTS OF THIS FUNCTION WERE WRONG. ==
+ * ======================================================================
+ * Wave N-2 blamed the pair `dst->unk4 = (u8 *)dst + 0x10; memcpy(dst->unk4,...)`.
+ * Wave N-1 re-ran that bisect, could not reproduce ANY step of it, and instead
+ * concluded the surplus was an unexplained whole-function "reserve".
+ * THIS wave ran a clean cumulative-prefix probe that appeared to localise the
+ * surplus to the `tbl` pair, and then DISPROVED that too with a control.
+ * The controls are recorded below so nobody localises it a fourth time.
  *
- * Four mutually-distinct spellings of the memcpy pair were then measured and
- * ALL FOUR scored EXACTLY 684 with framesize 0x108 -- the N-NO-OPS signature:
- *   a) memcpy(dst->unk4 = (u8 *)dst + 0x10, arg0, arg2);   (unk4 as void *)
- *   b) same with unk4 typed `u8 *`
- *   c) separate heap-block type with a trailing `u8 unk10[1]`, so the address
- *      is an address-of-member: `dst->unk4 = dst->unk10; memcpy(dst->unk10,..)`
- *   d) the plain two-statement form
- * => THE MEMCPY SPELLING IS NOT THE LEVER.  Do not spend more builds there.
+ * ---------------- WHAT THE RESIDUAL ACTUALLY IS (proven) ----------------
+ * The .text mnemonic sequence is IDENTICAL to golden -- 233 instructions each,
+ * `diff` of the mnemonic-only streams is EMPTY.  Confirmed by
+ *   mips-linux-gnu-objdump -drz -m mips:4300 <obj> | awk '<func only>'
+ * on both objects.  The ONLY differences are:
+ *   (1) framesize 0x108 vs golden 0x100, and EVERY local offset is exactly +8;
+ *   (2) three register picks that the shift drags with it:
+ *         golden `lbu t6,0x107(sp)` / `li t7,0x14`   vs mine `lbu t7` / `li t6`
+ *         golden `lw a3,0xD0(sp)`, `addiu a0,a3,0x10`, `sw a0,4(a3)`
+ *                                                   vs mine the same on v1
+ *         golden's `li t6,14` sits one slot later than mine.
+ * CRUCIALLY, the SAVED-REGISTER SLOTS AND THE ARG-BUILD AREA ARE NOT SHIFTED:
+ * ra@0x3C and s0@0x38 and the arg slots 0x10..0x28 are at the SAME offsets in
+ * both objects.  So the 8 surplus bytes are a block of UNUSED stack sitting at
+ * sp+[0x40,0x48), between the saved registers and the bottom of the locals.
+ * Mine never references [0x40,0x48) at all.  It is an unused COMPILER-TEMP
+ * RESERVE, 8 bytes, and golden's reserve is ZERO.
  *
- * ---------------- WHAT THE FRAME ACTUALLY DECODES TO ----------------
- * Calibrated against THREE matched siblings, all of which have pool == 0:
- *   func_15131EE4 (game_15D730.c) framesize 0xB0: argbuild 0x18 + gap 4 +
- *      ra 4 + locals 0x90; locals = Local 0x70 + Extra 0x14 + 3 scalars 0xC.
- *      EXACT, no pool.  <-- same emitter struct AND the same two-if/else flags
- *      block as this function, so it is the closest calibration available.
- *   func_15151A38 (game_17CAF0.c) framesize 0xF8: locals [0x98,0xF8) = 0x60 =
- *      Pos 0x1C + Spawn 0x20 + NINE scalars 0x24.  EXACT, no pool.
- *   func_15152F70 (game_17CAF0.c) framesize 0x108: locals [0x90,0x108) = 0x78 =
- *      Pos 0x1C + Spawn 0x1C + Style 0x20 + EIGHT scalars 0x20.  EXACT, no pool.
- *      (that one I closed this wave -- score 0, .text identical.)
- * Note s16 locals occupy a 4-byte slot each, not 2.
+ *   golden layout: argbuild [0x00,0x2C) | pad [0x2C,0x38) | s0,ra [0x38,0x40)
+ *                  | temp (none)        | locals [0x40,0x100) = 0xC0
+ *   mine  layout:  argbuild [0x00,0x2C) | pad [0x2C,0x38) | s0,ra [0x38,0x40)
+ *                  | TEMP [0x40,0x48)   | locals [0x48,0x108) = 0xC0
  *
- * Applying that law here, GOLDEN's locals region is [0x40,0x100) = 0xC0 =
- *      header 0x1C + data 0x10 + dst 4 + emit 0x70 + tbl 0x10  (= 0xB0)
- *    + FOUR 4-byte scalars                                      (= 0x10)
- * so golden declares FOUR trailing scalars, and golden's temp_v1 spills to
- * 0x48, i.e. it is the 2ND of those four (block [0x40,0x50), top-down).
+ * The declared locals sum to 0xC0 in BOTH -- the aggregate sizes are right:
+ *   header 0x1C + data 0x10 + dst 4 + emit 0x70 + tbl 0x10 + 4 scalars 0x10.
+ * golden: header@0xE4 data@0xD4 dst@0xD0 emit@0x60 tbl@0x50 scalars[0x40,0x50)
+ * mine:   header@0xEC data@0xDC dst@0xD8 emit@0x68 tbl@0x58 scalars[0x48,0x58)
+ * golden spills temp_v1 to 0x48 = the 2ND of its four scalars (top-down
+ * 0x4C,0x48,0x44,0x40), so golden's scalar declaration order has temp_v1 second.
+ * Mine spills temp_v1 to 0x48 too, but for mine that is the FOURTH scalar.
  *
- * THE SCALAR-COUNT SWEEP (this is new, and it is what bought the 8 points):
- *      2 scalars (obj,temp_v1)                    -> 0x108, score 684
- *      3 scalars (obj,payload,temp_v1)            -> 0x108, score 676  <- old best
- *      4 scalars (obj,payload,temp_v0,temp_v1)    -> 0x108, score 668  <- NEW BEST
- *      5 scalars (+ s32 ret)                      -> 0x110, score 1132
- * So the frame is NOT flat in the local count (the old note said it was); it
- * steps at 5.  Four scalars reproduces golden's locals size 0xC0 EXACTLY, and
- * it is also the declaration list the matched sibling func_15131EE4 uses
- * (ret/temp_v0/temp_v1 + the two if/else blocks).  `ret` is NOT golden's 4th
- * scalar -- capturing the func_15130280 return grows the frame to 0x110.
+ * ---------------- THE CONTROLS THAT KILLED THE `tbl` READING ----------------
+ * Cumulative-prefix probe (all 9 locals declared in every build, statements added
+ * in source order; `frame` read off the prologue):
+ *      P00 header setup + func_15147A80 only        frame 0xF8  hdr@0xDC
+ *      P01 + dst/memcpy1                            frame 0xF8  hdr@0xDC
+ *      P02 + payload/dst->unk4/memcpy2              frame 0xF8  hdr@0xDC
+ *      P03 + the callback if-block                  frame 0x100 hdr@0xE4  <- GOLDEN
+ *      P04 + `tbl = ...; emit.unk1D = tbl.unk0[..]` frame 0x108 hdr@0xEC
+ *      P05..P11 (everything else, cumulative)       frame 0x108 hdr@0xEC
+ * That looks like a clean localisation onto the tbl pair.  IT IS NOT:
+ *      X1  FULL function MINUS the tbl pair, tbl still declared  frame 0x108
+ *      X2  FULL function MINUS the tbl pair, tbl decl removed    frame 0xF8
+ * X1 is the decisive one: with everything else present, deleting the tbl pair
+ * does NOT get the frame back to 0x100.  (X1 vs X2 also proves IDO KEEPS the
+ * home of a declared-but-never-referenced local -- exactly 0x10 of difference --
+ * so the prefix probe's early rows are confounded by nothing else, but the
+ * prefix result still does not transfer to the full function.)
  *
- * Declaration-order permutations of the four scalars (all vs the 668 base):
- *      obj,payload,temp_v0,temp_v1   -> 668   <- keep
- *      obj,temp_v1,temp_v0,payload   -> 684
- *      temp_v0,temp_v1,obj,payload   -> 684
- *      payload,temp_v1,temp_v0,obj   -> 684
- * Statement order: moving `emit.unk8 = 0x1303;` above the tbl copy -> 1640.
+ * EVERY SINGLE-STATEMENT-GROUP REMOVAL FROM THE FULL FUNCTION KEEPS 0x108:
+ *      minus dst/memcpy1                       0x108   (wave N-1)
+ *      minus payload/dst->unk4/memcpy2         0x108   (wave N-1)
+ *      minus the callback if-block             0x108   (wave N-1)
+ *      minus the tbl pair                      0x108   (X1, this wave)
+ *      minus the emit scalar block             0x108  score 3514
+ *      minus the float chain                   0x108  score 3002
+ *      minus the three Vec copies              0x108  score 3940
+ *      minus emit.unk1E/20/22/54/24            0x108  score  386
+ *      minus emit.unk60..66 / unk5C            0x108  score  457
+ *      minus the flags if/else block           0x108   (wave N-1)
+ *      minus `dst->unk0 = func_15130280(...)`  0x108  score  437
+ * => THE 8 BYTES ARE A WHOLE-FUNCTION PROPERTY, NOT A STATEMENT'S.  Stop
+ * bisecting statements.  (Note the three scores BELOW 668 in that list: removing
+ * code can IMPROVE the number because the +8 shift's reordering cascade shrinks.
+ * Partial-removal scores are NOT comparable to the base -- read the FRAME, not
+ * the score, when probing this residual.)
  *
- * ---------------- WHAT IS LEFT ----------------
- * Under the calibrated law the naive region sum for golden is
- *      argbuild 0x2C + saved 0x8 + locals 0xC0 = 0xF4 -> 0xF8 rounded,
- * but golden's framesize is 0x100 and mine is 0x108, so BOTH carry a reserve
- * above the naive sum (golden 8, mine 16).  Every matched sibling I measured
- * carries ZERO.  So the open question is no longer "which statement costs a
- * web" -- it is WHY THIS FUNCTION HAS A RESERVE AT ALL, and why mine is one
- * 8-byte unit larger.  Next things to try, in order:
- *   1. the permuter (tools/decomp-permuter, ido configured) -- this is now a
- *      pure register/frame-shape residual, which is what it is for.
- *   2. the 11-argument func_15147A80 call: argbuild 0x2C is the only structural
- *      difference from every sibling I calibrated against (they max out at 6
- *      and 15 args with no reserve).  Try varying the DECLARED arity/param
- *      types of func_15147A80 (file-local shadow only -- NEVER edit
- *      functions.h) and watch the reserve, not the score.
- *   3. `Obj151B7328` is only used for `obj->unk98` and `(u8 *)obj + 0x10`;
- *      try typing obj as the callee's real return type instead of casting.
+ * ---------------- SPELLINGS OF THE tbl PAIR, ALL 0x108 / 668 ----------------
+ *      `extern Tbl151B7328 D_800AA460;` + `tbl = D_800AA460;`
+ *      `s32 tbl[4];` + `*(Tbl151B7328 *)tbl = *(Tbl151B7328 *)D_800AA460;`
+ *      Tbl as four named s32 fields + `(&tbl.unk0)[i]`
+ *      `tbl.unk0[(s32)(func_150ADA20() & 3)]`
+ *      `(u8)tbl.unk0[func_150ADA20() & 3]`
+ * and `extern void *func_15147A80(...)` instead of `extern s32 func_15147A80(...)`
+ * (return type pointer vs integer): 0x108 / 668, and func_151B6320 stays at 0.
  *
- * MEASURED NEGATIVES retained from the previous wave (still valid):
+ * ============ CALIBRATION: THE MATCHED SIBLING IN THIS VERY FILE ============
+ * func_151B6320 (top of conker/src/game_1E37D0.c, LIVE C, scores 0) has the same
+ * `func_15147A80(<11 args>)` + `memcpy(obj->unk98, &payload, N)` shape and gets
+ * TEMP == 0:  framesize 0x90 = argbuild 0x2C + pad 0xC + saved 8 + locals 0x50.
+ * Its declaration list is currently written as
+ *      s32 top_dummy; Header151B6320 header; s32 pad_dummy;
+ *      Payload151B6320 payload; s32 *temp_v0;
+ * The two "dummy" locals are almost certainly NOT dummies: 4 + 0x18 + 4 + 0x2C
+ * is numerically identical to header 0x1C + payload 0x30, i.e. Header151B6320 is
+ * really 0x1C bytes (6 bytes of trailing pad, not 2) and Payload151B6320 is
+ * really 0x30.  That is the SAME "the struct is 4-8 bytes bigger than you think"
+ * trap that Header151B7328's `u8 pad16[6]` already encodes in this function.
+ * Worth fixing there (it removes two unnamed frame-shaping locals from shipped
+ * code, which the project's own rules call an open question), and worth
+ * remembering as a general law: TRAILING STRUCT PADDING, NOT A DUMMY LOCAL.
+ *
+ * The other calibration siblings (all pool == 0):
+ *   func_15131EE4 (game_15D730.c:370) -- SAME emitter struct (Struct15131EE4Local,
+ *      0x70) and the SAME two-if/else flags block; framesize 0xB0, locals 0x90 =
+ *      Local 0x70 + Extra 0x14 + three scalars 0xC, temp 0.  It declares
+ *      `s32 ret;` capturing func_15130280's return; capturing it HERE grows the
+ *      frame to 0x110, so golden's func_151B7328 does NOT capture it.
+ *      It also writes `*(struct17 *)&D_800A5480` exactly as this function does,
+ *      so that cast is NOT the source of a temp.
+ *   func_15151A38 / func_15152F70 (game_17CAF0.c) -- 0xF8 / 0x108, temp 0.
+ *
+ * ---------------- SCALAR-COUNT SWEEP (wave N-1, still valid) ----------------
+ *      2 scalars (obj,temp_v1)                 -> 0x108, 684
+ *      3 scalars (obj,payload,temp_v1)         -> 0x108, 676
+ *      4 scalars (obj,payload,temp_v0,temp_v1) -> 0x108, 668   <- current
+ *      5 scalars (+ s32 ret)                   -> 0x110, 1132
+ * Declaration-order permutations of the four (vs the 668 base): 668 for
+ * obj,payload,temp_v0,temp_v1; 684 for obj,temp_v1,temp_v0,payload,
+ * temp_v0,temp_v1,obj,payload and payload,temp_v1,temp_v0,obj.  NOTE these were
+ * all measured with the frame 8 bytes wrong, so per the project's own rule they
+ * are STALE the moment the frame is fixed -- golden's temp_v1 is its 2ND scalar,
+ * so a reordering that looks bad today may be right once the reserve is gone.
+ *
+ * ---------------- OTHER MEASURED NEGATIVES (retained) ----------------
  *  - `emit.unk58 = (temp_v0|temp_v1) | 0x4C000;` -> IDO builds 0x4C000 whole
- *    (lui 0x4 + ori 0xC000 into `at`, ONE `or`).  Golden splits: `or t2,v0,v1;
- *    ori t3,t2,0xC000; lui at,0x4; or t1,t3,at`.  Source must therefore be
- *    `... | 0xC000 | 0x40000`.  Worth ~300 pts.  (Cross-check: matched
+ *    (lui 0x4 + ori 0xC000, ONE `or`).  Golden splits it, so the source must be
+ *    `... | 0xC000 | 0x40000`.  Worth ~300.  (Cross-check: the matched
  *    func_15131EE4 writes `temp_v0 | 0x4C000 | temp_v1` and DOES get the
  *    built-whole form, so the two spellings are genuinely separable.)
  *  - `u8 unk62` gives `li 0xff`; golden has `li -1` at unk62/63/64 and `li 0xff`
- *    only at unk66 => unk62 must be s8.
- *  - splitting `emit.unk28 = emit.unk2C = X;` into two statements: BYTE-
- *    IDENTICAL.  Keep the chained form (golden's two swc1 with no reload).
- *  - casts, `dst + 1` vs `(u8 *)dst + 0x10`: byte-identical, not the lever.
+ *    only at unk66 => unk62..64 must be s8.
+ *  - splitting `emit.unk28 = emit.unk2C = X;` into two statements: BYTE-IDENTICAL.
+ *  - every cast shape, `dst + 1` vs `(u8 *)dst + 0x10`, ternary vs if/else,
+ *    declaring vs not declaring obj/temp_v0/temp_v1/ret: BYTE-IDENTICAL.
+ *  - four distinct spellings of the memcpy pair: all 684 (N-no-ops signature).
  *
- * HEADER WIDTH 0x1C IS PROVEN, not guessed: func_15147A80 (game_174BF0.c,
- * matched) does `memcpy((u8*)temp_v0 + 0x10, arg0, 0x1C)` on this very struct.
- * Emitter151B7328 == Struct15131EE4Local (0x70) from game_15D730.c; the whole
- * field map at sp+0x60..0xD0 lines up 1:1, including pad67[9].
+ * ---------------- TOOLING TRAP THAT COST A WHOLE BATCH ----------------
+ * conker/src/game_1E37D0.c has CRLF line endings.  A python variant harness that
+ * does `src.replace("        tbl = ...\n...", new)` with '\n' patterns MATCHES
+ * NOTHING, str.replace silently returns the original, and EVERY variant reports
+ * the BASE score.  I got eight consecutive "668" readings that way, including
+ * two that were supposed to delete whole statements.  ALWAYS normalise
+ * (`.replace('\r\n','\n')`) AND assert the pattern is present before building --
+ * and treat "every variant scored identically" as a harness bug until a control
+ * variant that MUST change the score actually does.
  *
- * Rodata pre-filter: CLEAR.  D_800AA460 {0x60,0x61,0x62,0x63} and
- * D_800AA480 (1700.0f, low16 = 0x8000 so it can NOT inline) both live in the
- * EXTERNAL asm blob conker/asm/data/24EF20.rodata.s, so `extern` references
- * reproduce golden's relocs exactly.  D_800A5480 likewise (249F40.rodata.s).
- * This function is NOT rodata-blocked.  Its TU .rodata is 0 bytes both sides.
+ * Rodata pre-filter: CLEAR.  D_800AA460 {0x60,0x61,0x62,0x63} and D_800AA480
+ * (1700.0f, low16 = 0x8000 so it can NOT inline) both live in the EXTERNAL asm
+ * blob conker/asm/data/24EF20.rodata.s; D_800A5480 in 249F40.rodata.s.  This
+ * function is NOT rodata-blocked; its TU .rodata is 0 bytes both sides.
  *
  * NOTE: game_1E37D0.c also contains func_151B65D4, which is BLOCKED. Do not
  * touch it.
+ *
+ * ---------------- NEXT ----------------
+ *   1. The TU-aware permuter is set up at $HOME/perm/func_151B7328, re-seeded
+ *      from the 279 source (./permuter_tu.sh setup game_1E37D0 func_151B7328
+ *      <live-C copy of the TU>).  Selftest: (b) PASS harness object == Makefile
+ *      object, (b2) PASS pycparser round trip codegen-neutral, (c) base score
+ *      matches asm-differ, (d) PASS negative control, (e) isolation DIFFERS so
+ *      the TU-aware harness is load-bearing.  Check (a) "reassembly identity"
+ *      FAILS for this TU and it is a FALSE ALARM: game_1E37D0.c is CRLF and the
+ *      harness's splitter rejoins with LF, so all 360 lines "differ" by \r.  (b)
+ *      proves the codegen is identical anyway.  Do not chase (a) here.
+ *      Because the base frame is still wrong you can only use
+ *      PERMUTER_TU_MAX_FRAME=264 (stops the search trading the frame away);
+ *      REQUIRE_FRAME/REQUIRE_OFFSETS would reject the base itself.
+ *      ~1700 iterations from the 668 base produced the declaration-order move
+ *      (496) that led to the 279 above; it is worth a much longer run from 279.
+ *   2. The open question is now precise and narrow: WHAT MAKES IDO RESERVE ONE
+ *      8-BYTE COMPILER TEMP SLOT THAT IT NEVER USES?  It is not any single
+ *      statement and it is not the declaration list.  Excluded this wave (all
+ *      frame 0x108, and func_151B6320 stayed byte-identical throughout):
+ *        - the indirect call, five ways: `(*D_8008FB90[arg1])(...)`; a typedef'd
+ *          function-pointer array; an explicitly-sized array; `if (!call)`
+ *          instead of `if (call == 0)`; callee params typed as the real pointers.
+ *        - a single exit instead of two `return`s (678, i.e. WORSE).
+ *        - returning s32 instead of void * (668).
+ *        - func_15147A80 declared to return void * instead of s32 (668).
+ *      Still untried, in order of promise:
+ *        (a) the 11-argument func_15147A80 call -- argbuild 0x2C plus a 0xC pad
+ *            to 0x38 is the ONLY structural feature this function shares with the
+ *            matched func_151B6320 (which gets temp 0) and nothing else does.
+ *            Vary the DECLARED ARITY / parameter types of func_15147A80 -- but
+ *            note func_151B6320 shares that prototype, so re-verify it stays 0.
+ *        (b) the arg-save area: golden saves a0..a3 to 0x100..0x10C, i.e. the
+ *            frame boundary is exactly where the incoming args begin.  Try
+ *            param-list shapes (e.g. arg1/arg3 as s32 rather than u8) and watch
+ *            the FLOOR, not the score.
+ *        (c) a long permuter run from the 279 seed.
  */
 
-/* ---- BEST MEASURED VERSION (668).  Paste over the pragma in game_1E37D0.c ---- */
+/* ---------------- THE FLOOR IS THE FUNCTION'S, NOT THE TU'S ----------------
+ * Measured directly: compiled with the repo's exact IDO flags, func_151B7328's
+ * prologue is `addiu sp,sp,-264` BOTH in the whole game_1E37D0.c (all
+ * #pragma GLOBAL_ASM lines stripped) AND with every other function in the file
+ * reduced to a bare declaration.  So the 8 surplus bytes are a property of THIS
+ * FUNCTION'S OWN SOURCE, not of TU context.  An isolated compile is therefore a
+ * valid instrument for the FRAME here (it is not for the score -- the TU-aware
+ * harness's check (e) reports isolation changes other bytes).
+ *
+ * ---------------- A PERMUTER RESULT THAT WAS REFUSED ----------------
+ * From the 279 seed the permuter reaches 169 with exactly one change:
+ *      if ((unsigned char)(func_150ADA20() & 1)) { temp_v0 = 0x80; } ...
+ * on the SECOND of the two if/else blocks only.  REFUSED, and it must stay
+ * refused: golden's two blocks are SYMMETRIC (`andi t7,v0,1` then `andi t6,v0,1`,
+ * the same shape byte for byte), so nothing in the binary evidences a cast on one
+ * and not the other.  It is a no-op cast whose only effect is to rotate a temp
+ * register -- the banned category -- and it buys that rotation on top of a frame
+ * that is still 8 bytes wrong, i.e. exactly the plateau permuter_tu.sh's own docs
+ * warn about.  Any future 169 sighting is this, not progress.
+ * A second permuter output, 276, chains `emit.unk64 = (emit.unk63 = -1);`.
+ * ALSO REFUSED: golden materialises -1 THREE separate times (`li t5,-1`,
+ * `li t0,-1`, `li t7,-1`, then three sb) for unk62/63/64, which is three
+ * independent statements; the chained form would store one register twice.
+ * Three points is not worth making the output less like golden.
+ *
+ * ---------------- THE FRAME FLOOR (new, and it is the whole problem) --------
+ * The frame is PINNED at 0x108 across 7, 8 and 9 declared locals -- the temp
+ * pool absorbs whatever the declaration list gives up:
+ *      7 locals 0xB8 -> temp 0x10      8 locals 0xBC -> temp 0xC
+ *      9 locals 0xC0 -> temp 0x8      10 locals 0xC4 -> frame 0x110, temp 0xC
+ * Golden's floor is 0x100.  So the residual is EXACTLY ONE 8-BYTE COMPILER-TEMP
+ * SLOT that IDO reserves in my build and does not reserve in golden's, and which
+ * my build never writes to (sp+[0x40,0x48) is dead in my object).  Nothing in the
+ * declaration list can spend it: every scalar you delete comes straight back as a
+ * temp.  Attack the floor, not the locals.
+ *
+ * ---- BEST MEASURED VERSION (279).  Paste over the pragma in game_1E37D0.c ---- */
 
 typedef struct {
     Vec151B6320 unk0;
@@ -199,13 +344,13 @@ extern s32 (*D_8008FB90[])(void *, void *);
 extern void *func_15130280(void *, u8, s32, s32, u8, s32);
 
 void *func_151B7328(void *arg0, u8 arg1, s32 arg2, u8 arg3, s32 arg4) {
+    Obj151B7328 *obj;
+    u8 *payload;
     Header151B7328 header;
     Data151B7328 data;
     Data151B7328 *dst;
     Emitter151B7328 emit;
     Tbl151B7328 tbl;
-    Obj151B7328 *obj;
-    u8 *payload;
     s32 temp_v0;
     s32 temp_v1;
 
