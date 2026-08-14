@@ -2304,3 +2304,121 @@ game_12C1E0's block 246BF0 needs only **FOUR** more functions decompiled - func_
 func_150FF474, func_150FF6E0, func_150FF840 - versus SIXTEEN still stubbed in game_11C2B0. That is
 a bounded campaign, and it should close func_150FFD84, whose loop body is already byte-exact under
 the probe. Prefer it to game_64120's seven-function cluster.
+
+# ================================================================================
+# RODATA MIGRATION, THIRD AND HARDEST LAW: A TU OWNS **ONE CONTIGUOUS RUN**
+# ================================================================================
+
+The wave-37 campaign was planned on the belief that game_12C1E0's five remaining functions all
+owned constants in ONE block (0x246BF0), so closing four would permit a one-line migration and
+unlock the fifth. **That premise was wrong, and the reason generalises to every future campaign.**
+
+An object file has ONE `.rodata` section placed at ONE address. So a TU can only be given a SINGLE
+CONTIGUOUS RUN of the ROM's rodata. Measured for game_12C1E0:
+
+    func_150FF474's constants   ROM 0x246BE4 .. 0x246BF0   (tail of block 0x246B10)
+    ...0x40 bytes of NAMED objects referenced from OTHER TUs sit between...
+    func_150FFD84's constants   ROM 0x246C54 .. 0x246C5C   (inside block 0x246BF0)
+
+To own both, game_12C1E0 would have to own the foreign objects in between - which belong to other
+translation units. **There is no yaml spelling for that.** The migration is not merely blocked
+pending more decompilation; it is UNAVAILABLE, permanently, for this pair.
+
+So the pre-flight test for any proposed campaign now has THREE parts, and the new one is first:
+ 0. **CONTIGUITY** - collect every rodata symbol the TU's functions reference, sort by ROM address,
+    and confirm NOTHING between the lowest and highest is referenced from another TU. If a foreign
+    object sits in the middle, stop: no amount of decompilation will fix it.
+ 1. 16-ALIGNED start, MULTIPLE OF 16 length (IDO emits .rodata with sh_addralign 16 and pads
+    sh_size to a multiple of 16 - measured 14/14).
+ 2. zero padding in the ROM from range_end to the next 16-byte boundary.
+
+## AND MIGRATION IS NOT ALWAYS A WIN - IT CAN COST
+Discovered on func_150FF840, which is at score 5 with `extern` spelling: converting to true literals
+took it **5 -> 1170**. Golden emits a SEPARATE `lui %hi` per constant; a TU-local pool shares one
+`lui %hi(.rodata)` across them. So a function whose golden code loads several constants
+independently is HURT by owning its pool. Check the golden `lui` pattern before assuming a
+migration helps: separate `lui %hi` per constant => leave it external.
+
+# ================================================================================
+# THE UNBOUNDED-WINDOW TRAP IS REAL, AND IT IS ENORMOUS - MEASURED BOTH WAYS
+# ================================================================================
+
+Last wave established that `-o <func>` disassembles `max_lines * 4` bytes from the symbol start
+rather than stopping at the function. Wave 37 was the first to work SEVERAL functions inside ONE TU,
+which is exactly the condition that makes it bite, and the magnitude is not marginal:
+
+    func              bounded (own symbol range)      --max-lines 4096 window
+    func_150FF2D4                  325                        12778
+    func_150FF474                 4660                        12553
+    func_150FF6E0                  180                         7988
+    func_150FF840                    5                         7708
+    func_150FFD84                 6378                         6378
+
+A function at **5** reads as **7708** if you score it the default way while its neighbours are also
+being edited. Anyone driving a multi-function TU by the raw number is chasing noise.
+**RULE: when more than one function in a TU is in flight, bound the window to the symbol's own
+instruction count (or byte-compare the symbol's range) for every reported score.**
+
+# ================================================================================
+# functions.h DECLARES THE RNG WRONG, AND IT IS WORTH THOUSANDS
+# ================================================================================
+
+`func_150ADA20` is declared returning **u8** in conker/include/functions.h. It really returns
+**s32**. The binary evidence is decisive: golden spills the raw result as a WORD and performs a
+32-bit `divu`, whereas the u8 declaration narrows it to `sb`/`lbu`, i.e. it computes the modulo on
+the low byte only - a different function.
+Fixing it with the FILE-LOCAL SHADOW took func_150FF840 from **3950 -> 325**.
+
+    #define func_150ADA20 func_150ADA20_u8_decl_in_functions_h
+    #include "functions.h"
+    #undef func_150ADA20
+    s32 func_150ADA20(void);
+
+**VERIFIED SAFE THE ONLY WAY THAT COUNTS:** after the retype, all 11 already-matched functions in
+that TU still byte-compare IDENTICAL against expected/. Do that check before trusting any retype.
+This is the second file-local shadow to pay four figures. The RNG is called all over the tree, so
+expect this one specifically to recur - and prefer the shadow to editing the shared header, which
+was tested and breaks 13 TUs.
+
+## The same wave's second retype: pointer parameters declared as s32
+Several callees (func_150FFCC8, func_150FFB6C, func_151D5A18, func_151D3E6C, and arg8 of
+func_15102B38) take real POINTERS but are declared `s32`. With the wrong declaration IDO CSEs the
+seven `addiu a?,sp,0x11c` address computations into one spilled temp; with real pointer types it
+recomputes them as golden does. Worth **325 -> 5**.
+GENERAL FORM: *if golden recomputes an address at each call site and you emit one spilled temp,
+suspect a parameter declared as an integer where it is really a pointer.*
+
+# ================================================================================
+# A 2-D SUBSCRIPT AND A POINTER CURSOR ARE NOT INTERCHANGEABLE (1958 -> 180)
+# ================================================================================
+
+On func_150FF6E0, spelling the element as a genuine two-dimensional subscript
+`&D_800A2080[which][i]` with an `s32` index local scores 180; hoisting a `struct17 *base` pointer
+local scores 1958. The pointer form makes IDO **CSE the two `i*12` multiplies**, where golden
+computes one by shifts and the other by `multu`. That extra shared web costs a third callee-saved
+register and grows the frame 0x88 -> 0x90.
+This is the same family as the existing index-vs-pointer-cursor entry, but the mechanism is worth
+stating separately: the pointer form creates a CSE opportunity the subscript form does not.
+
+# ================================================================================
+# WAVE 37 RESULT
+# ================================================================================
+
+CLOSED: func_15152F70, 808 B, game_17CAF0.c - a randomised particle-burst spawner. Verified
+independently: score 0 with and without -R, all 49 siblings in the TU still 0, .text IDENTICAL
+(24,896 bytes), .rodata/.data/.bss identical, symbol size 808 both sides, pragmas 1744 -> 1743.
+
+THE CAMPAIGN DID NOT CLOSE BUT IT LEFT THREE FUNCTIONS VERY CLOSE, all with EXACT frames:
+  func_150FF840 @5    - one instruction. Golden fills the second `if`'s branch delay with a
+                        speculated body load; live C picks the third `if`'s condition load out of
+                        the branch target, forcing `beqzl` and duplicating an `lbu`.
+  func_150FF6E0 @180  - one redundant `b` with `move v0,zero` in its delay slot that live C elides,
+                        plus a UNIFORM +1 temp-rotation offset from the loop preheader onward.
+                        Exactly one extra temp allocation happens in golden and it emits NO
+                        instruction.
+  func_150FF2D4 @325  - two rows: a `lw` one slot early, and golden duplicating `lui at,0x4208`
+                        (34.0f) into a delay slot where live C shares one lui at the merge.
+  func_150FF474 @4660 and func_150FFD84 @6378 are HARD BLOCKED by the unavailable migration above.
+
+Naming a reciprocal (`inv = 1.0f/sqrtf(...)`) instead of inlining it twice fixed both `mul.s`
+operand orders on func_150FF2D4 (525 -> 505) - another instance of the statement-form law.

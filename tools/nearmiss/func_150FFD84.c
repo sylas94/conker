@@ -108,6 +108,66 @@
  * difference with the same suspected root cause.  With the block migrated this
  * function is expected to close: on the probe base the entire loop body and
  * the whole prologue are already byte-exact.
+ *
+ * ===========================================================================
+ * 2026-08 UPDATE -- THE 0x246BF0 MIGRATION WAS PRE-FLIGHTED AND IS **UNSAFE**.
+ * THE YAML WAS NOT TOUCHED.
+ * ===========================================================================
+ * ARITHMETIC (dumped from conker/conker.us.bin, the splat target):
+ *   [0x246BF0,0x246C60)  len 0x70 = 7*16, start%16 = 0, size%16 = 0   OK
+ *     246BF0: 41200000 C2F20000 42A20000   D_800A2130  Vec3(10,-121,81)
+ *     246BFC: 41200000 C31B0000 42C60000   D_800A213C  Vec3(10,-155,99)
+ *     246C08: BF800000 C2180000 42180000   D_800A2148  Vec3(-1,-38,38)
+ *     246C14: C1D00000 C1B80000 424C0000   D_800A2154  Vec3(-26,-23,51)
+ *     246C20: 00000060 00000061 00000062 00000063   D_800A2160  s32[4]
+ *     246C30: 45548000 3A83126F 3DCCCCCD 3DB43959
+ *     246C40: 3EC41894 3F4F5C2A 3A83126F 43360B61
+ *     246C50: 43360B61 BF283127 3F1EF9DC 00000000
+ * So the block is [0x40 of NAMED objects][0x30 of anonymous float literals].
+ *
+ * BLOCKER 1 -- THE BLOCK IS NOT OWNED BY THIS TU.  D_800A2148 and D_800A2154
+ * are referenced from **game_981E0.c** (`func_151D5714(D_800D154C, &D_800A2148,
+ * &D_800A2154, D_80088BB0, 1.0f, 0xFF, 1)`), a different translation unit, and
+ * D_800A2130 is referenced from the DATA table at ROM 0x23474C
+ * (asm/data/234730.rodata.s, `glabel D_8008FC8C .word D_800A2130`) as well as
+ * from live C func_150FFBDC.  Migrating the block makes game_12C1E0.c's own
+ * .rodata the definition site for those symbols; a literal pool cannot supply
+ * named globals, and hand-writing them as `const` objects cannot be interleaved
+ * with the pool the way the ROM is.
+ *
+ * BLOCKER 2 -- ONE OBJECT HAS ONE .rodata SECTION AT ONE ADDRESS.  This TU
+ * needs float literals at TWO disjoint ROM runs: 0x246BE4..0x246BF0 (the three
+ * constants func_150FF474 must have as literals) and 0x246C30..0x246C60 (this
+ * function's + func_150FF840's).  The 0x40 bytes of named objects sit between
+ * them.  No single `- [addr, .rodata, game_12C1E0]` line can cover both, and
+ * two lines cannot both be satisfied by one object file.
+ *
+ * WHAT THE ROM LAYOUT ACTUALLY SAYS.  The whole run 0x246B10..0x246C60 is
+ *   [named data][8 floats][named data][11 floats + pad]
+ * -- i.e. TWO `[const data][literal pool]` groups back to back.  That is the
+ * signature of TWO ORIGINAL TRANSLATION UNITS, not one.  splat's single
+ * `- [0x12C1E0, c, game_12C1E0]` segment merges them.  The migration becomes
+ * available only after splitting the .text segment into two `c` segments at the
+ * TU boundary (which by the rodata grouping falls between func_150FF6E0 and
+ * func_150FF840), and giving each its own `.rodata` line.  That is a repo
+ * layout change, not the one-line edit, and it was NOT attempted here.
+ *
+ * WHAT WAS PROVEN POSITIVELY (build evidence, probe only, reverted):
+ *  - IDO does NOT deduplicate identical float literals: spelling the eleven
+ *    constants as literals emits, in .rodata, in this order
+ *      45548000 3A83126F 3DCCCCCD 3DB43959 3EC41894 3F4F5C2A 3A83126F
+ *      43360B61 43360B61 BF283127 3F1EF9DC 00000000
+ *    which is BYTE-FOR-BYTE the ROM at 0x246C30, duplicate 0.001f pair,
+ *    duplicate 182.0444489f pair and the zero pad word included.  IDO pads
+ *    .rodata to a multiple of 16 with zeros, exactly as the ROM shows.
+ *  - With those literals this function goes 6378 -> 2637 and its size goes
+ *    984 -> 1012 bytes (golden 1020), i.e. the migration is the right diagnosis
+ *    but does not on its own close it -- two instructions still missing.
+ *  - The same probe takes func_150FF474 to golden's EXACT size (576) and 901.
+ *  - The same probe makes func_150FF840 WORSE (5 -> 1170): golden emits a
+ *    separate `lui %hi` per constant there, whereas a local pool lets IDO share
+ *    one `lui %hi(.rodata)` across several `%lo` loads.  func_150FF840 must
+ *    keep the `extern f32` spelling.
  * =========================================================================== */
 
 /* ---- parked source: this is the 6378 build, verbatim ---- */
