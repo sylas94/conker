@@ -50,13 +50,27 @@ def longest_run(vals):
 
 parked = {f[:-2] for f in os.listdir("../tools/nearmiss") if f.endswith(".c")}
 
-rows, skipped = [], {"parked":0,"noasm":0,"size":0,"jtbl":0,"floor":0}
+rows, skipped = [], {"parked":0,"noasm":0,"handwritten":0,"size":0,"jtbl":0,"floor":0,"in_tu_note":0}
+# NOTE, deliberately NOT a screen: a prior reconstruction is sometimes parked as a COMMENT BLOCK
+# inside the TU rather than in tools/nearmiss/ (func_15167E0C had an 885 note that way, and half a
+# wave went into re-deriving it). The obvious test -- "name occurs in src/<tu>.c more than once" --
+# was TRIED AND REJECTED: it discards 424 of ~550 candidates, because the second occurrence is
+# almost always a forward declaration or a same-file caller. Catching a handful of notes is not
+# worth losing three quarters of the pool, so the agent brief tells agents to grep their own TU
+# for an existing note instead. Keep it that way unless someone writes a precise test.
 for func, tu in stubbed.items():
     if func in parked: skipped["parked"] += 1; continue
     p = asmpath.get(func)
     if not p: skipped["noasm"] += 1; continue
     try: txt = open(p, errors="ignore").read()
     except OSError: continue
+    # SCREEN: splat tags hand-written assembly on line 1. Such a function is not compiler
+    # output at all -- no prologue, int regs saved into FPU regs, branches into the previous
+    # function, interior glabels, trapping `sub`, 64-bit ldl/ldr in a -mips2 build. 29 of these
+    # still carry live pragmas, clustered in the 0x150A-0x150D hand-written math region.
+    # A whole wave-half was spent discovering this the hard way; screen it here.
+    if "Handwritten function" in txt or "handwritten instruction" in txt:
+        skipped["handwritten"] += 1; continue
     lines = txt.count("\n")
     if not (200 <= lines <= 330): skipped["size"] += 1; continue
     if re.search(r'\bjr\s+\$?(v[01]|t[0-9]|a[0-3])\b', txt): skipped["jtbl"] += 1; continue

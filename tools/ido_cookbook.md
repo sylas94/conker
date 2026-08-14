@@ -2998,3 +2998,90 @@ the macro, and one commented-out pragma (init_B1B0.c:687).
 all (func_150AE280). There is exactly ONE of these in the tree.
 So the true count of still-stubbed functions is **1738**. Any tool that enumerates remaining work
 must handle both forms, and its total should be reconciled against the grep before use.
+
+# ================================================================================
+# SCREEN FOR HAND-WRITTEN ASSEMBLY FIRST -- SPLAT ALREADY TAGS IT, AND 29 ARE LIVE
+# ================================================================================
+
+Half a wave went into a function that is **not compiler output at all**. splat says so on line 1
+of the .s (`/* Handwritten function */`) and the picker never looked.
+
+    $ grep -rl 'Handwritten function' conker/asm/nonmatchings/ | wc -l   -> 29 (all still stubbed)
+
+Concentrated where the cookbook already warned the hand-written math lives: game_D4450 (6),
+game_225D20 (5), game_D86A0 (4), game_D0F20 (3), game_D3040 (2), plus singles in game_DAE10/
+DAE50/DAFA0/DF260/D5650.
+
+## The seven signatures, from func_150A3FC4
+Any ONE of these is decisive; this function had all seven.
+ 1. `/* Handwritten function */` on line 1, and `/* handwritten instruction */` per-instruction.
+ 2. **No prologue or epilogue** - never touches `$sp` - yet it clobbers callee-saved
+    `$s5/$s6/$s7/$fp`.
+ 3. It "saves" those integer registers **into FLOATING-POINT registers**:
+    `mtc1 $s5,$f1` ... later `mfc1 $s5,$f1`. No C compiler emits that.
+ 4. It **branches backwards INTO THE PREVIOUS FUNCTION**: `beqz $t0,.L150A3FBC`, where
+    0x150A3FBC is eight bytes *before* its own entry at 0x150A3FC4 - it is the trailing `jr $ra`
+    of func_150A3A70.
+ 5. **Interior glabels** (func_150A40A8, func_150A411C) that other code jumps into.
+ 6. Trapping `sub` rather than `subu`.
+ 7. 64-bit `ldl`/`ldr` in a `-mips2 -o32` build; and callee-saved registers READ BEFORE ANY
+    DEFINITION (extra arguments passed in `$s5/$s6/$s7/$fp`), plus a 5th argument read at
+    `lw $v0,0x10($sp)` with no frame allocated.
+
+**THE LESSON ABOUT SCREENING, not just about this function:** every screen the picker applied
+(no jtbl, no interior-symbol run, no pooled float, mid-band, unattempted) was TRUE and ALL of them
+were IRRELEVANT, because none tested whether the thing was C. A clean screen result is not evidence
+of tractability if the screens do not cover the failure mode. Ask what a screen set does NOT test.
+
+# ================================================================================
+# AN AGENT REFUSED ITS OWN BEST SCORE, AND THAT IS THE RIGHT CALL
+# ================================================================================
+
+func_15167E0C reached **685** (from 885), with structure byte-exact: same instruction count, same
+addresses, same branch forms, frame 0x20, ~160 of 195 instructions identical *including register
+names*. It was flagged NOT SHIPPABLE by the agent that produced it:
+
+> the 685 uses one packed variable for the Y and X axes and a second for Z, a split with no
+> semantic justification chosen purely for its register effect - not shippable as-is even at 0.
+> The honest single-variable shape scores 860.
+
+That is exactly the standard: **a variable split chosen for its register effect rather than its
+meaning is a forcer, even when it is not on the banned-construct list.** Score 0 would not have
+made it shippable.
+
+The residual is a genuine allocation wall, and it is well-characterised: golden spends TWO pool
+registers on the packed 24.8 value and ZERO on the sum; the honest C spends one on each. Golden's
+packed-Y and packed-X live ranges OVERLAP (packed-X is built before packed-Y is consumed), which is
+what forces the second pool register and evicts the sum. Writing that overlap into the source DOES
+flip the register class correctly - verified by dumping the diff - but IDO then picks a1/a2 instead
+of v0/v1, which displaces another local out of a3 and re-registers the whole function. **The
+pool-assignment ORDER is not steerable from C.**
+
+# ================================================================================
+# PICKER: A SCREEN I TRIED AND REJECTED, RECORDED SO NOBODY RE-ADDS IT
+# ================================================================================
+
+func_15167E0C was NOT unattempted: its TU already carried a parked 885 reconstruction **in a comment
+block inside the .c file**, not in tools/nearmiss/. The obvious screen - "skip if the function name
+occurs more than once in src/<tu>.c" - was implemented, measured, and **REVERTED**: it discarded
+**424 of ~550** candidates, because the second occurrence is almost always a forward declaration or
+a same-file caller. Catching a handful of notes is not worth losing three quarters of the pool.
+The agent brief now tells agents to grep their own TU for an existing note instead.
+Current screen tally: parked 113, handwritten 29, size 1304, jtbl 15, splat floor 125 -> **149
+candidates surviving**.
+
+# ================================================================================
+# WAVE 43 RESULT
+# ================================================================================
+
+CLOSED: func_15125DB4, 900 B, game_14FF90.c - the per-frame player control-mask gate. It seeds the
+paired 16-bit enable masks from the animation state, then progressively clears mask bits through a
+long chain of state and flag tests, and finally decrements a timer and clamps it at zero.
+Verified independently: score 0 with and without -R, **all 56 siblings in the TU still 0**, .text
+IDENTICAL (23,808 bytes), .rodata/.data/.bss identical, symbol size 900 both sides, zero banned
+constructs, grep GLOBAL_ASM 1741 -> 1740, and the full clean ROM gate passed on both sha1s.
+
+Notable: this is the function whose golden supplied the corpus evidence for the mask third-use law
+(`andi 0xFFEF / andi 0xFFEF / addiu -0x11`). Knowing in advance that it masks with the same constant
+at least three times - and that all sites must be spelled identically - was handed to the agent in
+the brief and is the kind of pre-loaded fact that makes a cold start cheap.
