@@ -1769,3 +1769,47 @@ decisions — here two thirds of the population was macro expansion and would ha
 confident wrong answer. Then, before trusting a correlation, build the 2×2 and check the predicted
 cell really is extreme; a clue that is true of one function can be the *opposite* of the corpus
 trend.
+
+## A NON-INLINABLE FLOAT LITERAL IS A SYSTEMIC BLOCKER, AND IT IS DIAGNOSABLE IN ONE PROBE
+
+Two cold targets in one wave hit the same wall, and the diagnosis is identical for both — so this
+is a class, not a coincidence.
+
+**Mechanism.** Live-C `.rodata` is `/DISCARD/`ed project-wide, so a float constant whose low 16 bits
+are nonzero (it cannot be built with `lui`+`mtc1`) must be spelled `extern f32 D_XXXXXXXX`. That
+turns a **link-time constant into a memory OBJECT**, and IDO treats the two completely differently:
+
+* a literal's `%hi`/`%lo` pair is a link-time constant it never considers for loop-invariant motion;
+* an extern variable's ADDRESS is an ordinary loop invariant, so with callee-saved registers free
+  IDO hoists it — `lui s6,%hi / addiu s6,s6,%lo` in the preheader plus `lwc1 $f10,0(s6)` in the
+  loop, where golden has `lui at,%hi / lwc1 $f10,%lo(at)` INSIDE the loop.
+* it also defeats alias analysis: because the object might alias a store, IDO reloads it per use
+  instead of keeping one copy.
+
+Either way the extra web renumbers every temp register downstream and shifts the saved-register
+block, so a **one-instruction cause produces a four-figure score**.
+
+**The one-probe diagnosis.** Substitute a nearby literal that IS inlinable (low16 == 0) — it is
+semantically wrong and for evidence only — and re-score:
+
+* func_150380C0: parked form 1220 → probe **410**, and the entire asm-differ output is FOUR LINES
+  (`lui at,%hi(D_8009863C)` vs `lui at,0xc7c3`, and `lwc1 %lo(...)` vs `mtc1 at,$f0`, twice). Every
+  stack offset, every integer AND fp register, every branch target, all scheduling and the 0x80
+  framesize are IDENTICAL to golden.
+* func_150E7C9C: 1466 → **604**, with the `$s6` hoist gone and every prologue/epilogue offset and
+  branch target matching.
+
+That probe is worth running early: it separates "my reconstruction is wrong" from "only the
+literal blocks me", and in both cases here it **proved the control flow, the declaration list, all
+parameter types and the callee prototypes were already correct**.
+
+**The fix is the yaml migration**, not a source change. Do NOT try to work around it:
+* `extern const f32` is inert — IDO 5.3 does not use `const` for alias analysis (measured, 1466 and
+  1220 unchanged).
+* Swapping operand order is inert.
+* A carrier local gives golden's instruction sequence but adds a stack home the frame decode proves
+  golden does not have — that is a fake frame-shaping local, so refuse it.
+
+**Two rodata entries holding the same value are a tell.** `D_8009863C` and `D_80098644` are both
+`.float -99999` — IDO emits one constant-pool entry per source-level literal, so duplicates in a
+block mean literals, not shared globals.
