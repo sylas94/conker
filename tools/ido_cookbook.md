@@ -2908,3 +2908,82 @@ func_15084558  3800 -> 3240, and it is the trap case above. Everything from the 
     the 812 ladder. Of 25 non-register diffs, ~6 are the splat artifact (unfixable), 4 are a dead
     4x-unrolled counting loop that also walks a pointer, and 4 are a loop-invariant RANKING inversion
     with 9 candidates for 9 saved registers on both sides.
+
+# ================================================================================
+# PICKER BUG THAT COST A WHOLE WAVE: A `.s` FILE DOES **NOT** MEAN "STILL STUBBED"
+# ================================================================================
+
+Wave 42 fed both agents four functions that were **already decompiled**, and they spent the wave
+verifying finished work. The agents caught it and said so plainly; the fault was entirely in the
+target picker.
+
+**`asm/nonmatchings/<tu>/<func>.s` FILES ARE RETAINED AFTER A FUNCTION IS DECOMPILED.** Removing the
+`#pragma GLOBAL_ASM` does not delete the `.s`. A picker that walks `asm/nonmatchings/` therefore sees
+every function that has EVER been stubbed, including all 3,900+ already-matched ones.
+
+**THE AUTHORITATIVE TEST FOR "STILL STUBBED" IS A LIVE `#pragma GLOBAL_ASM` LINE IN
+`conker/src/<tu>.c`** - build the candidate set from `src/`, never from the asm directory:
+
+    stubbed = {}
+    for c in glob.glob("src/**/*.c", recursive=True):
+        for m in re.finditer(r'#pragma\s+GLOBAL_ASM\("([^"]+)"\)', open(c).read()):
+            stubbed[os.path.basename(m.group(1))[:-2]] = os.path.basename(c)[:-2]
+
+Cross-check the count against the tree-wide pragma total (`grep -rc GLOBAL_ASM conker/src/`) before
+trusting any target list. If the picker's count and the grep count disagree, the picker is wrong.
+The same mistake is available in any tool that enumerates work from `asm/` - check them all.
+
+# ================================================================================
+# TRAP #6 CONFIRMED INDEPENDENTLY, AND IT HAS A NAME: THE RELOCATION-NAMING FLOOR
+# ================================================================================
+
+A second, cleaner case turned up by accident, and it is the strongest possible demonstration
+because the function is **already shipped and ROM-verified**.
+
+`func_151E24F0` (game_20AE20.c, live C since commit 65645c7, inside a ROM that gates byte-perfect)
+scores **10**. Exactly ONE byte differs across the entire 43,840-byte `.text` of its object:
+
+    built     4c04: 3c0b0000  lui   t3,0x0        R_MIPS_HI16 D_8008FE44
+              4c08: 256b0004  addiu t3,t3,4       R_MIPS_LO16 D_8008FE44   (addend 4, in-field)
+    expected  4c04: 3c0b0000  lui   t3,0x0        R_MIPS_HI16 D_8008FE48
+              4c08: 256b0000  addiu t3,t3,0       R_MIPS_LO16 D_8008FE48   (addend 0)
+
+**The `lui` words are IDENTICAL (0x3c0b0000); only the relocation's SYMBOL NAME differs, and
+asm-differ scores that too.** Both resolve to 0x8008FE48, and the linked word is 0x256bfe48 - exactly
+the golden encoding in the .s comment.
+
+The construct is IDO's strength-reduced loop-end pointer for `for (i = 0; i < 4; i++) v = D_8008FE44[i];`
+(the `sltu` proves an unsigned pointer compare). **`D_8008FE48` is not a real variable:**
+asm/data/234900.rodata.s holds ONE contiguous initialised run spanning 0x8008FE44-0x8008FE54 which
+splat chopped into labels at FE44 (1 byte), FE45 (3), FE48 (12) and FE54 - and the function itself
+indexes `D_8008FE44[j]` for j up to 16, proving a single array.
+
+Reaching 0 would require declaring a fictitious `extern s8 D_8008FE48[]` and writing `p < D_8008FE48`
+- inventing an array boundary the source never had. **Correctly REFUSED** under "refuse a better
+score that makes the output less like golden": the output is already exactly golden.
+
+## Consequences, and one of them affects the verification protocol
+* **A SHIPPED, CORRECT FUNCTION CAN SCORE NONZERO.** Score != 0 is not evidence of a defect for
+  code that is already live. Check whether the residual is entirely relocation-naming before
+  treating it as a regression.
+* **THE "ALL SIBLINGS STILL 0" CHECK WILL FLAG THESE AS FALSE POSITIVES.** When a sibling scores
+  nonzero, diff it: if every differing row is a `%hi`/`%lo` pair whose instruction WORDS match and
+  only the reloc symbol name differs, it is the floor, not a regression.
+* Add it as a residual class in its own right: **RELOCATION-NAMING FLOOR**, distinct from
+  ALLOCATION / SCHEDULING / BASIC BLOCK / as1 PEEPHOLE. Such a function is verifiable only by the
+  ROM gate - which is, as ever, the authority.
+
+# ================================================================================
+# WAVE 42: ZERO NEW FUNCTIONS, TWO USEFUL CONFIRMATIONS
+# ================================================================================
+
+Nothing was closed and nothing in the repository was modified. The three functions reported as
+"closed" (func_15015A38, func_15023DE0, func_1500AF08) were all already live C from commits 65645c7
+and b401477; the agents verified rather than re-derived them, and said so explicitly.
+
+What the wave is actually worth:
+ 1. the picker bug above, now fixed - it would have silently poisoned every future wave;
+ 2. the relocation-naming floor, proved from the binary on a shipped function;
+ 3. an incidental confirmation that the screened-clean pool is real: with zero callees and zero
+    float, three of the four targets had genuinely nothing left to get wrong, which is why they were
+    already finished.
