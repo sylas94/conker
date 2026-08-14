@@ -1880,3 +1880,114 @@ costs one yaml line the day its cluster closes.
   0.4315068424f the residual is 399, and at 399 there is not one inserted, deleted or reordered
   instruction - only the frame size, one addiu offset, and a t-register rotation.
 ALWAYS PROBE WITH THE TRUE VALUE; a convenient nearby constant measures a different function.
+
+# ================================================================================
+# SIBLING-PROJECT INTELLIGENCE: WHAT TRANSFERS, WHAT DOES NOT, AND FOUR NEW LEVERS
+# ================================================================================
+
+Checked the other N64 decomps for transferable lore. The result is worth recording because most
+of it does NOT transfer, and the one source that does is not a Rare game.
+
+## The landscape, measured rather than assumed
+
+* **Perfect Dark** (Rare, 2000) - "fully decompiled" and yet **97.4%**. The project states the gap
+  is "a small handful of functions ... not yet byte-matching even though they are functionally the
+  same." CALIBRATION: a residue of functionally-correct-but-not-byte-matching functions is the
+  NORMAL end state of a mature decomp, not evidence that this project is doing something wrong.
+* **Banjo-Kazooie** (Rare, 1998, Conker's engine grandparent) - IDO, but `OPT_FLAGS := -O2` with
+  **NO -g3** (read from its Makefile). Engine and struct lore transfers; NONE of our distinctive
+  levers do. Stack homing, source-line-placement scheduling and the frame-layout law are all -g3
+  artefacts. They are ours alone, which is why this cookbook has no upstream.
+* **Banjo-Tooie** (WIP, Mr-Wiseguy) - the DIRECT engine sibling of Conker, same era and lineage.
+  Thin on matching lore, but the best external candidate for STRUCT LAYOUTS AND PROTOTYPES - i.e.
+  the `unknownN` blocker class (func_151B65D4), which is an RE problem, not a codegen problem.
+* **Paper Mario** - GCC 2.8.1, NOT IDO. A dead lead; do not spend time on it.
+
+## The real source: OoT's "-O2 decompilation (for IDO 5.3)" guide
+
+Same compiler, different game. It INDEPENDENTLY CONFIRMS laws derived from scratch in this file,
+which is the strongest validation any of them have had:
+
+* naive codegen creates pseudo-registers WITH RESERVED STACK SPACE, then the optimizer promotes
+  them to registers while PRESERVING the reservations  == our stack-home law
+* rodata literals are "really const" and are HOISTED TO FUNCTION START IN SAVED REGISTERS
+  == the exact extern-hoist mechanism behind our whole rodata blocker class
+* `&a[i]` vs `a + i` selects different loop-counter strategies  == our pointer-vs-index law
+* moving statements between basic blocks affects regalloc  == our which-side-of-a-guard lever
+* constants in locals are REMATERIALISED after calls rather than spilled  == our mask law
+* "IDO does not use SSA form" - each variable generally stays in ONE register, so reusing a
+  variable produces surprises. This is the MECHANISM behind our measured "merging two locals
+  backfires" result (10 -> 55/80/293/1248).
+
+### RECONCILIATION, not a correction, to the web-reference-count law
+The guide gives the allocation order as **v0, v1, a0-a3, t0-t5, then stack**. This file says
+`$v0, $v1, $a1, $a2`. NOT a contradiction: ours was derived on functions WITH PARAMETERS, where
+`a0` (and often `a3`) is already occupied by an incoming argument. Ours is the special case.
+BUT IT MEANS OUR LIST STOPS TOO EARLY. Extend the ranking through `a3` and `t0-t5` before
+declaring a register unreachable - a bail that assumed the list ended at `$a2` may be wrong for
+any function with more live webs than four.
+
+## FOUR LEVERS WE DID NOT HAVE (verify each before trusting it)
+
+1. **`void f(void)` uses 4 MORE bytes of stack than `void f()`.** A pure frame-size knob with no
+   semantic change. This tree currently has 288 `(void)` prototypes and exactly 1 empty-paren.
+2. **Calling a function that returns a value consumes stack EVEN IF THE RESULT IS IGNORED.**
+   A second frame knob.
+3. **`for (i = 0, other = 4; i < 4; i++)`** - multi-init in the loop header as a regalloc lever.
+4. Three cheap axes: comma vs semicolon statement separation; ternary vs if/else (occasional
+   regalloc difference only); and DUPLICATING an expression to let CSE fold it back, forcing a
+   reorder (the inverse of our break-a-CSE-by-re-spelling-one-call-site law).
+
+**WHY 1 AND 2 MATTER MORE THAN THEY LOOK.** The BAIL checklist in this file contains
+"Stack-aggregate off-by-one-WORD ... BAIL" - a frame off by exactly one word, declared
+unreachable BECAUSE WE HAD NO FRAME LEVER. There are now two, and both move the frame by exactly
+4 bytes. Every bail in that class is re-openable.
+CAVEAT, and it is the project's own standard: the OoT guide marks its own -g/-O2 stack claim
+"TODO: verify". VERIFY BOTH IN THIS TREE BEFORE USING THEM, and if either turns out load-bearing
+in a shipped match, it faces the delete-and-objsame test like any other construct. A prototype
+spelling is a declaration change, not a no-op mask, so it is defensible in principle - but
+"defensible in principle" is not the standard here; measurement is.
+
+# ================================================================================
+# WAVE 33 - TWO CLEAN CLASSIFICATIONS, ZERO CLOSED
+# ================================================================================
+
+Four cold targets, chosen to avoid the rodata class. The avoidance WORKED: both probes came back
+negative (func_1000CEAC has zero float ops at all; func_15160E30's only constants are 255.0f and
+IDO's 2^31 float->unsigned bias, both low16==0 and inlinable). The rodata screen is now a reliable
+pre-filter and should stay in every brief.
+
+## func_15160E30 @430 - a PURE SCHEDULER residual, and a positional proof
+
+Frame EXACT at 0x100. The differ shows **zero 'r' (register), zero 's' (stack-offset) and zero 'i'
+(immediate) rows** - ten rows out of ~230 instructions, all pure ordering, instruction counts equal
+in every block. Five source variants scored IDENTICALLY at 430 (struct pointers vs s32[2]+casts,
+operand order of the multiply, declaration-order swap of two locals), which by the N-no-ops test
+says those axes are all dead.
+
+THE FINDING WORTH KEEPING: the function has four `return 1` tail blocks compiled from IDENTICAL
+source. **Two of them match golden exactly; two do not.** Same source, same registers, different
+schedule. That is direct evidence that the residual is POSITIONAL - a scheduler tie-break decided
+by where the block sits, not by anything written in it. It is the cleanest permuter target this
+project has produced, and it is exactly the class the -g3 source-line lever acts on.
+
+## func_1000CEAC @2710 - one missing web explains both the frame AND the register map
+
+Control flow reproduced essentially instruction-for-instruction across all 20 regions (rotated
+osRecvMesg while-loop, 16-bit mask loop, 4-way dispatch, unrolled-by-2 tail loop all line up).
+The callee-saved map differs by ONE web:
+
+    golden   s3=&D_800418B0  s4=&D_800BE9E4  s5=2      s6=ptr8  s7=1
+    ours                                     s5=ptr8   s6=1     s7=&D_800BE9E4
+
+and every t-register in the four dispatch arms renames in lockstep - that is where the bulk of
+2710 lives. Frame 0xa0 vs golden 0x98: **exactly one surplus compiler temp slot**, with both sides
+carrying 5 live spills. One cause, two symptoms.
+
+THE STEP THAT PAID MOST: deleting a `timers` local took 6320 -> 3360, and the ENTIRE tail loop then
+matched including golden's spills around both calls. A local you added "because the value is used
+twice" can cost four figures.
+
+**THIS IS THE FIRST TARGET FOR THE NEW FRAME LEVERS.** The frame is 8 bytes heavy = two 4-byte
+knobs, and the function calls several routines whose return values it ignores. Lever 2 above
+predicts exactly this shape.
