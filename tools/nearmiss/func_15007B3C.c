@@ -1,3 +1,62 @@
+/* ===========================================================================
+ * func_15007B3C  --  game_34F20.c  --  MEASURED 2026-08-14
+ * ===========================================================================
+ * backlog.tsv IS WRONG FOR THIS ROW.  It says `bytes=96, measured_2026_08_11=1`.
+ * The golden function is **1704 bytes** (mips-linux-gnu-readelf -sW on
+ * expected/build/src/game_34F20.c.o) and this file, installed with the pragma
+ * removed and all five neighbours live, measures:
+ *
+ *     differ_R = 2927,  differ (no -R) = 3227
+ *     FNDIFF func_15007B3C  words=308  relocs=349  size=1696/1704
+ *     (106 differing rows; golden is 426 instructions, this file 424)
+ *
+ * Calibration for those numbers: with the #pragma restored the same harness
+ * prints `differ_R=0 differ=0 words=0 relocs=0 size=1704/1704`, so the 2927 is
+ * real and not a stale object.  Treat every `measured_2026_08_11` value in
+ * backlog.tsv as unverified until re-measured -- this one is off by 3 orders of
+ * magnitude in the score and 18x in the size.
+ *
+ * WHAT IS ACTUALLY WRONG (it is much closer than 2927 suggests -- the score is
+ * inflated because a whole-function register rotation scores every row):
+ *
+ *  1. HARD BLOCKER -- THE JUMP TABLE.  game_34F20 has NO `.rodata` line in
+ *     conker.us.yaml (`grep -n game_34F20 conker/conker.us.yaml` gives only
+ *     `- [0x34F20, c, game_34F20]`).  Golden reads
+ *         lui at,%hi(jtbl_80095A50) / lw t8,%lo(jtbl_80095A50)(at)
+ *     and live C emits
+ *         lui at,%hi(.rodata)       / lw t8,%lo(.rodata)(at)
+ *     i.e. a private live-C table that conker.ld discards.  This function
+ *     CANNOT close until game_34F20's rodata block is migrated (see
+ *     conker-jtbl-unlocked: one `[0xADDR, .rodata, game_34F20]` yaml line).
+ *     The switch SHAPE is already right: golden's `addiu t8,v0,-0x13` /
+ *     `sltiu at,t8,0x2d` is exactly cases 19..63 as written below.
+ *
+ *  2. A GLOBAL v0<->v1 WEB SWAP.  Golden gives the switch scrutinee v0
+ *     (`lw v0,%lo(D_800BE9F4)(v0)`, `addiu t8,v0,-0x13`, four `bne v0,at`) and
+ *     this file gives it v1; the same swap reappears in the D_80082FA0 loop,
+ *     where golden's `i` is v0 / cursor v1 with homes 0x34 / 0x18 and this file
+ *     has them the other way round.  One temp web too many or too few.
+ *
+ *  3. TWO INSTRUCTIONS, AND THE ONLY REAL STRUCTURAL DEFECT.  Golden CSEs the
+ *     addresses of D_800D2456 and D_800D2457:
+ *         lui v0,%hi(D_800D2456) / addiu v0,v0,%lo(D_800D2456)
+ *         sb  t6,0(v0)           / sb    t6,%lo(D_800D2457)(at)
+ *     this file emits an independent lui+%lo for each. They are adjacent bytes;
+ *     golden is reading them as two fields of ONE object. Find that object
+ *     (a 2-byte struct / a u8[2]) and this cluster and the 2-instruction
+ *     shortfall both go away.  Do this BEFORE touching registers.
+ *
+ * TU-PHASE EXPERIMENT RUN ON THIS FUNCTION (negative -- see session report):
+ * each of the five live neighbours (func_15007A70 declared BEFORE it;
+ * func_150081E4/15008230/15008248/150082CC declared AFTER it) was replaced in
+ * turn by a #pragma GLOBAL_ASM stub, with blank-line padding so the -g3 line
+ * numbers were held fixed, and three pure line-shift controls (1/3/10 blank
+ * lines inserted ahead of this function) were run as well.  All nine builds
+ * produced this function BYTE-IDENTICAL (.text+reloc sha1 a8bd8ff6a1632607,
+ * size 1696).  Neighbouring code in the same TU does not move this function's
+ * codegen, and neither do absolute source line numbers.
+ * =========================================================================== */
+
 /* --- local prototypes (missing from functions.h) --- */
 void func_1500E738(void);
 void func_1500C2A0(void);

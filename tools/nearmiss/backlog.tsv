@@ -68,7 +68,7 @@ func_1502F9FC	492	game_58F80.c	best_550.c	550
 func_151B09BC	460	game_1DD500.c	grind_func_151B09BC.c	-
 func_15010880	336	game_3DC30.c	orig_game_3DC30.c	-
 func_100049E0	144	init_49E0.c	v2.c	2
-func_15007B3C	96	game_34F20.c	body_v1.c	1
+func_15007B3C	1704	game_34F20.c	body_v1.c	2927 (jtbl-blocked; game_34F20 has no .rodata line in the yaml)
 func_151EFF94	92	game_21D420.c	game_21D420.MATCHES_WITH_O2_NO_G3.c	-
 func_1509F850	56	game_CCD00.c	jtbl2_func_1509F850.c	-
 func_150611E8	1012	game_83300.c	-	4538

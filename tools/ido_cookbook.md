@@ -2047,3 +2047,153 @@ The allocation-order correction still stands and is still worth using: the full 
 Those agree - ours was derived on functions WITH parameters, where a0 (and often a3) is already
 occupied - but our truncated list can make a register look unreachable when it is merely further
 down the table. Re-check any bail that concluded "unreachable" while counting only four slots.
+
+# ================================================================================
+# THE TU-PHASE HYPOTHESIS IS DEAD. MEASURED AT THE BYTE LEVEL, THREE WAYS.
+# ================================================================================
+
+The idea: IDO's temp/register rotation counter is TRANSLATION-UNIT scoped, so a function's
+tie-break phase depends on the real code compiled before it, and in a TU that is mostly
+`#pragma GLOBAL_ASM` stubs that phase is wrong BY CONSTRUCTION. It predicted that several of the
+twelve bails at score <= 20 would compile to 0 with no source change once neighbours were
+decompiled, and it was the main argument for whole-TU campaigns over size-ranked targets.
+
+IT IS FALSE. Not "no score change" - NO BYTE CHANGE.
+
+1. game_34F20. Each of the five live neighbours replaced in turn by a GLOBAL_ASM stub -
+   func_15007A70 (declared BEFORE the target) and four declared AFTER. The target came out
+   byte-identical every time (.text+reloc sha1 a8bd8ff6a1632607).
+2. game_18D770, on a genuine tie-class function. func_15160E30 (frame exact, stack-offset multiset
+   exact, zero register rows, purely positional residual) survived five neighbour stubs including
+   the function immediately preceding it - byte-identical (sha1 866339abee517824).
+3. MAXIMUM PERTURBATION. func_15160E30 compiled with ALL 111 other function bodies in the TU
+   demoted to prototypes - 4 FUNC symbols instead of 115 - is byte-identical to the full-TU build:
+   words=0, relocs=0.
+
+THE HARNESS WAS PROVEN, which is what makes this a result and not a broken null: every stub variant
+changed exactly its own function's bytes and no other function's, and all nine whole-object sha1s
+differ, so the builds were distinct and not stale. The one plausible confound - the -g3 line table -
+was held fixed by padding each stub to preserve line count, then tested separately as a control.
+
+**THE CORRECT STATEMENT: the TU HEAD matters (types, file-local prototypes, macros); other function
+BODIES do not.** There is no TU-scoped counter for function bodies to advance.
+
+CONSEQUENCE. Whole-TU campaigns can NO LONGER be justified by "the neighbours fix the phase". They
+remain justified by shared types, shared file-local prototypes, and rodata-block granularity
+(migration is per-TU) - which are real and separate reasons. Size-ranked target picking is NOT
+disqualified by this experiment.
+
+# ================================================================================
+# MEASUREMENT TRAP: `-o <func>` IS **NOT** BOUNDED BY THE SYMBOL SIZE
+# ================================================================================
+
+This file previously said boundedness is per-function and told you to check the symbol size. That
+advice is INCOMPLETE and the second half is wrong for our invocation. Read from diff.py:
+
+    max_function_size_bytes = args.max_lines * 4          # line 572
+    ...
+    if end is not None:  end_addr = eval_int(end)
+    else:                end_addr = start_addr + config.max_function_size_bytes   # 1499, 1591
+
+`st_size` IS parsed out of the symtab (1461/1468) and is NOT used to set the window. So with our
+standard `--max-lines 4096` the disassembly window is **16,384 bytes from the symbol start** - far
+past the end of every function in this project (the ones in play measure 548-1704 bytes).
+
+WHY IT USUALLY DOES NOT BITE: the bytes after your function are normally the injected asm of
+still-stubbed neighbours, identical on both sides, so they contribute nothing and the window LOOKS
+bounded. Symbol sizes are present for these functions (func_1000CEAC 1100, func_15160E30 1032,
+func_15007B3C 1704, func_15162B28 976, func_1505A3A8 548) - having a size does not mean it is used.
+(4,773 of 10,185 FUNC symbols in expected/ have size 0, which is a separate issue.)
+
+WHEN IT DOES BITE, AND IT ALMOST FAKED A MAJOR RESULT: **perturb any LATER function in the same TU
+and the earlier function's score moves, purely because the differ is comparing those later bytes.**
+Anyone testing "does a neighbour affect my function" BY SCORE would have measured a large effect
+and confirmed the TU-phase hypothesis. The experiment above only survives because it compared the
+function's OWN byte range (sha1 of its .text+relocs), not the score.
+RULE: for any question of the form "does X elsewhere in the TU affect this function", compare
+BYTES over the symbol's own range. Never use the score.
+
+# ================================================================================
+# THE -g3 SOURCE-LINE-PLACEMENT LEVER DID NOT REPRODUCE - QUALIFY IT
+# ================================================================================
+
+The levers list credits "source LINE placement is a scheduling lever under -g3" with closing
+func_15196748 from a bailed score of 1. On func_15160E30 it produced NOTHING: six variants on the
+four `return 1` tail blocks - blank line before the last two, before all four, before the 3rd only,
+before the 4th only, merging the last two onto the store above, merging all four - every one
+byte-identical. The merges genuinely move those instructions to a different line in the -g3 line
+table (asm-differ's source column proves it) and codegen does not move. Controls in game_34F20
+agree: inserting 1, 3 or 10 blank lines ahead of a function left it byte-identical.
+
+**So the lever is NOT "absolute line number" and NOT "blank lines".** Whatever closed func_15196748
+was something narrower - most likely which STATEMENTS SHARE A LINE at an adjacent-pair granularity
+(this file already records "line joins pay at the ADJACENT-PAIR granularity, not the block"), not
+where a line sits. Do not budget a wave on blank-line placement again without re-reading that entry.
+
+# ================================================================================
+# permuter_tu.sh SELFTEST CHECK (e) IS AN ARTIFACT - ITS CONCLUSION IS WRONG
+# ================================================================================
+
+Check (e) reports "isolation DIFFERS from the in-TU build. A plain single-function permuter would
+optimise the wrong bytes; this harness is load-bearing." That is a FALSE ALARM: objdump_fn.sh
+includes objdump's ADDRESS COLUMN, and a function necessarily sits at a different offset in a
+4-symbol object than in a 115-symbol one, so the sha1 differs while the instruction bytes are
+identical (measured: words=0). The header comment's "on-record case of a source that compiled to
+golden bytes in isolation and scored 560 inside its real 40-function TU" is either the same address
+artifact or a TU-HEAD difference (types/prototypes/macros), which the isolation test preserved.
+permuter_tu.sh remains worth using for its exact flags and per-function scoring; only check (e)'s
+CONCLUSION is wrong.
+
+# ================================================================================
+# FRAME LAW, SHARPENED: A SPILLED LOCAL IS SPILLED TO ITS OWN HOME
+# ================================================================================
+
+Worth 569 points on func_1000CEAC and it is the operational half of the stack-home law that had
+been missed. Because a spilled local goes to ITS OWN HOME, any spill offset in golden READS OFF
+that local's declaration POSITION:
+
+    declaration ordinal = (framesize - spill_offset) / 4
+
+Golden spills ptrC to 0x80 with framesize 0x98 => ptrC is the SIXTH declared local. And the frame
+size then reads off the local COUNT. Golden 0x98 vs ours 0xa0 => golden has SEVEN locals where we
+had NINE. That is not "one surplus compiler temp" (the earlier park's reading, and it survived
+three hours of wrong work) - it is TWO SURPLUS AUTOS, and no amount of statement-shuffling moves it.
+
+**WHEN THE FRAME IS 4N BYTES WRONG, COUNT LOCALS. DO NOT CHASE TEMPS.** And read every spill offset
+in golden as a declaration ordinal BEFORE writing the declaration list.
+COROLLARY THAT COSTS TIME IF MISSED: the frame rounds to 8, so removing ONE local can leave the
+frame unchanged and look like a dead lever. **Probe by removing locals in PAIRS.**
+The 11-ablation falsification of the "surplus temp" theory (every single-statement deletion inside
+case 1 and case 2, all frame -160) is the model for killing a frame theory cheaply.
+
+## Corollary: a deduced declaration list is FALSIFIABLE, and it falsified the obvious source
+Seven locals with ptrC sixth, plus "mask and i are simultaneously live so they cannot be one
+variable" and "ptr8 must be a local (golden holds it in s6 across osRecvMesg)", left exactly one
+arrangement: NO `p` local (index the array directly - which golden's four reloads already showed),
+and **`chan` and the loop counter `i` are THE SAME VARIABLE**. Corroborated independently by golden
+reusing a2 for both the chan copy and i=0; with a separate chan we emitted a3 there, and the merge
+snapped it to a2.
+
+# ================================================================================
+# AFTER ANY STRUCTURAL WIN, THE WHOLE NEGATIVE LIST IS STALE
+# ================================================================================
+
+A clean case, and it should be doctrine. On func_1000CEAC's old base, writing `default:` last scored
+2624 vs 2710 - an apparent 86-point WIN, and the previous park listed it as the #2 thing to try.
+After the p->unk8/p->unkC read order was fixed, the SAME change scores 2410 vs 2141 - a 269-point
+LOSS. **Negatives measured on a defective base are not negatives.** Re-measure the ruled-out list
+after every structural improvement, and record which base each negative was measured against.
+
+# ================================================================================
+# A PERMUTER "WIN" REFUSED ON BINARY EVIDENCE - THE RIGHT KIND OF REFUSAL
+# ================================================================================
+
+Over 5,287 gated iterations the permuter's single best output on func_1000CEAC was exactly
+`u16 mask` -> `u32 mask`, worth 2141 -> 1795 on the real differ with the frame still exact. It is
+semantically identical (mask is `lhu`-loaded so it is already 0..0xffff, and `>>= 1` never widens
+it) and contains NO banned construct - a grep for the usual tells passes it.
+IT IS STILL WRONG. Golden contains TWO redundant u16 truncations that only a u16-typed variable can
+produce: `andi v0,v1,0xffff` immediately after an `lhu`, and `andi t3,v0,0xffff` after the `srl`.
+A u32 spelling deletes them. So the lower score buys itself by making the output LESS like golden -
+the exact rule this file already states. **A 346-point improvement that removes two instructions
+golden has is a regression, not a win.**

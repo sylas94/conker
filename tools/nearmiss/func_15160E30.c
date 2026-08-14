@@ -72,6 +72,121 @@
  *  `addiu v1,s1,0x18` order.  The reverse (`p` first, then `obj = p->unk0`)
  *  emits the addiu first.
  *
+ * ===========================================================================
+ * 2026-08-14 SESSION -- BASE CONFIRMED, RESIDUAL RE-MEASURED AT THE BYTE LEVEL,
+ * AND ONE CLAIM IN THIS FILE CORRECTED
+ * ===========================================================================
+ * Base reproduces EXACTLY:  differ_R = 430, differ (no -R) = 430.
+ * Permuter harness agrees the frame is right:
+ *     golden frame = 256 bytes;  base.c frame = 256 bytes
+ *     stack-offset multiset: base.c MATCHES golden (58 displacements)
+ *
+ * CORRECTION -- THE INSTRUCTION COUNTS ARE *NOT* EQUAL.
+ * Byte compare of the two objects (readelf symbol size + raw .text):
+ *     FNDIFF func_15160E30  words=37  relocs=0  size=1028/1032
+ * Golden is 1032 bytes, this file is 1028: **golden has ONE MORE INSTRUCTION**.
+ * The line above in this header ("Instruction COUNTS are equal in both blocks")
+ * is wrong and cost time.  The extra instruction is a `nop` golden keeps at
+ * 0xef0, and it is the whole reason 7 further rows differ -- every forward
+ * branch that crosses 0xef0 has a target one instruction lower in this file
+ * (rows at fn+0x028/0x040/0x04c/0x05c/0x074/0x160/0x238 are ONLY that).
+ *
+ * The three real clusters, read off the bytes (fn base = 0xb70 in the object):
+ *
+ * (1) fn+0x0b8..0x0e8, 18 words.  Pure rotation.  golden:
+ *        c28 addiu a0,sp,0xdc      <-- FIRST slot after `jal func_15145EA4`
+ *        c2c..c4c  the three lwc1/sub.s/swc1 groups
+ *        c50 move  a1,a0           <-- MIDDLE of the group
+ *     this file emits `addiu a0,sp,0xdc` at c4c and `move a1,a0` at c58, i.e.
+ *     both AFTER the subtractions.  Same instructions, same registers.
+ *
+ * (2) fn+0x2c8, 2 words.  golden `lwc1 $f6,0x20(v1)` then `lwc1 $f8,0x7c(sp)`;
+ *     this file emits them swapped.
+ *
+ * (3) fn+0x37c..0x3a0 and fn+0x3f0..0x400, plus the nop.  In BOTH tail blocks
+ *     golden emits `li v0,1` LAST and this file HOISTS it:
+ *        golden ee4 lw t4 / ee8 ctc1 t2 / eec sb t3,0x2f(t4) / ef0 NOP /
+ *               ef4 lw t5 / ef8 sb zero,9(t5) / efc b f64 / f00 li v0,1
+ *        mine   ee4 lw t4 / ee8 ctc1 t2 / eec LI V0,1 / ef0 sb t3,0x2f(t4) /
+ *               ef4 lw t5 / ef8 b f60   / efc sb zero,9(t5)
+ *     and in the second block golden f60 `li v0,1` is last while this file puts
+ *     it at f10, inside the trunc.w.s -> mfc1 gap.
+ *     READ THIS OFF THE NOP: golden had a free slot at ef0 and DID NOT fill it
+ *     with `li v0,1`.  So in golden that instruction was not AVAILABLE to the
+ *     scheduler at that point.  Whatever closes this function has to make the
+ *     return constant unhoistable, not merely relocate it.
+ *
+ * NEW MEASURED NEGATIVES (all built through the repo Makefile + buildlock, and
+ * verified at the byte level, not just by score):
+ *
+ *   *** THE -g3 SOURCE-LINE-PLACEMENT LEVER IS INERT ON THIS FUNCTION. ***
+ *   Six line-placement variants produced output BYTE-IDENTICAL to the base
+ *   (identical .text sha1 for the function, not merely an identical score):
+ *      blank line before the last two `return 1;`                  identical
+ *      blank line before ALL FOUR `return 1;`                      identical
+ *      blank line before the 3rd `return 1;` only                  identical
+ *      blank line before the 4th `return 1;` only                  identical
+ *      merge the last two `return 1;` onto the store above them    identical
+ *      merge ALL FOUR `return 1;` onto the store above them        identical
+ *   The merges really do move those instructions to a different line in the
+ *   -g3 line table (asm-differ's source column proves it), and codegen does not
+ *   move.  This is the same result as the game_34F20 control in the same
+ *   session, where inserting 1 / 3 / 10 blank lines ahead of a function left it
+ *   byte-identical.  Conclusion: whatever closed func_15196748 was NOT the
+ *   absolute line number and NOT blank lines; do not spend another wave here.
+ *
+ *   Statement/structure axes, all WORSE -- do not repeat:
+ *      swap the unk2F / unk9 store order in the hit block           1690
+ *      `struct17 *d = &spDC;` before the subtractions, call f(d,d)   795
+ *      `k = p->unk20; alpha = k * trace.unk4;`                      1929
+ *
+ * TU CONTEXT IS NOT A FACTOR (measured, see the session report):
+ *   Replacing each of five live neighbours (func_15160CDC -- the function
+ *   immediately BEFORE this one -- func_15160A58, func_151618BC, func_151621B8,
+ *   func_15162510) with a #pragma GLOBAL_ASM stub left this function
+ *   BYTE-IDENTICAL every time (sha1 866339abee517824, size 1028, all five).
+ *   Stronger: compiling this function with ALL 111 other function bodies in the
+ *   TU demoted to prototypes (4 FUNC symbols instead of 115) is also
+ *   byte-identical -- `FNDIFF func_15160E30 words=0 relocs=0 size=1028/1028`.
+ *   NOTE for anyone reading permuter_tu.sh: its selftest check (e) prints
+ *   "isolation DIFFERS from the in-TU build ... this harness is load-bearing"
+ *   for this TU.  That is an ARTIFACT -- objdump_fn.sh includes the address
+ *   column, and the function sits at a different offset in the smaller object.
+ *   The bytes are identical.  (The harness is still worth using: it compiles
+ *   with the repo's exact flags and scores only the target function.)
+ *
+ * PERMUTER SETUP GOTCHA (cost a full selftest cycle):
+ *   permuter_tu.sh's default dir is conker/permuter_tu/<func>, which is under
+ *   ".../conker decomp/" -- a path WITH A SPACE.  IDO's recompiled `cc` silently
+ *   fails to write the object when -o has a space in it (exit 0, no file), so
+ *   selftest (b)/(b2)/(c) all fail with a da39a3ee... empty-string sha1 and (d)
+ *   "fails" for free.  Pass an explicit dir outside the repo:
+ *      ./permuter_tu.sh setup game_18D770 func_15160E30 <cand.c> $HOME/permtu/func_15160E30
+ *   With that, SELFTEST: PASS, base score = 550 (permuter metric; asm-differ 430),
+ *   and both gates are safe:
+ *      PERMUTER_TU_REQUIRE_FRAME=256 PERMUTER_TU_REQUIRE_OFFSETS=1
+ *
+ * PERMUTER RESULT -- NEGATIVE.  6,846 iterations, -j 8, --best-only
+ * --stop-on-zero, both gates on (3,851 of those iterations were gate
+ * rejections, which is the gates working).  Score histogram of everything it
+ * ever printed: 550 x1312, 560 x17, 568 x18, 570 x14, 574 x4 -- **nothing below
+ * the base**.  The single output-550-1 it wrote is the pycparser round-trip
+ * REFORMAT of base.c (diff is whitespace and brace style only), i.e. exactly the
+ * "winning output that is a reformat of the base" trap in the project notes.
+ * Do not re-run this configuration expecting a different answer; the randomizer
+ * has no move that reaches golden's schedule from here.  What is left is a
+ * SOURCE IDEA, not a search: find the construct that makes `li v0,1`
+ * unhoistable (see the nop argument above).
+ *
+ * Two more frame-neutral variants measured after the permuter run:
+ *      swap the `hit` local for `struct17 *d`, `d = &spDC;` before the
+ *        subtractions, call func_15145128(d, d, ...), read trace.unk0
+ *        directly  -- FIVE scalars so the frame is still 0x100         485
+ *        (compare v4's 795, which added a SIXTH scalar: the alias idea is
+ *         worth ~310 points of the frame, and still 55 worse than plain)
+ *      hoist `sp68[1] = (s32)&spDC;` to sit immediately before the
+ *        func_15145EA4 call                              BYTE-IDENTICAL to base
+ *
  * RULED OUT (each a single-variable build, all 430 or worse):
  *   `alpha = trace.unk4 * p->unk20`  (operand swap)              430 identical
  *   `struct17 *sp70[2]/sp68[2]` instead of s32[2] + casts        430 identical
