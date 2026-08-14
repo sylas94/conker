@@ -2197,3 +2197,110 @@ produce: `andi v0,v1,0xffff` immediately after an `lhu`, and `andi t3,v0,0xffff`
 A u32 spelling deletes them. So the lower score buys itself by making the output LESS like golden -
 the exact rule this file already states. **A 346-point improvement that removes two instructions
 golden has is a regression, not a win.**
+
+# ================================================================================
+# NEW LAW: A REPEATED MASK CONSTANT MOVES INTO A REGISTER AT ITS THIRD USE
+# ================================================================================
+
+This closed func_1512317C outright (565 -> 0) and it is corroborated three ways.
+
+THE OBSERVATION. Golden emits `and $t6, $t5, $a1` with `addiu $a1, $zero, -0x11` set up earlier,
+where the obvious spelling gives `andi t6, t5, 0xffef`. Writing `~0x10` in ONE mask block and
+`0xFFEF` in the other scores 565; writing `~0x10` in BOTH scores **0**.
+
+TWO SEPARATE THINGS ARE GOING ON, and both matter:
+ 1. **THE THIRD USE SWITCHES TO A REGISTER.** Corpus evidence from func_15125DB4, a matched sibling
+    in the same TU, showing the ladder in one function:
+        andi  $t9, $t8, 0xFFEF
+        andi  $t1, $t0, 0xFFEF
+        addiu $a0, $zero, -0x11      <- third use materialises the constant into a register
+    and the identical ladder appears for 0xFFF0 (andi, andi, addiu -0x10) and 0xFFE0.
+ 2. **THE SPELLINGS MUST AGREE.** IDO counts uses of the CONSTANT EXPRESSION. Spelling one site
+    `0xFFEF` and another `~0x10` gives it two different constants, each below the threshold, so
+    neither is promoted. Pick one spelling for a given mask and use it everywhere in the function.
+
+THE COUNTER-EXAMPLE THAT BOUNDS THE LAW, and it is why this is a law rather than a superstition:
+matched func_150EEC84 (game_11A680.c) contains `*(u16 *)((u8 *)D_800BE748 + (idx * 6)) &= ~0x10;`
+and compiles to a bare `andi t4,t3,0xffef`. So `~0x10` does NOT always produce a register - a SINGLE
+use stays immediate. The trigger is the third use, not the spelling.
+
+USE IT AS A DIAGNOSTIC: if golden materialises a mask into a register and you emit `andi`, count
+your uses of that exact constant expression - you probably have two where golden has three, or you
+have split one constant across two spellings.
+
+# ================================================================================
+# THE RODATA PRE-FILTER PROBE, AS THIS FILE STATED IT, IS WRONG. IT GIVES FALSE NEGATIVES.
+# ================================================================================
+
+The probe was written as: substitute a low16-zero literal, and "if the score COLLAPSES and the
+residual becomes a handful of lui/lwc1 rows, the C is right and the function is rodata-blocked."
+**That misses an entire failure mode.** On func_150EFB80 the substitution made the score WORSE
+(935 -> 1140), because a lui-able literal inlines as lui+mtc1 and DELETES the `lwc1` that golden
+actually has. Read by score, that function looks not-rodata-blocked. It is rodata-blocked.
+
+**CORRECTED PROBE: substitute the literal and read the SHAPE, not the score.** Specifically, check
+whether the FRAME SIZE, the $f-REGISTER SAVE LIST, and the LOOP-INVARIANT REGISTER ASSIGNMENTS snap
+to golden. On func_150FFD84 that was decisive in a single build: frame 0x108 -> 0x118 with the two
+`sdc1 $f26/$f28` saves reappearing.
+
+## TWO distinct failure modes of `extern f32` - this file only described the first
+
+**(1) ADDRESS HOIST.** An `extern f32` is an addressable object, so its ADDRESS becomes a
+loop-invariant candidate and competes for the last callee-saved register, EVICTING the real
+candidate. On func_150EFB80 golden puts the divisor constant 0x65 in `$s8` (`li s8,0x65`, then
+`divu zero,v0,s8`); the extern spelling puts `&D_800A1828` there and falls back to `li at,0x65`.
+Cost: ~8 rows plus an address shift = 935.
+
+**(2) LOAD HOIST DENIED - NEW, and it corrupts the frame.** Golden hoists the VALUE of a rodata
+float out of a loop into an `$f` register. A loop-invariant LOAD can only leave a call-containing
+loop if the compiler knows the memory cannot be written - i.e. only for a true constant. Spelled
+`extern f32`, the load is correctly pinned INSIDE the loop, which also removes the `sdc1` saves of
+the registers that would have held it and **SHRINKS THE FRAME** (0x118 -> 0x108 on func_150FFD84).
+=> **ON A RODATA-BLOCKED FUNCTION THE FRAME CAN BE WRONG FOR A REASON THAT HAS NOTHING TO DO WITH
+THE DECLARATION LIST.** Check the $f-register save count against golden BEFORE hunting phantom
+locals. This is the first known way to mis-apply the frame law and waste hours.
+
+# ================================================================================
+# LOOP-INVARIANT CANDIDATES ARE RANKED BY SOURCE POSITION OF FIRST USE
+# ================================================================================
+
+Falsifiable and falsified in the right direction: reordering two statements moved `li s8,0x65` to
+golden's exact address. IDO ranks loop-invariant candidates by the SOURCE POSITION OF THEIR FIRST
+USE and hands out whatever callee-saved registers remain. Useful whenever a near-miss differs only
+in WHICH value occupies the last s-register - the lever is statement order, not spelling.
+(Related but distinct from the web-reference-count law, which ranks by defs+uses.)
+
+# ================================================================================
+# MINE THE MATCHED CORPUS **FIRST**, AHEAD OF THE FRAME DECODE
+# ================================================================================
+
+This out-earned every other lever in wave 36 and the ordering advice is now explicit. Both of one
+agent's targets had their spawn structs ALREADY DEFINED in matched code (game_17CAF0.c), and a
+matched sibling (func_15152B38) shared the same two locals - which calibrated both struct sizes
+exactly and confirmed the declaration-order reading BEFORE a line of C was written. Result:
+func_150EFB80 scored 945 on its FIRST build with the frame already exact.
+
+**STANDARD FIRST STEP ON ANY COLD START: grep the matched corpus for another caller of the same
+callee, and for the struct types it passes.** Matched code is ground truth and it is free. Only
+then decode the frame.
+
+# ================================================================================
+# WAVE 36 RESULT AND THE CONCRETE UNBLOCK ORDER
+# ================================================================================
+
+CLOSED: func_1512317C, 908 B, game_14FF90.c - a per-frame camera mode gate. Verified independently:
+score 0 with and without -R, all 55 siblings in the TU still 0, .text IDENTICAL (23,808 bytes),
+.rodata/.data/.bss identical, symbol size 908 on both sides, tree-wide pragma count 1745 -> 1744.
+
+PARKED: func_151B7328 @676 - frame is 8 bytes heavy in the COMPILER-TEMP pool, not the aggregates
+(proved by a deliberately-wrong shrink: cutting the struct by 8 gave framesize 0x100 with the
+header at 0xE4 exactly, so 0xB0 of aggregate is right). A 9-build bisect localises the surplus to
+two statements that cost FOUR pool webs in our spelling and TWO in golden's.
+
+**THE ACTIONABLE ONE.** func_150EFB80 @935 and func_150FFD84 @6378 are BOTH rodata-blocked, and
+neither is register-allocation-hard - both are within a handful of instructions of matching. The
+rodata migration is not a niche jump-table unlock; it is what closes this whole family.
+game_12C1E0's block 246BF0 needs only **FOUR** more functions decompiled - func_150FF2D4,
+func_150FF474, func_150FF6E0, func_150FF840 - versus SIXTEEN still stubbed in game_11C2B0. That is
+a bounded campaign, and it should close func_150FFD84, whose loop body is already byte-exact under
+the probe. Prefer it to game_64120's seven-function cluster.

@@ -317,7 +317,72 @@ void func_15122AE0(void) {
 //     }
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_1512317C.s")
+void func_1511FC60(struct108 *arg0);
+void func_150495B0(f32 *arg0, f32 arg1, f32 *arg2, f32 arg3, f32 arg4, f32 arg5);
+s32 func_15125490(struct108 *arg0);
+
+void func_1512317C(struct108 *arg0) {
+    s32 cond1;
+    s32 bit100;
+    s32 bit200;
+    s32 flag;
+
+    bit100 = arg0->unk5F0 & 0x100;
+    bit200 = arg0->unk5F0 & 0x200;
+    cond1 = (arg0->unk3D0->stunned != 0) && (arg0->unk23E != 9) && (arg0->unk23E != 0x38) &&
+            (arg0->unk23E != 0x39) && (arg0->unk23E != 0x3B) && (arg0->unk23E != 0x37) &&
+            (arg0->unk23E != 0x15) && (arg0->unk23E != 0x26) && (arg0->unk23E != 0x3A);
+
+    flag = ((arg0->unk2C & 0x80) != 0) ||
+           ((arg0->unk84 & 0x1000000) != 0) ||
+           ((arg0->unk3D0->unk28 != 0.0f) && (arg0->unk3D0->in_water == 0) &&
+            (arg0->unk3D4->unk9C == 0) && (bit100 == 0) && (bit200 == 0) &&
+            (arg0->unk23E != 3)) ||
+           ((arg0->unk3D0->unk65 != 0) && (bit100 == 0) && (bit200 == 0)) ||
+           (cond1 != 0) ||
+           (func_15125490(arg0) != 0) ||
+           (arg0->unk3D0->health == 0) ||
+           (((*(u8 *)((u8 *)arg0->unk3D4 + 0x4E) & 0xF) == 1) &&
+            (arg0->unk3D0->xz_velocity > 15.0f)) ||
+           (*(u8 *)((u8 *)arg0->unk3D4 + 0x1AC) != 0);
+
+    if (((*arg0->unk36C & 0x10) != 0) && (flag == 0)) {
+        if ((arg0->unk36A & 0x10) == 0) {
+            return;
+        }
+        if (func_15123934(arg0, 0x100, 4, arg0->unk134, 1) != 0) {
+            func_1511FC60(arg0);
+        }
+        return;
+    }
+
+    if ((arg0->unk2C == 0x100) && (arg0->unk73C == 0)) {
+        func_151239CC(arg0, 1);
+        arg0->unk3D4->unk198 = 0;
+        arg0->unk3D4->unk197 = 0;
+        *(s16 *)((u8 *)arg0 + 0x5F8) = 1;
+        arg0->unk5FC = 2;
+        arg0->unk36A &= ~0x10;
+        *arg0->unk36C &= ~0x10;
+    }
+
+    if ((arg0->unk2C == 0x100) || (arg0->unk73C != 0)) {
+        arg0->unk36A &= ~0x10;
+        *arg0->unk36C &= ~0x10;
+    }
+    arg0->unk3D4->unk198 = arg0->unk73C;
+
+    if ((arg0->unk73C != 0) || (arg0->unk73C == 3)) {
+        func_150495B0((f32 *)((u8 *)arg0 + 0x74C), 0.0f, (f32 *)((u8 *)arg0 + 0x79C), 4.0f, 9.0f,
+                      arg0->unk7B4);
+        func_150495B0((f32 *)((u8 *)arg0 + 0x754), 0.0f, (f32 *)((u8 *)arg0 + 0x7A0), 4.0f, 9.0f,
+                      arg0->unk7B4);
+    }
+
+    if ((arg0->unk2C != 0x100) && (arg0->unk73C != 0)) {
+        arg0->unk73C = 0;
+    }
+}
 
 void func_15123508(struct108 *arg0) {
     if ((arg0->unk84 & 2) != 0) {
