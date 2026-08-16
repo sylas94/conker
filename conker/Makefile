@@ -125,6 +125,7 @@ $(BUILD_DIR)/$(SRC_DIR)/init_1E4A0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_1E530.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_1FB40.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_20000.c.o: OPT_FLAGS := -g
+$(BUILD_DIR)/$(SRC_DIR)/init_210C0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_214F0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_22040.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_22460.c.o: OPT_FLAGS := -g
@@ -154,8 +155,9 @@ $(BUILD_DIR)/$(SRC_DIR)/init_3920.c.o: OPT_FLAGS := -O2
 # -mips3 object CANNOT be linked into this 32-bit ROM ("linking 32-bit with 64-bit code" ld
 # error). So the RNG is not C-matchable here without converting the whole ROM to -mips3. Stays
 # pragma. See memory/conker-handwritten-math-cluster.md.
-# NOTE: game_21CAC0 (func_151EF610) golden is -O1, but it's an unmatched register near-miss;
-# no override needed while pragma. See src/game_21CAC0.c comment.
+# NOTE: game_21CAC0 (func_151EF610) golden addressing is -O1 (un-CSE'd assembler-macro
+# load+store), but its REGISTERS are -O2's (a0/a1/v0, not the -O1 t6..t1 rotation). No flag
+# reproduces both. Stays pragma; no override needed. See src/game_21CAC0.c comment.
 
 # $(BUILD_DIR)/$(SRC_DIR)/init_B1B0.o: OPT_FLAGS := -O2
 

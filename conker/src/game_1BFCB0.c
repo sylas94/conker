@@ -3,7 +3,12 @@
 #include "variables.h"
 
 
-extern s32 func_151928B0(void *a0, s32 *a1);
+typedef struct {
+    u8 pad00[0x4];
+    u8 unk04;
+} Obj151928B0;
+
+extern s32 func_151928B0(Obj151928B0 *a0, s32 *a1);
 extern s32 func_1510F8CC(s32);
 extern void (**D_8008F860[])(void *);
 
@@ -35,4 +40,25 @@ void func_15192800(void *arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1BFCB0/func_151928B0.s")
+s32 func_151928B0(Obj151928B0 *arg0, s32 *arg1) {
+    s32 ret;
+
+    switch (arg0->unk04) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+        ret = 1;
+        *arg1 = 0;
+        break;
+    case 0x53:
+        ret = 1;
+        *arg1 = 1;
+        break;
+    default:
+        ret = 0;
+        break;
+    }
+    return ret;
+}

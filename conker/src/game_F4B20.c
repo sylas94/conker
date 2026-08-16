@@ -3,6 +3,7 @@
 #include "variables.h"
 
 
+/* Near-miss at 160/6300; see tools/nearmiss/func_150C7670.c */
 #pragma GLOBAL_ASM("asm/nonmatchings/game_F4B20/func_150C7670.s")
 
 extern u8 D_80089470[];
