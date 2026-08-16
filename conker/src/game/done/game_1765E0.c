@@ -5,7 +5,7 @@
 
 struct260 *func_15149130(s16 arg0, s8 arg1, s8 arg2, s8 arg3, u8 arg4, u8 arg5, struct37 *arg6, u8 arg7, s32 arg8) {
     struct260 *temp_v0;
-    u8 phi_v0;
+    u8 id;
     s32 sp24;
     // fakematch? an alternative is to mark sp24 as volatile
     s32 *tmp;
@@ -14,12 +14,12 @@ struct260 *func_15149130(s16 arg0, s8 arg1, s8 arg2, s8 arg3, u8 arg4, u8 arg5, 
     tmp = &sp24;
 
     if ((arg4 & 2) != 0) {
-        phi_v0 = 95;
+        id = 95;
     } else {
-        phi_v0 = 35;
+        id = 35;
     }
 
-    temp_v0 = func_15167A68(phi_v0, arg8, *tmp, 1, arg7, 1);
+    temp_v0 = func_15167A68(id, arg8, *tmp, 1, arg7, 1);
     if (temp_v0 == 0) {
         return NULL;
     }

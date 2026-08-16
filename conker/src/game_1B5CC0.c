@@ -217,7 +217,6 @@ void func_15188B74(s32 idx) {
     Node15188B74 *node;
     Node15188B74 *prev;
     Node15188B74 *next;
-    volatile s32 *delta;
     s32 *head;
     void (**funcs0)(Node15188B74 *);
     void (**funcs1)(Node15188B74 *);
@@ -231,13 +230,12 @@ void func_15188B74(s32 idx) {
     prev = 0;
     if (node != 0) {
         funcs0 = D_8008D580;
-        delta = &D_800BE9E4;
         maxFade = 0xFF;
         do {
             countdown = node->unk6;
             next = node->unkC;
             if (countdown != 0) {
-                node->unk6 = countdown - *delta;
+                node->unk6 = countdown - D_800BE9E4;
                 countdown = node->unk6;
             }
             if (countdown < 0) {
@@ -248,7 +246,7 @@ void func_15188B74(s32 idx) {
             fade = node->unk3;
             if (node->unk6 != 0) {
                 if (fade != maxFade) {
-                    fade += *delta << 4;
+                    fade += D_800BE9E4 << 4;
                     if (fade >= 0x100) {
                         fade = maxFade;
                     }
@@ -256,7 +254,7 @@ void func_15188B74(s32 idx) {
                 }
                 prev = node;
             } else if (fade != 0) {
-                fade -= *delta << 3;
+                fade -= D_800BE9E4 << 3;
                 if (fade < 0) {
                     fade = 0;
                 }

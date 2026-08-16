@@ -58,6 +58,38 @@ Two engines run in PARALLEL: the **orchestrator** (LLM agents match `GLOBAL_ASM`
   src) crack against old context and score ~30-80 in-project (won't port) — they refresh on re-import. `apply_
   wins` extract is now redefinition-aware (`_project_types()`): strips only project-header typedefs (Gfx/Mtx/
   s32, 461 names), KEEPS agent-local typed `struct_<hex>` (the type-sweep's) — else typed funcs fail to compile.
+- **asm-differ SILENTLY UNDER-SCORES ANY FUNCTION > 4096 BYTES (2026-08-10) — fixed in `iter_match.sh`.**
+  `diff.py --max-lines` defaults to 1024 and also caps the diff at `max_lines*4 = 4096` BYTES. Past that it emits a
+  `...` row; `score_diff_lines()` sees `lines_were_truncated`, rewinds to the end of the last 50-instruction
+  matching streak and STOPS SCORING. So the standard `diff.py -o <func> -R` reports a fraction of the real residue
+  on exactly the big targets the byte-strategy tells us to chase. MEASURED on game_1A89B0/func_1517BBAC
+  (5144 bytes = 1286 insns): default **791**, `--max-lines 4096` **40536**. A prior wave recorded that 791 as a
+  "plateau after 5 attempts" and planned around it; the function was in fact nowhere near matching, and the score
+  ranking of candidates *inverts* under the correct metric (a "123" scored 40381 while a "594" scored 38831).
+  `iter_match.sh` now always passes `--max-lines 4096`; functions <= 4096 bytes are unaffected (verified identical,
+  still 0 for the ones that match). When scoring by hand, pass it too. Re-check any recorded near-miss score for a
+  function over 4096 bytes before trusting it.
+- **TU-AWARE PERMUTER — `conker/permuter_tu.sh` (2026-08-10).** Fixes the "NON-PORTS" bullet above at the root.
+  Stock decomp-permuter compiles an ISOLATED single-function source: `src/ast_util.py:extract_fn()` demotes every
+  other function definition in base.c to a bare prototype, and IDO -O2 -g3 codegen is TU-dependent. `permuter_tu.sh`
+  keeps base.c single-function (so the randomizer is unchanged) but its generated `compile.sh` splices the candidate
+  back into the real TU and compiles the WHOLE file with the repo's exact flags + asm-processor, in a private
+  per-worker temp dir (never the shared `build/`). MEASURED on game_1A89B0/func_1517BBAC: 1.2 s per whole-TU compile
+  on 16 cores, and its object's target-function disassembly is byte-identical to `make build/src/<tu>.c.o` —
+  whereas the isolated compile of the same source is NOT (different sha1). `setup` / `selftest` / `run` / `extract` /
+  `chain`; **always run `selftest` first** (5 controls incl. a pycparser round-trip check and a negative control),
+  and `run` forces `--stack-diffs` because without it the scorer rewrites every sp offset to `addr(sp)` and reports
+  0 for sources asm-differ scores in the hundreds. A permuter 0 is still only a CANDIDATE — re-score with asm-differ.
+  **Two traps it now handles for you.** (1) *Fake constructs*: setup zeroes the ten randomization passes that can
+  only emit banned code (`perm_refer_to_var` → `if (var) {}`, `perm_ins_block` → `if (1) {...}`, `perm_empty_stmt`,
+  `perm_add_self_assignment`, `perm_dummy_comma_expr`, `perm_add_mask`, `perm_xor_zero`, `perm_mult_zero`,
+  `perm_duplicate_assignment`, `perm_pad_var_decl`), so a win is shippable instead of having to be un-faked.
+  `PERMUTER_TU_ALLOW_FAKE=1` restores them for diagnosis only. (2) *Frame trade-away*: the scorer weighs a stack
+  byte at 1 but a reordering at 60 and an insertion at 100, so on a function whose last blocker is frame size it
+  BUYS register wins by GROWING the frame — measured on func_1517BBAC, every "improved" output came back at frame
+  232 vs the seed's 224 vs golden's 216, i.e. further from a match than it started. `./permuter_tu.sh frame <dir>`
+  reports both frames and prints the gate to use; `PERMUTER_TU_MAX_FRAME=<n>` fails any candidate whose frame grew,
+  `PERMUTER_TU_REQUIRE_FRAME=<n>` demands an exact frame (only usable once the base already has it).
 - **CYCLE-5 GAP WORK — ALL DONE & COMMITTED (2026-06-23):**
   1. ✅ Cookbook tweaks (score-magnitude-tracks-size reframe; reloc-spelling + stack-aggregate-off-by-word BAIL
      bullets; register/volatile-last + STALL rule) — committed `0df39e8`.

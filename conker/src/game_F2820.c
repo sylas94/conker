@@ -80,7 +80,7 @@ extern void func_15143134(void *, s32, s32);
 s32 func_150C5BD4(struct102 *arg0)
 {
   u8 *p = ((u8 *) arg0) + 0xC8;
-  int new_var;
+  u32 offset;
   s32 t0;
   if ((*((s32 *) (*((s32 *) p)))) == 0)
   {
@@ -99,8 +99,8 @@ s32 func_150C5BD4(struct102 *arg0)
   }
   else
   {
-    new_var = (((((p[5] << 6) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu;
-    func_15143134(p + 0x8, (s32) (((u8 *) arg0) + 0x24), t0 + (((((new_var & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu));
+    offset = (p[5] << 4) << 2;
+    func_15143134(p + 0x8, (s32) (((u8 *) arg0) + 0x24), t0 + offset);
   }
   return 1;
 }

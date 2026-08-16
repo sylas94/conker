@@ -148,18 +148,18 @@ void func_15147A30(void *arg0) {
 
 void *func_15147A80(void *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, void *arg8, s32 arg9, s32 argA) {
     void *temp_v0;
-    u8 phi_v0;
+    u8 id;
     s32 size;
     s32 i;
 
     size = *(u8 *)((u8 *)arg0 + 0x15) * arg2;
     if (*(u16 *)((u8 *)arg0 + 0xE) & 0x40) {
-        phi_v0 = 0x4D;
+        id = 0x4D;
     } else {
-        phi_v0 = 0x22;
+        id = 0x22;
     }
 
-    temp_v0 = func_15167A68(phi_v0, argA, arg1 + size + 0xA0, 1, (u8)arg9, 1);
+    temp_v0 = func_15167A68(id, argA, arg1 + size + 0xA0, 1, (u8)arg9, 1);
     if (temp_v0 == NULL) {
         return NULL;
     }

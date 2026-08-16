@@ -5,13 +5,43 @@
 void func_150F2994(s32 arg0, s32 arg1);
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11F780/func_150F22D0.s")
+static const f32 D_800A1920[3] = { 0.0f, -45.0f, 0.0f };
+
+void func_15143134(const void *, void *, s32);
+
+s32 func_150F22D0(void *arg0, void *arg1, u8 arg2) {
+    s32 bone;
+
+    switch (arg2) {
+    case 3:
+        bone = 0x29;
+        break;
+    case 4:
+        bone = 0x2D;
+        break;
+    case 5:
+        bone = 0x31;
+        break;
+    case 6:
+        bone = 0x35;
+        break;
+    case 7:
+        bone = 0x39;
+        break;
+    case 8:
+        bone = 0x3D;
+        break;
+    default:
+        return 0;
+    }
+    func_15143134(D_800A1920, arg0, *(s32 *)((u8 *)arg1 + 0x1D4) + (bone << 6));
+    return 1;
+}
 
 s32 func_150F237C(s32 arg0, s32 arg1) {
     return 0xE;
 }
 
-extern s32 func_150F22D0(void *, void *, s32);
 extern void func_151C329C(void *, s32, s32);
 
 void func_150F2390(void *arg0, s32 arg1, s32 arg2) {
@@ -52,9 +82,22 @@ s32 func_150F2480(struct Arg0 *arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11F780/func_150F2518.s")
-
 extern void func_150A8050(f32 (*)[4], f32, f32, f32);
+extern u8 D_800BE9C0;
+
+s32 func_150F2518(struct Arg0 *arg0, s32 arg1) {
+    f32 tmp[16];
+    f32 *p;
+
+    p = (f32 *)((s32)arg0 + arg0->off + 0xF8);
+    func_150A8050((f32 (*)[4])&tmp, p[9], 0.0f, p[10]);
+    tmp[12] = p[6];
+    tmp[13] = p[7];
+    tmp[14] = p[8];
+    guMtxF2L((f32 (*)[4])&tmp, (Mtx *)((s32)arg0 + (D_800BE9C0 << 6) + 0x78));
+    return 1;
+}
+
 extern void func_150A7960(f32 *, f32, s32, f32, f32 *, f32 *, f32 *);
 
 struct Sub150F25A0 {

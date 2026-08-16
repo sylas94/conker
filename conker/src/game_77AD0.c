@@ -59,15 +59,15 @@ extern f32 D_80099344;
 //     void *temp_v0_6;
 //     void *temp_v0_8;
 //     void *temp_v1_2;
-//     struct127 *phi_s0;
-//     s32 phi_s1;
-//     f32 phi_f20;
-//     f32 phi_f0;
-//     s32 phi_s3;
-//     s8 phi_s2;
-//     void *phi_a1;
-//     s32 phi_t0;
-//     s32 phi_v1;
+//     struct127 *actor;
+//     s32 i;
+//     f32 dtMax;
+//     f32 dt;
+//     s32 result;
+//     s8 actorNum;
+//     void *cur;
+//     s32 j;
+//     s32 numPlayers;
 //
 //     D_800BE9EC = (u8)0;
 //     D_800D1548 += 1; //(s32) (D_800D1548 + 1);
@@ -77,51 +77,51 @@ extern f32 D_80099344;
 //     func_1508295C(D_800BE9F0, 0, 0);
 //     D_800CC2B8 ^= 1; //(u8) (D_800CC2B8 ^ 1);
 //
-//     // phi_s1 = (u8)0;
-//     for (phi_s1 = 0; phi_s1 < 25; phi_s1++) {
-//         phi_s0 = &D_800CC2D0[phi_s1];
-//         if (phi_s0 == 0) {
-//             phi_s2 = phi_s1 + 1;
+//     // i = (u8)0;
+//     for (i = 0; i < 25; i++) {
+//         actor = &D_800CC2D0[i];
+//         if (actor == 0) {
+//             actorNum = i + 1;
 //         } else {
-//             phi_s0->unk274 = (u8)0;
-//             phi_s0->unk300 = (u8)0;
-//             phi_s0->unkF4 = (s32) (phi_s0->unkF4 & 0xFFEE5FFF);
-//             D_800C3E78 = phi_s1;
-//             if (phi_s0->y_position <= (f32) phi_s0->unk38) {
-//                 if (phi_s0->unk127 == 0xFF) {
-//                     func_15060F28(phi_s0, 0);
-//                     phi_s2 = phi_s1 + 1;
+//             actor->unk274 = (u8)0;
+//             actor->unk300 = (u8)0;
+//             actor->unkF4 = (s32) (actor->unkF4 & 0xFFEE5FFF);
+//             D_800C3E78 = i;
+//             if (actor->y_position <= (f32) actor->unk38) {
+//                 if (actor->unk127 == 0xFF) {
+//                     func_15060F28(actor, 0);
+//                     actorNum = i + 1;
 //                 } else if (D_800BE616 == 0) {
-//                     func_1507D4F8(phi_s1);
-//                     phi_s2 = phi_s1 + 1;
+//                     func_1507D4F8(i);
+//                     actorNum = i + 1;
 //                 } else {
 // block_8:
-//                     if (phi_s0->unk2FA == 0) {
-//                         phi_s2 = phi_s1 + 1;
+//                     if (actor->unk2FA == 0) {
+//                         actorNum = i + 1;
 //                     } else {
-//                         D_800D154C = phi_s0;
-//                         temp_s2 = phi_s1 + 1;
-//                         phi_s0->unk12 += 1; // (u16) (phi_s0->unk12 + 1);
+//                         D_800D154C = actor;
+//                         temp_s2 = i + 1;
+//                         actor->unk12 += 1; // (u16) (actor->unk12 + 1);
 //                         D_800D35DC = temp_s2;
 //                         D_800CC2BA = (u16)0;
-//                         phi_s3 = 0;
-//                         if ((D_800BE616 == 0) || (temp_v0 = func_1504C8BC(phi_s0), phi_s3 = temp_v0, phi_s2 = temp_s2, (temp_v0 != 0))) {
-//                             if ((s32) phi_s1 < (s32) D_8008FD8C) {
-//                                 temp_v0_2 = phi_s0->unk31C;
+//                         result = 0;
+//                         if ((D_800BE616 == 0) || (temp_v0 = func_1504C8BC(actor), result = temp_v0, actorNum = temp_s2, (temp_v0 != 0))) {
+//                             if ((s32) i < (s32) D_8008FD8C) {
+//                                 temp_v0_2 = actor->unk31C;
 //                                 temp_v0_2->unk195 = (s8) (temp_v0_2->unk195 - D_800BE9E4);
-//                                 temp_v0_3 = phi_s0->unk31C;
+//                                 temp_v0_3 = actor->unk31C;
 //                                 if ((s32) temp_v0_3->unk195 < 0) {
 //                                     temp_v0_3->unk195 = (u8)0;
 //                                 }
-//                                 phi_s0->unk31C->unk57 = (u8)0;
-//                                 if ((s32) phi_s1 < 4) {
-//                                     D_800CC284 = (s32) D_800BE728[phi_s1]; // * 4));
+//                                 actor->unk31C->unk57 = (u8)0;
+//                                 if ((s32) i < 4) {
+//                                     D_800CC284 = (s32) D_800BE728[i]; // * 4));
 //                                 } else {
 //                                     bzero(&sp5C, 6);
 //                                     D_800CC284 = &sp5C;
 //                                 }
 //                             }
-//                             temp_v0_4 = phi_s0->camera;
+//                             temp_v0_4 = actor->camera;
 //                             if (temp_v0_4 != 0) {
 //                                 temp_f0 = temp_v0_4->unk384;
 //                                 if (D_800991A8 == temp_f0) {
@@ -132,51 +132,51 @@ extern f32 D_80099344;
 //                             } else {
 //                                 D_800CC280 = 0;
 //                             }
-//                             if (phi_s0->unk127 != 0xFF) {
-//                                 func_150A11C4(phi_s0);
-//                             } else if (phi_s0->unkF8 & 0x400000) {
-//                                 func_150A278C(phi_s0);
+//                             if (actor->unk127 != 0xFF) {
+//                                 func_150A11C4(actor);
+//                             } else if (actor->unkF8 & 0x400000) {
+//                                 func_150A278C(actor);
 //                             }
-//                             phi_s0->unk2C = (f32) phi_s0->unk14;
-//                             phi_s0->unk30 = (f32) phi_s0->y_position;
-//                             phi_s0->unk34 = (f32) phi_s0->unk1C;
-//                             D_800CC27C = (s8) (((u32) phi_s0->unk184 >> 0x1C) & 7);
+//                             actor->unk2C = (f32) actor->unk14;
+//                             actor->unk30 = (f32) actor->y_position;
+//                             actor->unk34 = (f32) actor->unk1C;
+//                             D_800CC27C = (s8) (((u32) actor->unk184 >> 0x1C) & 7);
 //                             temp_f0_2 = D_800BE9A4;
-//                             phi_f20 = 2.0f;
+//                             dtMax = 2.0f;
 //                             if (D_800BE616 != 0) {
-//                                 phi_f20 = 2.0f;
+//                                 dtMax = 2.0f;
 //                                 if ((D_8008FDBC & 0x100) != 0) {
-//                                     phi_f20 = 5.0f;
+//                                     dtMax = 5.0f;
 //                                 }
 //                             }
-//                             phi_f0 = temp_f0_2;
-//                             if (phi_f20 < temp_f0_2) {
-//                                 phi_f0 = phi_f20;
+//                             dt = temp_f0_2;
+//                             if (dtMax < temp_f0_2) {
+//                                 dt = dtMax;
 //                             }
-//                             D_800D1550[0] = (f32) (phi_s0->unk48 * phi_f0);
+//                             D_800D1550[0] = (f32) (actor->unk48 * dt);
 //                             D_800CC264 = (s16) (s32) (D_800D1550[1364] * 100.0f); // wtf?
 //                             if ((s32) D_800CC27C >= 6) {
 //                                 D_800CC27C = (u8)0;
 //                             }
 //                             temp_v0_5 = (D_800B0DF0)->unk49;
 //                             if (temp_v0_5 != 0) {
-//                                 D_80086004[temp_v0_5](phi_s0);
+//                                 D_80086004[temp_v0_5](actor);
 //                             }
-//                             if ((phi_s0->unk25C & 0x200) == 0) {
-//                                 // temp_v0_6 = D_80086014[phi_s0->unk0];
-//                                 if (D_80086014[phi_s0->unk0] != 0) {
-//                                     D_80086014[phi_s0->unk0](phi_s0);
+//                             if ((actor->unk25C & 0x200) == 0) {
+//                                 // temp_v0_6 = D_80086014[actor->unk0];
+//                                 if (D_80086014[actor->unk0] != 0) {
+//                                     D_80086014[actor->unk0](actor);
 //                                 }
 //                             }
-//                             if (phi_s0->unk0 != 0) {
-//                                 func_1507E73C(phi_s0);
-//                                 func_1504AF10(phi_s0, 0, 0);
-//                                 if (((s32) phi_s1 < (s32) D_8008FD8C) && (D_800D18A8 == 0)) {
-//                                     func_15085710(phi_s0->unk127, 5, phi_s0->health);
+//                             if (actor->unk0 != 0) {
+//                                 func_1507E73C(actor);
+//                                 func_1504AF10(actor, 0, 0);
+//                                 if (((s32) i < (s32) D_8008FD8C) && (D_800D18A8 == 0)) {
+//                                     func_15085710(actor->unk127, 5, actor->health);
 //                                 }
 //                             }
-//                             phi_s0->unk2FF = (u8)1;
-//                             if (phi_s3 == 2) {
+//                             actor->unk2FF = (u8)1;
+//                             if (result == 2) {
 //                                 temp_t8 = D_800CC2BA;
 //                                 D_800BE9E4 = (s32) temp_t8;
 //                                 D_800BE9A4 = (f32) ((f32) temp_t8 * 0.5f);
@@ -187,14 +187,14 @@ extern f32 D_80099344;
 //                                     D_800BE9A8 = 0.0f;
 //                                 }
 //                             }
-//                             if ((phi_s0->unk14 != phi_s0->unk2C) || (phi_s0->unk18 != phi_s0->unk30) || (phi_s0->unk1C != phi_s0->unk34)) {
-//                                 phi_s0->unk300 = (u8)1;
+//                             if ((actor->unk14 != actor->unk2C) || (actor->unk18 != actor->unk30) || (actor->unk1C != actor->unk34)) {
+//                                 actor->unk300 = (u8)1;
 //                             }
 //                             temp_v0_7 = (D_800B0DF0)->unk4A;
-//                             phi_s2 = temp_s2;
+//                             actorNum = temp_s2;
 //                             if (temp_v0_7 != 0) {
-//                                 D_8008600C[temp_v0_7](phi_s0);
-//                                 phi_s2 = temp_s2;
+//                                 D_8008600C[temp_v0_7](actor);
+//                                 actorNum = temp_s2;
 //                             }
 //                         }
 //                     }
@@ -206,25 +206,25 @@ extern f32 D_80099344;
 //     }
 // //     temp_v1 = D_8008FD8C;
 // //     if ((s32) temp_v1 > 0) {
-// //         phi_a1 = &D_800CC2D0;
-// //         phi_t0 = 0;
-// //         phi_v1 = (s32) temp_v1;
+// //         cur = &D_800CC2D0;
+// //         j = 0;
+// //         numPlayers = (s32) temp_v1;
 // // loop_56:
-// //         if (phi_a1->unk0 != 0) {
-// //             temp_a0 = phi_a1->unk31C;
+// //         if (cur->unk0 != 0) {
+// //             temp_a0 = cur->unk31C;
 // //             if (temp_a0 != 0) {
-// //                 temp_a2 = &D_800CBDA0 + (phi_t0 * 2);
-// //                 if (phi_a1->unk137 != 0) {
+// //                 temp_a2 = &D_800CBDA0 + (j * 2);
+// //                 if (cur->unk137 != 0) {
 // //                     temp_a3 = *temp_a2;
 // //                     if (temp_a3 != 0) {
 // //                         temp_v0_8 = D_800DBEF4 + (temp_a3 * 0xA0);
 // //                         temp_v0_8->unk-51 = (u8) (temp_v0_8->unk-51 | 0x84);
 // //                         temp_v1_2 = D_800DBF94 + (*temp_a2 * 4);
-// //                         temp_v1_2->unk-4 = (s32) (temp_v1_2->unk-4 | (1 << phi_t0));
+// //                         temp_v1_2->unk-4 = (s32) (temp_v1_2->unk-4 | (1 << j));
 // //                     }
-// //                     phi_a1->unk31C->unk56 = (u8)5;
+// //                     cur->unk31C->unk56 = (u8)5;
 // // block_64:
-// //                     phi_v1 = (s32) D_8008FD8C;
+// //                     numPlayers = (s32) D_8008FD8C;
 // //                 } else {
 // //                     temp_v0_9 = temp_a0->unk56;
 // //                     if (temp_v0_9 != 0) {
@@ -234,10 +234,10 @@ extern f32 D_80099344;
 // //                 }
 // //             }
 // //         }
-// //         temp_t0 = phi_t0 + 1;
-// //         phi_a1 = phi_a1 + 0x32C;
-// //         phi_t0 = temp_t0;
-// //         if (temp_t0 < phi_v1) {
+// //         temp_t0 = j + 1;
+// //         cur = cur + 0x32C;
+// //         j = temp_t0;
+// //         if (temp_t0 < numPlayers) {
 // //             goto loop_56;
 // //         }
 // //     }
@@ -549,24 +549,24 @@ s32 func_1504C8BC(struct127 *arg0) {
 }
 
 void func_1504C9E4(struct127 *arg0, s8 arg1, u8 arg2) {
-    u8 phi_a2;
+    u8 step;
     s32 tmp0;
     s32 tmp1;
 
     tmp0 = (u8)(arg0->unk1D1 - arg1);
 
     if (tmp0) {
-        phi_a2 = 3;
+        step = 3;
         if (arg2 == 16) {
-            phi_a2 = 6;
+            step = 6;
         }
 
         tmp1 = tmp0;
         if (tmp0 >= 128) {
-            arg0->unk1D1 += phi_a2;
+            arg0->unk1D1 += step;
         }
         else {
-            arg0->unk1D1 -= phi_a2;
+            arg0->unk1D1 -= step;
         }
 
         tmp0 = tmp1;
@@ -579,17 +579,17 @@ void func_1504C9E4(struct127 *arg0, s8 arg1, u8 arg2) {
 }
 
 void func_1504CA60(struct127 *arg0) {
-    f32 phi_f12;
+    f32 maxFallSpeed;
     f32 temp_f2;
 
     temp_f2 = arg0->unk180 + 20.0f;
     arg0->unk1CC = arg0->y_position;
-    phi_f12 = 18.0f;
+    maxFallSpeed = 18.0f;
     if (30.0f < arg0->unk28) {
-        phi_f12 = 80.0f;
+        maxFallSpeed = 80.0f;
     }
     if (arg0->unk81 != 0) {
-        phi_f12 = 80.0f;
+        maxFallSpeed = 80.0f;
         temp_f2 -= 30.0f;
         if ((arg0->unk28 < 5.0f) && (arg0->y_velocity < 0.0f)) {
             arg0->unk81 = 0;
@@ -600,7 +600,7 @@ void func_1504CA60(struct127 *arg0) {
             arg0->y_velocity = 25.0f;
         }
     }
-    func_15058EA4(arg0, temp_f2, 3.8f, temp_f2, -3.5f, 80.0f, -phi_f12);
+    func_15058EA4(arg0, temp_f2, 3.8f, temp_f2, -3.5f, 80.0f, -maxFallSpeed);
     arg0->unk80 = 1;
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_77AD0/func_1504CB98.s")
@@ -849,33 +849,33 @@ struct127 *func_15052F58(s32 arg0, s32 arg1) {
 //     u8 idx;
 //     struct127 *temp_a0;
 //     struct05 *temp_v0;
-//     s32 phi_a1;
-//     s8 phi_v1;
-//     struct127 *phi_a0;
-//     // f32 phi_return;
+//     s32 entryId;
+//     s8 holdState;
+//     struct127 *target;
+//     // f32 ret;
 //
 //     sp3C = 0;
-//     phi_a1 = -1;
+//     entryId = -1;
 //     if (arg0->id == 72) {
 //         sp40 = -1;
 //         temp_v0 = func_15033E84(arg0, -1);
-//         phi_a1 = -1;
+//         entryId = -1;
 //         if (temp_v0 != 0) {
-//             phi_a1 = temp_v0->unk6;
+//             entryId = temp_v0->unk6;
 //         }
 //     }
 //     idx = arg0->unk124;
 //     temp_a0 = &D_800CC2D0[idx];
 //     if (arg8 == 0) {
-//         // phi_return = idx; // bitwise (f32)
+//         // ret = idx; // bitwise (f32)
 //         if (temp_a0->y_position < (arg0->y_position + (arg1 * arg0->unk150))) {
-//             // phi_return = 0.0f;
+//             // ret = 0.0f;
 //             if (temp_a0->y_velocity < 0.0f) { // stick an || here
 //                 arg0->unk13C = (idx + 0x64);
 //                 if (arg9 != 0) {
 //                     D_800D1580 = arg9;
-//                     sp40 = phi_a1;
-//                     func_1506E5FC(temp_a0, phi_a1);
+//                     sp40 = entryId;
+//                     func_1506E5FC(temp_a0, entryId);
 //                 }
 //                 D_800CC2D0[idx].unk1CC = D_800CC2D0[idx].y_position;
 //                 D_800CC2D0[idx].unk76 = arg0->unk7A;
@@ -884,49 +884,49 @@ struct127 *func_15052F58(s32 arg0, s32 arg1) {
 //                     D_800CC2D0[idx].y_velocity = 0.0f;
 //                     arg0->y_velocity = 0.0f;
 //                     if (arg0->id == 0x48) {
-//                         phi_v1 = (s8) 2;
-//                         if (phi_a1 == 0x7A) {
+//                         holdState = (s8) 2;
+//                         if (entryId == 0x7A) {
 //                             arg0->unk65 = (arg0->unk124 + 1);
 //                             arg0->unk5C = arg2;
 //                             arg0->unk101 = (arg0->unk101 | arg3);
 //                             func_1505E650(&D_800CC2D0[idx], 5, 1.0f, 0.0f, 0.0f, 0.0f, 0);
 //                             func_15083568(&D_800CC2D0[idx], 0x79, 1.0f, 0);
 //                             sp3C = 1;
-//                             phi_v1 = (s8) 2;
+//                             holdState = (s8) 2;
 //                         }
 //                     } else {
 //                         arg0->unk150 = 0.75f;
 //                         D_800CC2D0[idx].y_position = arg0->y_position;
-//                         phi_v1 = 1;
+//                         holdState = 1;
 //                         if (D_800BE9F0 == 6) {
-//                             phi_v1 = 0x81;
+//                             holdState = 0x81;
 //                         }
 //                     }
 //                     D_800CC2D0[idx].unk76 = arg0->unk7A;
 //                     D_800CC2D0[idx].unk78 = arg0->unk7A;
 //                     D_800CC2D0[idx].unk7A = arg0->unk7A;
 //                     D_800CC2D0[idx].unk40 = (s16) (arg0->unk7A + 0x4000) * 0.005493164f;
-//                     D_800CC2D0[idx].unk31C->unk4E = phi_v1;
+//                     D_800CC2D0[idx].unk31C->unk4E = holdState;
 //                     D_800CC2D0[idx].unk83 = 0;
 //                     D_800CC2D0[idx].disable_run = 0;
-//                     phi_a0 = &D_800CC2D0[idx];
-//                     // phi_return = arg0->unk7A; // bitwise ( f32)
+//                     target = &D_800CC2D0[idx];
+//                     // ret = arg0->unk7A; // bitwise ( f32)
 //                 } else {
 //                     D_800CC2D0[idx].unk65 = D_800C3E78 + 1;
 //                     D_800CC2D0[idx].unk5C = arg2;
 //                     D_800CC2D0[idx].disable_run = 0;
 //                     D_800CC2D0[idx].unk101 =  (D_800CC2D0[idx].unk101 | arg3);
-//                     phi_a0 = &D_800CC2D0[idx];
+//                     target = &D_800CC2D0[idx];
 //                 }
-//                 phi_a0->immune =  arg6;
-//                 phi_a0->unk239 = arg7;
-//                 phi_a0->unk31C->unk27 = 0;
+//                 target->immune =  arg6;
+//                 target->unk239 = arg7;
+//                 target->unk31C->unk27 = 0;
 //                 arg0->unk218 = 0;
 //                 arg0->unk232 =  arg5;
 //                 if (arg4 != 0) {
-//                     temp_ret = func_1506160C(phi_a0, 1, 0, 0, 0);
-//                     phi_a0->unk101 = (u8) (phi_a0->unk101 | 0x40);
-//                     // phi_return = temp_ret;
+//                     temp_ret = func_1506160C(target, 1, 0, 0, 0);
+//                     target->unk101 = (u8) (target->unk101 | 0x40);
+//                     // ret = temp_ret;
 //                 }
 //             }
 //         }
@@ -934,10 +934,10 @@ struct127 *func_15052F58(s32 arg0, s32 arg1) {
 //     //    goto block_6;
 //     }
 //     if (sp3C != 0) {
-//         // phi_return =
+//         // ret =
 //         func_15060F28(arg0, 0);
 //     }
-//     // return phi_return;
+//     // return ret;
 // }
 
 
@@ -1044,7 +1044,7 @@ void func_1505371C(struct127 *arg0) {
 void func_15053750(struct127 *arg0) {
     f32 temp_f2;
     f32 temp_f16;
-    s32 phi_v0;
+    s32 sign;
 
     temp_f2 = arg0->unk154 - arg0->xz_scale;
     if (temp_f2 != 0.0f) {
@@ -1053,11 +1053,11 @@ void func_15053750(struct127 *arg0) {
             func_15062BDC(arg0, arg0->unk154, arg0->y_scale);
         } else {
             if (temp_f2 < 0.0f) {
-                phi_v0 = -1;
+                sign = -1;
             } else {
-                phi_v0 = 1;
+                sign = 1;
             }
-            func_15062BDC(arg0, ((f32) phi_v0 * temp_f16) + arg0->xz_scale, arg0->y_scale);
+            func_15062BDC(arg0, ((f32) sign * temp_f16) + arg0->xz_scale, arg0->y_scale);
         }
     }
 
@@ -1068,11 +1068,11 @@ void func_15053750(struct127 *arg0) {
             func_15062BDC(arg0, arg0->xz_scale, arg0->unk158);
         } else {
             if (temp_f2 < 0.0f) {
-                phi_v0 = -1;
+                sign = -1;
             } else {
-                phi_v0 = 1;
+                sign = 1;
             }
-            func_15062BDC(arg0, arg0->xz_scale, ((f32) phi_v0 * temp_f16) + arg0->y_scale);
+            func_15062BDC(arg0, arg0->xz_scale, ((f32) sign * temp_f16) + arg0->y_scale);
         }
     }
 }
@@ -1091,25 +1091,25 @@ void func_150548D8(s32 arg0) {
 
 void func_150548E4(struct127 *arg0) {
     struct127 *temp_s0;
-    struct127 *phi_s2;
-    s32 phi_v0;
+    struct127 *other;
+    s32 soundId;
     s32 i;
 
     temp_s0 = &D_800CC2D0[arg0->unk65 - 1];
 
     for (i = 0; i < D_8008FD8C; i++) {
-        phi_s2 = &D_800CC2D0[i];
+        other = &D_800CC2D0[i];
 
-        if ((phi_s2->unk274 == (((s32) ((s32)arg0 - (s32)D_800CC2D0) / (s32)sizeof(struct127)) + 1)) && (temp_s0->unk232 == 1)) {
+        if ((other->unk274 == (((s32) ((s32)arg0 - (s32)D_800CC2D0) / (s32)sizeof(struct127)) + 1)) && (temp_s0->unk232 == 1)) {
             temp_s0->unk218 = 0;
             if ((func_150ADA20() & 1) != 0) {
                 temp_s0->unk232 = (u8)2U;
-                phi_v0 = 0x1DB;
+                soundId = 0x1DB;
             } else {
                 temp_s0->unk232 = (u8)3U;
-                phi_v0 = 0x1DC;
+                soundId = 0x1DC;
             }
-            func_10010344(phi_v0, temp_s0, 0x7D00, 0x1F4, 0x9C4);
+            func_10010344(soundId, temp_s0, 0x7D00, 0x1F4, 0x9C4);
         }
     }
 }
@@ -1133,12 +1133,12 @@ void func_15054A5C(struct127 *arg0, struct127 *arg1) {
 // PERMUTER CANDIDATE (best 715). Every instruction is reproduced and the stack frame
 // (0x58) + local slot offsets (sp50/sp4C/sp48) match; the residual is a coupled
 // register-allocation web inside the id==0x4B arm: the target keeps D_800CC2D0's base in
-// v0 (hoisted above the beq) with arg0->unk84.uh in t7 and phi_v1/arg0->unk7A in v1/a0,
+// v0 (hoisted above the beq) with arg0->unk84.uh in t7 and targetYaw/arg0->unk7A in v1/a0,
 // while IDO gives us the mirror colouring. Reading unk84 into a named local fixes its
 // (otherwise far too late) schedule but then claims v0, which pushes the D_800CC2D0
 // lui/addiu below the branch. Reconstruction below (logic verified against the asm):
 // void func_15054F74(struct127 *arg0) {
-//     s16 phi_v1; u16 temp_t7; f32 sp50, sp4C, sp48, temp_f2, temp_f0;
+//     s16 targetYaw; u16 temp_t7; f32 sp50, sp4C, sp48, temp_f2, temp_f0;
 //     if (arg0->id == 12) {
 //         if ((D_800C3E78 + 1) != D_800CC2D0[arg0->unk124].unk65) {
 //             if (arg0->unk232 == 18) func_15052F9C(arg0, 50.0f, 0, 4, 0, 12, 0, 8, 0, 0);
@@ -1149,9 +1149,9 @@ void func_15054A5C(struct127 *arg0, struct127 *arg1) {
 //         func_1505A184(arg0->unk7A ^ 0x8000, 500.0f, 0.0f, &sp50, &sp48, &sp4C);
 //         temp_f0 = arg0->x_position; temp_f2 = arg0->z_position; temp_t7 = arg0->unk84.uh;
 //         arg0->unk2EC = ((s32)((f32)(s16)(s32)temp_f0 + sp50) << 0x10) | ((s32)((f32)(s16)(s32)temp_f2 + sp48) & 0xFFFF);
-//         if (temp_t7 != 0xF) phi_v1 = func_1505A630(D_800CC2D0->x_position - temp_f0, temp_f2 - D_800CC2D0->z_position, 0);
-//         else phi_v1 = arg0->unk7A - 0x800;
-//         arg0->unk7A += (s16)(phi_v1 - arg0->unk7A) / 3;
+//         if (temp_t7 != 0xF) targetYaw = func_1505A630(D_800CC2D0->x_position - temp_f0, temp_f2 - D_800CC2D0->z_position, 0);
+//         else targetYaw = arg0->unk7A - 0x800;
+//         arg0->unk7A += (s16)(targetYaw - arg0->unk7A) / 3;
 //         arg0->xz_scale = 2.0f; arg0->y_scale = 2.0f; arg0->unk40 = 90.0f;
 //     } else if ((arg0->id == 0x1B) || (arg0->id == 0x7E)) {
 //         if (arg0->unk2E4 != 0) {
@@ -1194,8 +1194,8 @@ void func_15055260(s32 arg0, s32 arg1, s32 arg2) {
 //     u8 temp_v1;
 //     s32 temp_a0;
 //     struct108 *temp_a0_2;
-//     f32 phi_f0;
-//     s32 phi_a2;
+//     f32 ratio;
+//     s32 alpha;
 //
 //     sp74 = (u16)arg0->unk278;
 //     sp6C = 0;
@@ -1283,14 +1283,14 @@ void func_15055260(s32 arg0, s32 arg1, s32 arg2) {
 //             arg0->xz_velocity = 0.0f;
 //             arg0->unk18 = (*(f32*)&arg0->unk180 + sp70);
 //             if (temp_f0 != 0.0f) {
-//                 phi_f0 = (arg0->unk18 - temp_f12) / temp_f0;
+//                 ratio = (arg0->unk18 - temp_f12) / temp_f0;
 //             } else {
-//                 phi_f0 = 0.0f;
+//                 ratio = 0.0f;
 //             }
 //             temp_f2 = arg0->unk2C;
 //             temp_f12 = arg0->unk34;
-//             arg0->unk14 = temp_f2 + ((arg0->unk14 - temp_f2) * phi_f0);
-//             arg0->unk1C = temp_f12 + ((arg0->unk1C - temp_f12) * phi_f0);
+//             arg0->unk14 = temp_f2 + ((arg0->unk14 - temp_f2) * ratio);
+//             arg0->unk1C = temp_f12 + ((arg0->unk1C - temp_f12) * ratio);
 //         } else if (arg0->unk18 < arg0->unk118) {
 //             arg0->gravity = 0.0f;
 //             arg0->y_velocity = 0.0f;
@@ -1322,14 +1322,14 @@ void func_15055260(s32 arg0, s32 arg1, s32 arg2) {
 //
 //     temp_v1 = arg0->unk7F;
 //     if (temp_v0 < 0xA) {
-//         phi_a2 = (s32) (temp_v0 * 0xFF) / 0xA;
+//         alpha = (s32) (temp_v0 * 0xFF) / 0xA;
 //     } else {
-//         phi_a2 = 0xFF;
+//         alpha = 0xFF;
 //         if (temp_v1 >= 0x15) {
-//             phi_a2 = (s32) ((-(s32) temp_v1 * 0xFF) + 0x1DE2) / 0xA;
+//             alpha = (s32) ((-(s32) temp_v1 * 0xFF) + 0x1DE2) / 0xA;
 //         }
 //     }
-//     func_1503192C(arg0, sp74, phi_a2, 0);
+//     func_1503192C(arg0, sp74, alpha, 0);
 //     if (sp74 == 0x1F) {
 //         temp_a0_2 = D_800DBFF0;
 //         temp_f0 = temp_a0_2->unk2F8 - arg0->unk14;
@@ -1346,16 +1346,16 @@ void func_15055260(s32 arg0, s32 arg1, s32 arg2) {
 // }
 
 void func_15055A2C(s32 arg0, f32 arg1, f32 arg2, f32 arg3, s32 arg4) {
-    s32 phi_a0 = 1549;
-    s32 phi_v1 = 1000;
+    s32 soundId = 1549;
+    s32 minDist = 1000;
 
     if (arg4 == 1) {
-        phi_a0 = 1549;
-        phi_v1 = 100;
+        soundId = 1549;
+        minDist = 100;
     } else {
-        phi_a0 = D_8009919C[func_150ADA20() % 6U];
+        soundId = D_8009919C[func_150ADA20() % 6U];
     }
-    func_10010F88(phi_a0, 32700, func_150ADA20() % 500U, 0, 0, arg1,  arg2, arg3, phi_v1, 3000);
+    func_10010F88(soundId, 32700, func_150ADA20() % 500U, 0, 0, arg1,  arg2, arg3, minDist, 3000);
 }
 
 void func_15055B0C(struct127 *arg0, s32 arg1) {

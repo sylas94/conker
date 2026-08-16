@@ -58,11 +58,9 @@ void func_150D26F0(u8 *arg0) {
 
 s32 func_150D317C(struct Func150D317CObj *arg0) {
     struct Func150D317CSub *sub;
-    f32 *step;
 
-    step = &D_800BE9A4;
-    arg0->unk128 += arg0->unk130 * *step;
-    arg0->unk12C += arg0->unk134 * *step;
+    arg0->unk128 += arg0->unk130 * D_800BE9A4;
+    arg0->unk12C += arg0->unk134 * D_800BE9A4;
     sub = (struct Func150D317CSub *)((u8 *)arg0 + 0x110);
     sub->unk18 = func_15144B68(arg0->unk128);
     sub->unk1C = func_15144B68(sub->unk1C);

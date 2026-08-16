@@ -101,7 +101,29 @@ def expand(n):
     if good:
         # refresh expected/ so object-diff (iter_match) works for the new stub
         # files — the current build objects ARE the correct target bytes.
-        sh("cp -r conker/build/src/* conker/expected/build/src/ 2>/dev/null")
+        #
+        # MIRROR, don't merge. `cp -r` can add and overwrite but never removes, so any
+        # object that moves (e.g. src/init_1CBF0.c -> src/libultra/audio/init_1CBF0.c) or
+        # stops being generated (a TU that becomes fully live C emits no asm-processor
+        # intermediate) leaves a permanent orphan in expected/. Those orphans made
+        # objsame/iter_match report DIFF on six files that had not changed at all, which
+        # is indistinguishable from genuinely losing a match.
+        #
+        # RE-VERIFY IMMEDIATELY BEFORE MIRRORING. This overwrites the golden reference
+        # with whatever is currently built, so running it over a broken tree would make
+        # expected/ adopt the broken bytes — and every later objsame would report a
+        # false SAME, silently, forever. try_batch() gates on the sha1s, but it also
+        # bisects and reverts, so the tree state at THIS point is not necessarily the
+        # state that was verified. Check the artefacts on disk right now instead of
+        # trusting that history.
+        inner = sh(f"sha1sum {INNER}/build/conker.us.bin").stdout.split()
+        outer = sh(f"sha1sum {REPO}/build/conker.us.z64").stdout.split()
+        if not (inner and inner[0] == INNER_SHA and outer and outer[0] == OUTER_SHA):
+            print("REFUSING to refresh expected/: current build is not byte-perfect "
+                  f"(inner={inner[0] if inner else '?'}, outer={outer[0] if outer else '?'}). "
+                  "expected/ left untouched.")
+            return
+        sh("rsync -a --delete conker/build/src/ conker/expected/build/src/")
         files = " ".join(f"conker/src/game_{p['off']:X}.c" for p in good)
         sh(f"git add conker/conker.us.yaml {files}", cwd=REPO)
         msg = f"yaml: stub {len(good)} game segments (asm->c) for matching\\n\\nROM sha1 unchanged (all GLOBAL_ASM stubs)."

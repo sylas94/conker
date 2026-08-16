@@ -169,18 +169,18 @@ void func_1513C060(Anim1513C060 *arg0) {
 
 struct210 *func_1513C350(struct210 *arg0, s32 arg1, u8 arg2, u8 arg3, u8 arg4, s32 arg5, s32 arg6, struct167 *arg7, s32 arg8, u8 arg9, s32 argA) {
     struct210 *temp_v0;
-    u8 phi_v0;
+    u8 id;
     s32 i;
 
     if (arg1 == 0) {
         arg1 = &D_800A4AA0;
     }
     if (arg0->unk0 & 0x40000) {
-        phi_v0 = 0x4A;
+        id = 0x4A;
     } else {
-        phi_v0 = 0x1B;
+        id = 0x1B;
     }
-    temp_v0 = func_15167A68(phi_v0, argA, arg8 + 0xB0, 1, arg9, 1);
+    temp_v0 = func_15167A68(id, argA, arg8 + 0xB0, 1, arg9, 1);
     if (temp_v0 == 0) {
         return NULL;
     }
@@ -503,18 +503,18 @@ void func_1513CFE4(Anim1513CFE4 *arg0) {
 void *func_1513D2F0(void *arg0, s32 arg1, u8 arg2, u8 arg3, u8 arg4, u8 arg5, u8 arg6, s32 arg7, s32 arg8, s32 arg9, u8 argA, s32 argB) {
     struct210 *temp_v0;
     s32 flags;
-    s32 phi_v0;
+    s32 id;
     s32 i;
 
     flags = *(s32 *)((u8 *)arg0 + 0x40);
     if (flags & 0x800000) {
-        phi_v0 = 0x56;
+        id = 0x56;
     } else if (flags & 0x2000000) {
-        phi_v0 = 0x49;
+        id = 0x49;
     } else {
-        phi_v0 = 0x1C;
+        id = 0x1C;
     }
-    temp_v0 = func_15167A68(phi_v0, argB, arg9 + 0x110, 1, argA, (flags & 0x80000000U) ? 2 : 1);
+    temp_v0 = func_15167A68(id, argB, arg9 + 0x110, 1, argA, (flags & 0x80000000U) ? 2 : 1);
     if (temp_v0 == NULL) {
         return NULL;
     }

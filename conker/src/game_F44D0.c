@@ -84,4 +84,6 @@ void func_150C7020(void *arg0, s16 arg1, s32 arg2, s32 arg3) {
     func_15134DAC(&sp1C, 0);
 }
 
+
+/* Near-miss at 299/9900; see tools/nearmiss/func_150C71C0.c */
 #pragma GLOBAL_ASM("asm/nonmatchings/game_F44D0/func_150C71C0.s")

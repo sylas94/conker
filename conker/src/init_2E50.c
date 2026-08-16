@@ -1,58 +1,66 @@
 #include <ultra64.h>
 
 #include "functions.h"
-#include "variables.h"
 
+/* variables.h is deliberately not included: it declares D_80035910 as an
+ * OSThread *, but the PI thread's ADDRESS is what gets passed to osStopThread
+ * here. src/libultra/io/pimgr.c carries the same file-local override. */
+extern OSThread D_80035910; /* piThread */
+extern u8 D_8003A572;
+extern u8 D_8003A573;
+extern u8 D_8003A575;
 
-extern void (*jtbl_8002C080[])(void);
-#pragma GLOBAL_ASM("asm/nonmatchings/init_2E50/func_10002E50.s")
-// NON-MATCHING: lots to figure out
-// void func_10002E50(struct158 *arg0) {
-//     s32 phi_s0;
-//     struct188 tmp;
-//
-//     tmp.unk8 = NULL;
-//
-//     do {
-//         osRecvMesg(arg0->unk8, &tmp.unk8, 1);
-//         switch (tmp.unk8->unk0 - 0xA) {
-//             case 7:
-//                 // TODO: figure this out from the asm
-//                 osStopThread(0);
-//                 osRecvMesg(arg0->unk10, &tmp, 1);
-//                 phi_s0 = 0;
-//                 break;
-//             case 1:
-//                 jtbl_8002C080[tmp.unk8->unk0 - 0xA]();
-//                 break;
-//             case 2:
-//                 osRecvMesg(arg0->unk10, &tmp, 1);
-//                 phi_s0 = arg0->unk14(1, &tmp.unk8->unkC, &tmp.unk8->unk8, &tmp.unk8->unk10);
-//                 break;
-//             case 5:
-//                 osRecvMesg(arg0->unk10, &tmp, 1);
-//                 phi_s0 = arg0->unk18(&tmp.unk8->unk14, 0, &tmp.unk8->unkC, &tmp.unk8->unk8, &tmp.unk8->unk10);
-//                 break;
-//             case 6:
-//                 osRecvMesg(arg0->unk10, &tmp, 1);
-//                 phi_s0 = arg0->unk18(&tmp.unk8->unk14, 1, &tmp.unk8->unkC, &tmp.unk8->unk8, &tmp.unk8->unk10);
-//                 break;
-//             case 0:
-//                 osSendMesg(tmp.unk8->unk4, tmp.unk8, 0);
-//                 phi_s0 = -1;
-//                 break;
-//             default:
-//                 phi_s0 = -1;
-//         }
-//         if (phi_s0 != 0) {
-//             continue;
-//         }
-//         osRecvMesg(arg0->unkC, &tmp.unk4, 1);
-//         osSendMesg(tmp.unk8->unk4, tmp.unk8, 0);
-//         osSendMesg(arg0->unk10, 0, 0);
-//         if (tmp.unk8->unk0 != 0xB) {
-//             continue;
-//         }
-//         D_8003A573 = (u8)0;
-//     } while (1);
-// }
+/* __osDevMgrMain, with Rare's PI-thread interlock added to the DMAREAD case. */
+void func_10002E50(void *arg) {
+    OSIoMesg *mb;
+    OSMesg em;
+    OSMesg dummy;
+    OSDevMgr *dm;
+    s32 ret;
+
+    mb = NULL;
+    dm = (OSDevMgr *)arg;
+
+    while (1) {
+        osRecvMesg(dm->cmdQueue, (OSMesg *)&mb, OS_MESG_BLOCK);
+        switch (mb->hdr.type) {
+            case OS_MESG_TYPE_DMAREAD:
+                if (D_8003A572 != 0) {
+                    D_8003A575 = 1;
+                    osStopThread(&D_80035910);
+                    D_8003A575 = 0;
+                }
+                D_8003A573 = 1;
+                osRecvMesg(dm->acsQueue, &dummy, OS_MESG_BLOCK);
+                ret = dm->dma(OS_READ, mb->devAddr, mb->dramAddr, mb->size);
+                break;
+            case OS_MESG_TYPE_DMAWRITE:
+                osRecvMesg(dm->acsQueue, &dummy, OS_MESG_BLOCK);
+                ret = dm->dma(OS_WRITE, mb->devAddr, mb->dramAddr, mb->size);
+                break;
+            case OS_MESG_TYPE_EDMAREAD:
+                osRecvMesg(dm->acsQueue, &dummy, OS_MESG_BLOCK);
+                ret = dm->edma(mb->piHandle, OS_READ, mb->devAddr, mb->dramAddr, mb->size);
+                break;
+            case OS_MESG_TYPE_EDMAWRITE:
+                osRecvMesg(dm->acsQueue, &dummy, OS_MESG_BLOCK);
+                ret = dm->edma(mb->piHandle, OS_WRITE, mb->devAddr, mb->dramAddr, mb->size);
+                break;
+            case OS_MESG_TYPE_LOOPBACK:
+                osSendMesg(mb->hdr.retQueue, mb, OS_MESG_NOBLOCK);
+                ret = -1;
+                break;
+            default:
+                ret = -1;
+                break;
+        }
+        if (ret == 0) {
+            osRecvMesg(dm->evtQueue, &em, OS_MESG_BLOCK);
+            osSendMesg(mb->hdr.retQueue, mb, OS_MESG_NOBLOCK);
+            osSendMesg(dm->acsQueue, NULL, OS_MESG_NOBLOCK);
+            if (mb->hdr.type == OS_MESG_TYPE_DMAREAD) {
+                D_8003A573 = 0;
+            }
+        }
+    }
+}

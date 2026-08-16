@@ -125,9 +125,15 @@ $(BUILD_DIR)/$(SRC_DIR)/init_1E4A0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_1E530.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_1FB40.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_20000.c.o: OPT_FLAGS := -g
+$(BUILD_DIR)/$(SRC_DIR)/init_210C0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_214F0.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_22040.c.o: OPT_FLAGS := -g
 $(BUILD_DIR)/$(SRC_DIR)/init_22460.c.o: OPT_FLAGS := -g
+
+# game_221290 is Rare's compressed-audio bitstream decoder; the shipped code for
+# this whole TU is unoptimised -g output (constant-divisor `div`, every local
+# reloaded per reference, dead `b end / nop` after an explicit return).
+$(BUILD_DIR)/$(SRC_DIR)/game_221290.c.o: OPT_FLAGS := -g
 
 
 $(BUILD_DIR)/$(SRC_DIR)/libultra/io/ai.c.o: OPT_FLAGS := -O1
@@ -138,13 +144,20 @@ $(BUILD_DIR)/$(SRC_DIR)/libultra/io/pfschecker2.c.o: OPT_FLAGS := -O1
 
 $(BUILD_DIR)/$(SRC_DIR)/libultra/os/getthreadpri.c.o: OPT_FLAGS := -O1
 
+# libultra was shipped compiled without debug info. At -g3 IDO schedules the
+# "addiu sp,sp,N" stack restore into the "jr ra" delay slot; the ROM's epilogue
+# leaves that slot as a nop. Plain SDK source at -O2 -g0 reproduces the ROM
+# bytes exactly (previously faked with a trailing dummy label).
+$(BUILD_DIR)/$(SRC_DIR)/libultra/gu/guNormalize.c.o: OPT_FLAGS := -O2
+
 $(BUILD_DIR)/$(SRC_DIR)/init_3920.c.o: OPT_FLAGS := -O2
 # NOTE: game_DAE50 RNG (func_150ADA20/ADA68) needs -mips3 for native u64 dsll32/dsrl, BUT a
 # -mips3 object CANNOT be linked into this 32-bit ROM ("linking 32-bit with 64-bit code" ld
 # error). So the RNG is not C-matchable here without converting the whole ROM to -mips3. Stays
 # pragma. See memory/conker-handwritten-math-cluster.md.
-# NOTE: game_21CAC0 (func_151EF610) golden is -O1, but it's an unmatched register near-miss;
-# no override needed while pragma. See src/game_21CAC0.c comment.
+# NOTE: game_21CAC0 (func_151EF610) golden addressing is -O1 (un-CSE'd assembler-macro
+# load+store), but its REGISTERS are -O2's (a0/a1/v0, not the -O1 t6..t1 rotation). No flag
+# reproduces both. Stays pragma; no override needed. See src/game_21CAC0.c comment.
 
 # $(BUILD_DIR)/$(SRC_DIR)/init_B1B0.o: OPT_FLAGS := -O2
 
@@ -225,8 +238,11 @@ $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) $(OBJCOPYFLAGS) -O binary $< $@
 
 # extract
+# Go through tools/split_conker.py, NEVER ../tools/n64splat/split.py directly.
+# The wrapper silences the spimdisasm marker labels that break tools/asm-processor,
+# and refuses splits that would truncate undefined_{syms,funcs}_auto.txt. See its docstring.
 $(BUILD_DIR)/splat: check $(BASENAME).$(VERSION).yaml
-	$(PYTHON) ../tools/n64splat/split.py $(BASENAME).$(VERSION).yaml
+	$(PYTHON) ../tools/split_conker.py $(BASENAME).$(VERSION).yaml
 
 %.ok: %.bin
 	@echo "$$(cat $(BASENAME).$(VERSION).sha1)  $<" | sha1sum --check
@@ -309,5 +325,5 @@ progress.debugger.csv: $(TARGET).elf
 
 
 # settings
-.PHONY: all clean default
+.PHONY: all clean default dirs check extract verify replace progress really-clean
 SHELL = /bin/bash -e -o pipefail

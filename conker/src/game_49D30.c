@@ -63,7 +63,112 @@ extern void func_1501FFE8(f32 *, struct_game49D30_1 *, s32, s32);
 extern void func_1516D2E0(s32);
 extern void func_1516D328(s32);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501C880.s")
+typedef struct {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s32 unk4;
+    /* 0x08 */ s32 unk8;
+    /* 0x0C */ u32 unkC;
+    /* 0x10 */ s32 unk10;
+    /* 0x14 */ s32 unk14;
+    /* 0x18 */ OSTask_t list;
+    /* 0x58 */ OSMesgQueue *msgQ;
+    /* 0x5C */ void *msg;
+} SchedTask1501C880; /* 0x60 */
+
+typedef struct {
+    u8 unk0[0x20];
+} SchedMsg1501C880;
+
+extern u8 D_800BE9C0;
+extern s32 D_800BE9C8[];
+extern SchedTask1501C880 *D_800BEAD4;
+extern SchedTask1501C880 D_800BEAD8[];
+extern u8 D_800BEBA0;
+extern u64 *D_800BEB9C;
+extern u64 *D_800BEAD0;
+extern u64 D_800BEBB0[];
+extern u64 D_800C1060[];
+extern u64 D_800CBE10[];
+extern u64 D_8003A5E8[];
+extern s32 D_100291A0;
+extern void func_1501A39C(void);
+extern void func_1501CC3C(void);
+
+/* Append one 8-byte command to the display list under construction and
+   advance the write head (D_800BE9D0). */
+#define PUTGFX1501C880(cmd, arg)        \
+{                                       \
+    Gfx *_g = (Gfx *)D_800BE9D0;        \
+    D_800BE9D0 += 8;                    \
+    _g->words.w0 = (u32)(cmd);          \
+    _g->words.w1 = (u32)(arg);          \
+}
+
+void func_1501C880(s32 arg0, s32 arg1) {
+    s32 limit;
+    s32 *pool;
+    s32 count;
+
+    arg0 = arg0;
+    pool = D_800BE9C8;
+    limit = (pool[1] - pool[0]) >> 3;
+    D_800BEAD4 = &D_800BEAD8[D_800BE9C0];
+    D_800BEAD4->unk0 = 0;
+    count = (D_800BE9D0 - pool[D_800BE9C0]) >> 3;
+    if ((count < 0) || (count > limit)) {
+        func_1501A39C();
+        D_800BE9D0 = D_800BE9D8[D_800BE9C0];
+        PUTGFX1501C880(0xE9000000, 0);
+        PUTGFX1501C880(0xDF000000, 0);
+        count = (D_800BE9D0 - pool[D_800BE9C0]) >> 3;
+    }
+
+    if ((count < 0) || (count > (limit - 400))) {
+        D_800BE9D0 = pool[D_800BE9C0] + ((limit - 400) << 3);
+        PUTGFX1501C880(0xE9000000, 0);
+        PUTGFX1501C880(0xDF000000, 0);
+    }
+
+    D_800BEAD4->list.data_ptr = (u64 *)pool[D_800BE9C0];
+    D_800BEAD4->list.data_size = ((D_800BE9D0 - pool[D_800BE9C0]) >> 3) << 3;
+    func_1501CC3C();
+
+    D_800BEAD4->list.type = 1;
+    D_800BEAD4->list.flags = 4;
+    D_800BEAD4->list.ucode_boot = (u64 *)&D_100290D0;
+    D_800BEAD4->list.ucode_boot_size = (s32)&D_100291A0 - (s32)&D_100290D0;
+    if (D_800BEBA0 != 0) {
+        D_800BEAD4->list.ucode = D_800C1060;
+        D_800BEAD4->list.ucode_data = D_800BEB9C;
+    } else {
+        D_800BEAD4->list.ucode = D_800BEBB0;
+        D_800BEAD4->list.ucode_data = D_800BEAD0;
+    }
+    D_800BEAD4->list.ucode_data_size = 0x800;
+    D_800BEAD4->list.dram_stack = D_800CBE10;
+    D_800BEAD4->list.dram_stack_size = 0x400;
+    D_800BEAD4->list.output_buff = (u64 *)D_80038090;
+    D_800BEAD4->list.output_buff_size = (u64 *)D_80038094;
+    D_800BEAD4->list.yield_data_ptr = D_8003A5E8;
+    D_800BEAD4->list.yield_data_size = 0xC00;
+    D_800BEAD4->unkC = 0x23;
+    if (arg1 != 0) {
+        D_800BEAD4->unkC |= 0x40;
+    }
+    if (D_800BE617 != 0) {
+        D_800BEAD4->unkC |= (D_80082FA0 + 1) << 16;
+        D_800BE617 = 0;
+    }
+    D_800BEAD4->msgQ = &D_800BEA10;
+    D_800BEAD4->msg = &((SchedMsg1501C880 *)&D_800BEA68)[D_800BE9C0];
+    D_800BEAD4->unk10 = D_8002AAE8[D_800BE9C0];
+    osWritebackDCacheAll();
+    osSendMesg(&D_8003B1E8, D_800BEAD4, 1);
+    if (arg1 != 0) {
+        D_800BE9C0 ^= 1;
+    }
+    *(s16 *)&D_800BEAA8 = *(s16 *)&D_800BEAA8 + 1;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501CC3C.s")
 
@@ -253,7 +358,7 @@ void func_1501DF04(s32 arg0)
 {
   struct127 *obj;
   u8 temp_s0;
-  s32 new_var;
+  s32 argCopy;
   if (func_100127D0() != 0)
   {
     func_151F2BA8();
@@ -272,7 +377,7 @@ void func_1501DF04(s32 arg0)
       do
       {
         temp_s0 = D_800C3C99;
-        func_1501DE18(new_var = arg0);
+        func_1501DE18(argCopy = arg0);
       }
       while ((temp_s0 != 0) && (D_800C35C4 == 0));
     }
@@ -722,7 +827,7 @@ void func_150233BC(void) {
 
 void func_150233E4(void) {
     s32 i;
-    int new_var;
+    int zero;
     struct_game49D30_2 *entry;
 
     i = 0;
@@ -731,8 +836,8 @@ void func_150233E4(void) {
         if (entry->unk0 != 0) {
             func_1516D2E0(entry->unk34);
             entry->unk34 = 0;
-            new_var = 0;
-            entry->unk0 = new_var;
+            zero = 0;
+            entry->unk0 = zero;
         }
         i++;
     } while (&D_800C3D48 != &((struct_game49D30_2 *) D_800C3CA0)[i]);
@@ -828,18 +933,18 @@ extern s32 func_150229E4(struct127 *);
 void func_15022998(s32 *arg0);
 void func_1502378C(void)
 {
-  s32 new_var;
-  s32 *new_var2;
+  s32 result;
+  s32 *objArg;
   s32 i;
   s32 limit;
   s32 active;
   struct127 *obj;
   obj = D_800CC2D0;
  i = 0; if ((*((u8 *) (&D_800C3654))) != 0) { func_1504A730(); return; } for (active = 1, limit = 0x19; i != (limit ^ 0); obj++) { if (obj->interaction_state != 0) { D_800C3E78 = i;
-      func_15022998(new_var2 = (s32 *) obj);
+      func_15022998(objArg = (s32 *) obj);
       func_1507E73C(obj);
-      new_var = func_150229E4(obj);
-      if (new_var != 0)
+      result = func_150229E4(obj);
+      if (result != 0)
       {
  do { } while (0);
         func_1502178C(obj, 0, -1);

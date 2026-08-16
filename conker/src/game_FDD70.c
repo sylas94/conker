@@ -13,7 +13,57 @@ extern void func_151951E0(struct127 *);
 extern void func_15136C3C(struct127 *, s32, s32, s32, s32, s32, s32, s32);
 extern void func_1507CD64(struct127 *, s32);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_FDD70/func_150D08C0.s")
+s32 func_1509BE40();
+void func_1509BFB0(s32 num, s32, s32, ...);
+void func_150495B0(f32 *arg0, f32 arg1, f32 *arg2, f32 arg3, f32 arg4, f32 arg5);
+
+extern f32 D_800888C0;
+extern f32 D_800888C4;
+extern f32 D_800888C8;
+extern f32 D_800888CC;
+extern f32 D_800888D0;
+extern f32 D_800888D4;
+extern f32 D_800888D8;
+extern f32 D_800888DC;
+extern f32 D_800888E0;
+
+void func_150D08C0(struct108 *arg0) {
+    if (func_1509BE40(1, 0x403D, 6, 0x9000) != 0) {
+        arg0->unk84 |= 0x80021000;
+        if (func_1509BE40(1, 0x4043, 6, 0x9000) != 0) {
+            D_800888CC = 64.0f;
+            D_800888D0 = 255.0f;
+            D_800888D4 = 255.0f;
+        } else if (func_1509BE40(1, 0x4044, 6, 0x9000) != 0) {
+            D_800888CC = 255.0f;
+            D_800888D0 = 64.0f;
+            D_800888D4 = 255.0f;
+        } else if (func_1509BE40(1, 0x4045, 6, 0x9000) != 0) {
+            D_800888CC = 255.0f;
+            D_800888D0 = 255.0f;
+            D_800888D4 = 64.0f;
+        } else {
+            D_800888CC = 255.0f;
+            D_800888D0 = 255.0f;
+            D_800888D4 = 255.0f;
+        }
+    } else {
+        D_800888CC = 255.0f;
+        D_800888D0 = 255.0f;
+        D_800888D4 = 255.0f;
+        arg0->unk84 &= ~0x80021000;
+        arg0->unk84 |= 8;
+    }
+    func_150495B0(&D_800888C0, D_800888CC, &D_800888D8, 4.0f, 6.0f, arg0->unk7B4);
+    func_150495B0(&D_800888C4, D_800888D0, &D_800888DC, 4.0f, 6.0f, arg0->unk7B4);
+    func_150495B0(&D_800888C8, D_800888D4, &D_800888E0, 4.0f, 6.0f, arg0->unk7B4);
+    func_1509BFB0(1, 0x30F5, 0x12, (u8)D_800888C0);
+    func_1509BFB0(1, 0x30F4, 0x12, (u8)D_800888C4);
+    func_1509BFB0(1, 0x30F3, 0x12, (u8)D_800888C8);
+    func_1509BFB0(1, 0x30FA, 0x12, (u8)D_800888C0);
+    func_1509BFB0(1, 0x30F9, 0x12, (u8)D_800888C4);
+    func_1509BFB0(1, 0x30F8, 0x12, (u8)D_800888C8);
+}
 
 void func_150D0E90(s32 arg0) {
     struct131 *temp;

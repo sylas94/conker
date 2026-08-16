@@ -1,19 +1,37 @@
 # Conker's Bad Fur Day Decompilation
 
-![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-36.28%25-critical) ![all Functions](https://img.shields.io/badge/funcs-6126%2F8090-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
+![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-32.11%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4042%2F5909-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
 
 | Progress                                                                                                                                           | Functions                                                |
 |----------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| ![init Progress](https://img.shields.io/badge/init-46.81%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-381%2F621-blue)      |
-| ![game Progress](https://img.shields.io/badge/game-35.27%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-5574%2F7287-blue) |
-| ![debugger Progress](https://img.shields.io/badge/debugger-55.27%25-orange) | ![debugger Functions](https://img.shields.io/badge/funcs-171%2F182-blue) |
+| ![init Progress](https://img.shields.io/badge/init-47.98%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-325%2F538-blue)      |
+| ![game Progress](https://img.shields.io/badge/game-30.82%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-3685%2F5329-blue) |
+| ![debugger Progress](https://img.shields.io/badge/debugger-38.38%25-critical) | ![debugger Functions](https://img.shields.io/badge/funcs-32%2F42-blue) |
 
 The **Progress** badges are decompiled-byte percentages and the **Functions** badges are
-function counts, both measured from the linked map via `tools/progress.py` (a function
-counts as decompiled when it is real C rather than a `#pragma GLOBAL_ASM` stub). The ROM
-built from this tree is byte-identical to the retail US cartridge: inner code bin sha1
-`842e3d348e3c8ae0039e2ab367ad492f9b5266d8`, full ROM sha1
+function counts. A function counts as decompiled when a C translation unit implements it
+and no `#pragma GLOBAL_ASM` stub for it remains. Of the 5909 functions in the three code
+sections, **4042 are decompiled, 1686 are still GLOBAL_ASM stubs, and 181 come from
+handwritten `.s` objects** (libultra leaf routines and the like, which are not decompilation
+targets). The ROM built from this tree is byte-identical to the retail US cartridge: inner
+code bin sha1 `842e3d348e3c8ae0039e2ab367ad492f9b5266d8`, full ROM sha1
 `4cbadd3c4e0729dec46af64ad018050eada4f47a`.
+
+Two independent tools produce these figures and are expected to agree:
+`tools/progress.py` parses the linker map (and writes the `progress.*.csv` files via
+`make -C conker progress`), while `tools/progress_check.py` reads the linked ELF's symbol
+table and the input objects instead. They currently agree to within one function --
+4041/5908 against 4042/5909, the difference being a single file-local symbol that a linker
+map does not list.
+
+> **Note on earlier numbers.** Badges published before 2026-08-16 read high (36.28%,
+> 6126/8090). splat types more than just functions as `@function`, so the map contains
+> interior branch labels (`.L1500ABCD`), padding markers (`func_XXXX_pad`) and rodata
+> symbols (`D_*`) alongside real functions; `tools/progress.py` counted all of them. None
+> carries a `#pragma GLOBAL_ASM`, so each was also scored as decompiled C -- inflating both
+> halves of the fraction. 1989 labels and 140 rodata symbols were being counted, which is
+> why the `debugger` badge in particular fell (121 of its 182 "functions" were rodata). The
+> tool now filters them, and `tools/progress_check.py` exists to keep it honest.
 
 A WIP decompilation of Conker's Bad Fur Day.
 
@@ -66,6 +84,17 @@ make extract
 ```sh
 make -C conker extract
 ```
+
+> `make -C conker extract` runs `tools/split_conker.py`, not
+> `tools/n64splat/split.py`. Do not call splat directly: the wrapper silences the
+> spimdisasm marker labels that `tools/asm-processor` cannot parse, and refuses
+> splits (e.g. `--modes ld`) that would truncate `conker/undefined_syms_auto.txt`
+> and `conker/undefined_funcs_auto.txt` to empty. To regenerate only `conker.ld`
+> after a `conker.us.yaml` edit:
+>
+> ```sh
+> cd conker && python3 ../tools/split_conker.py conker.us.yaml --modes ld --keep-auto-syms
+> ```
 
 **Compile code (optional)**
 

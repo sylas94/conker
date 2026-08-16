@@ -51,6 +51,8 @@ void func_150432BC(f32 arg0) {
 
 void func_150432CC(s32 arg0, s32 arg1) {
     D_800CBD74 = D_800CBD74 | 1;
+    /* Original-game redundancy: this self-assignment emits a real second store-back
+       of D_800CBD74 (see also game_16EE20.c:496). It is code, not a codegen hack. */
     D_800CBD74 = D_800CBD74;
     D_800CBD7C = arg1;
     D_800CBD78 = arg0;

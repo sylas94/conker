@@ -73,24 +73,24 @@ void func_1000B294(s32 *arg0) {
 // NON-MATCHING: no idea.
 // struct151 * func_1000B294(s32 *arg0) {
 //     s32 i;
-//     struct151 *phi_v1;
+//     struct151 *entry;
 //     struct151 *tmp;
 //     struct151 *ret = NULL;
 //
 //     for (i = 0; i < 3; i++)
 //     {
-//         phi_v1 = &D_800417B0[i];
-//         ret = phi_v1;
-//         if (phi_v1)
+//         entry = &D_800417B0[i];
+//         ret = entry;
+//         if (entry)
 //         {
-//             if (arg0 == phi_v1->unk10)
+//             if (arg0 == entry->unk10)
 //             {
-//                 phi_v1->unk10 = phi_v1;
+//                 entry->unk10 = entry;
 //             }
-//             tmp = *phi_v1->unk60;
+//             tmp = *entry->unk60;
 //             if ((tmp) && (arg0 == tmp->unk10))
 //             {
-//                 phi_v1->unk10 = tmp;
+//                 entry->unk10 = tmp;
 //             }
 //         }
 //     }
@@ -686,22 +686,22 @@ void func_1000CBF0(s32 arg0, s32 arg1, s32 arg2)
 
 // #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000CC54.s")
 void func_1000CC54(s32 arg0) {
-    s32 phi_a3;
+    s32 volume;
     struct151 *temp_v0;
 
     temp_v0 = D_800417B0[arg0];
     if (temp_v0 != 0) {
-        phi_a3 = (((u32) (temp_v0->unk58 * ((u32) (temp_v0->unk4C * temp_v0->unk52) >> 0xF)) >> 0xF) * temp_v0->unk2C) >> 0xF;
-        if (phi_a3 != temp_v0->unk30) {
+        volume = (((u32) (temp_v0->unk58 * ((u32) (temp_v0->unk4C * temp_v0->unk52) >> 0xF)) >> 0xF) * temp_v0->unk2C) >> 0xF;
+        if (volume != temp_v0->unk30) {
             if (temp_v0->unk30 == 0) {
                 func_10008988(arg0, temp_v0->unk38 ^ 0xFFFF, 1);
             } else {
-                if (phi_a3 == 0) {
+                if (volume == 0) {
                     func_10008988(arg0, temp_v0->unk38 ^ 0xFFFF, 0);
                 }
             }
-            temp_v0->unk30 = phi_a3;
-            func_10008EE0(arg0, phi_a3);
+            temp_v0->unk30 = volume;
+            func_10008EE0(arg0, volume);
         }
     }
 }
@@ -982,12 +982,12 @@ s32 func_1000E588(s32 arg0, s32 arg1, s32 arg2) {
 
 s32 func_1000E654(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     struct151 *sp1C;
-    struct151 *phi_a0;
+    struct151 *owner;
 
     sp1C = func_1000B1FC(arg0);
-    phi_a0 = NULL;
+    owner = NULL;
     if (arg3 >= 0) {
-        phi_a0 = func_1000B1FC(arg3);
+        owner = func_1000B1FC(arg3);
     }
 
     if (sp1C != NULL) {
@@ -999,8 +999,8 @@ s32 func_1000E654(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
         }
         sp1C->unk24 = arg1;
         sp1C->unk20 = arg2;
-        if (phi_a0 != NULL) {
-            sp1C->unk10 = phi_a0;
+        if (owner != NULL) {
+            sp1C->unk10 = owner;
         }
         return 1;
     }

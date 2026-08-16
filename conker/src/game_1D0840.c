@@ -65,6 +65,7 @@ struct header151A3504 {
     u8 unk14;
     u8 unk15;
     u8 pad16[0x2];
+    s32 unk18;
 };
 
 struct260 *func_151A3504(struct frame151A3504 *, u8);
@@ -134,7 +135,6 @@ void func_151A3390(void *arg0, u8 arg1) {
 }
 
 struct260 *func_151A3504(struct frame151A3504 *arg0, u8 arg1) {
-    s32 pad_dummy;
     struct header151A3504 sp8C;
     struct frame151A3504 sp3C;
     struct260 *temp_v0;
@@ -657,7 +657,7 @@ struct struct151A4E34
 s32 func_151A4E34(struct struct151A4E34 **arg0, s32 arg1)
 {
   struct struct151A4E34 *v0 = arg0[0];
-  unsigned long new_var;
+  u32 offset;
   s32 v1 = (s32) v0->unk1D4;
   if (v1 == 0)
   {
@@ -667,8 +667,8 @@ s32 func_151A4E34(struct struct151A4E34 **arg0, s32 arg1)
   {
     return 0;
   }
-  new_var = (((((((((*(((u8 *) arg0) + 5)) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF;
-  func_15143134(((u8 *) arg0) + 8, arg1, v1 + (((new_var & 0xFFFF) & 0xFFFF) << 6));
+  offset = ((*(((u8 *) arg0) + 5)) << 4) << 2;
+  func_15143134(((u8 *) arg0) + 8, arg1, v1 + offset);
   return 1;
 }
 
@@ -677,10 +677,10 @@ void func_151A4E9C(void *arg0)
 {
   u8 *p;
   u8 v;
-  int new_var;
+  int mask;
   *((u8 *) (((u8 *) arg0) + 0x30)) = 0;
   *((u16 *) (((u8 *) arg0) + 0x1E)) &= 0xFFFD;
- new_var = 0xFFu; do { p = *((u8 **) (((u8 *) arg0) + 0x98)); v = (p[0x30] & new_var) | 1; *(p + 0x30) = v; *((volatile u8 *) (p + 0x30)) = v | 4; } while (0);
+ mask = 0xFFu; do { p = *((u8 **) (((u8 *) arg0) + 0x98)); v = (p[0x30] & mask) | 1; *(p + 0x30) = v; *((volatile u8 *) (p + 0x30)) = v | 4; } while (0);
 }
 
 
@@ -780,7 +780,93 @@ void func_151A5130(void *arg0, void *arg1, s16 arg2)
   D_8008F900[*((u8 *) (((u8 *) arg1) + 0x14))](arg0, arg1, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D0840/func_151A5170.s")
+/* Viewport/screen descriptor: D_800BE628 is an array of these, 0x180 bytes each. */
+struct Scr151A5170 {
+    u8  pad0[0x4];
+    f32 unk4;
+    f32 unk8;
+    u8  padC[0x18];
+    f32 unk24;
+    u8  pad28[0x4];
+    f32 unk2C;
+    u8  pad30[0x150];
+};
+
+Gfx *func_15142FBC(Gfx *gfx, s32 arg1, s32 arg2, u8 *arg3);
+
+#define SCR151A5170(obj) (&((struct Scr151A5170 *)D_800BE628)[(obj)->unk1A])
+
+Gfx *func_151A5170(Gfx *gfx, struct Obj151A4FD0 *arg1, s32 arg2) {
+    s32 x0;
+    s32 i;
+    s32 y0;
+    s32 w;
+    s32 h;
+    s32 sw;
+    s32 sh;
+    u8 update;
+
+    gDPPipeSync(gfx++);
+    gDPSetCombineMode(gfx++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+    gDPSetPrimColor(gfx++, 1, 0, arg1->unk15, arg1->unk16, arg1->unk17, 255);
+    func_1501A490((s32)gfx, arg2, 0, 0, 0, 3);
+    update = 0;
+    gfx = func_15142FBC(gfx, 0xC00, 0x0F0A4004, &update);
+
+    sw = (s32)SCR151A5170(arg1)->unk4;
+    sh = (s32)SCR151A5170(arg1)->unk8;
+
+    for (i = 0; i < 2; i++) {
+        if (i == 0) {
+            x0 = (s32)SCR151A5170(arg1)->unk2C;
+            h = 8;
+            if (sw > 256) {
+                w = 256;
+            } else {
+                w = sw;
+            }
+        } else {
+            if (sw <= 256) {
+                break;
+            }
+            x0 = (s32)(SCR151A5170(arg1)->unk2C + 256.0f);
+            w = sw - 256;
+            h = 0x36;
+        }
+
+        y0 = (s32)SCR151A5170(arg1)->unk24;
+
+        while ((f32)y0 < SCR151A5170(arg1)->unk24 + (f32)sh) {
+            if (SCR151A5170(arg1)->unk24 + (f32)sh < (f32)(y0 + h)) {
+                h = (s32)(SCR151A5170(arg1)->unk24 + (f32)sh - (f32)y0);
+            }
+
+            gDPPipeSync(gfx++);
+            gDPSetTextureImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b, D_800BE620,
+                               D_8002AAE8[D_800BE9C0]);
+            gDPSetTile(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b,
+                       ((w * G_IM_SIZ_16b_LINE_BYTES) + 7) >> 3, 0, G_TX_LOADTILE, 0,
+                       G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD);
+            gDPLoadTile(gfx++, G_TX_LOADTILE, x0 << G_TEXTURE_IMAGE_FRAC,
+                        y0 << G_TEXTURE_IMAGE_FRAC, (x0 + w - 1) << G_TEXTURE_IMAGE_FRAC,
+                        (y0 + h - 1) << G_TEXTURE_IMAGE_FRAC);
+            gDPSetTile(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b,
+                       ((w * G_IM_SIZ_16b_LINE_BYTES) + 7) >> 3, 0, G_TX_RENDERTILE, 0,
+                       G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD);
+            gDPSetTileSize(gfx++, G_TX_RENDERTILE, 0, 0, w << G_TEXTURE_IMAGE_FRAC,
+                           h << G_TEXTURE_IMAGE_FRAC);
+            gSPTextureRectangle(gfx++, x0 << G_TEXTURE_IMAGE_FRAC, y0 << G_TEXTURE_IMAGE_FRAC,
+                                (x0 + w) << G_TEXTURE_IMAGE_FRAC,
+                                (y0 + h) << G_TEXTURE_IMAGE_FRAC,
+                                G_TX_RENDERTILE, 0, 0, 1 << 10, 1 << 10);
+
+            y0 += h;
+        }
+    }
+
+    gDPPipeSync(gfx++);
+    return func_15142FBC(gfx, 0x2C00, 0x0F0A4004, &update);
+}
 
 extern void (*D_8008F904[])(void *, void *, u8);
 

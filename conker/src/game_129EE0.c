@@ -90,15 +90,15 @@ void func_150FCFB0(s32 arg0) {
 
 void func_150FDB0C(void *arg0, s32 arg1, u8 arg2)
 {
-  u8 *new_var2;
+  u8 *state;
   s32 *v0;
   s32 a2;
   s32 v1;
-  s32 *new_var;
+  s32 *msg;
  v0 = (s32 *) (((u8 *) arg0) + 0x110); if (arg2 == 0x2D) { v1 = *((s32 *) arg1); ; if (v1 == (*v0)) {
-      new_var2 = (u8 *) v0;
+      state = (u8 *) v0;
       *v0 = *((s32 *) (arg1 + 4));
-      *((u8 *) (new_var2 + 4)) = *((u8 *) (arg1 + 9));
+      *((u8 *) (state + 4)) = *((u8 *) (arg1 + 9));
     }
     else
     {
@@ -116,11 +116,11 @@ void func_150FDB0C(void *arg0, s32 arg1, u8 arg2)
   }
   else
   {
-    new_var = (s32 *) arg1;
+    msg = (s32 *) arg1;
     v1 = arg2 == 0;
     if (v1)
     {
-      v1 = *new_var;
+      v1 = *msg;
       if (v1 != (*v0))
       {
         if ((*((u8 *) (((u8 *) v0) + 4))) != (*((u8 *) (arg1 + 4))))

@@ -252,13 +252,13 @@ typedef struct {
 
 typedef struct {
     char pad_0[0x160];
-    u8 * volatile field_0x160;
+    u8 *field_0x160;
 } Field160Owner;
 
 void func_150F6400(Field160Owner *arg0) {
     Field160ChildBlock *p;
 
-    if (arg0->field_0x160 != 0) {
+    if (*(s32 *)&arg0->field_0x160 != 0) {
         p = (Field160ChildBlock *)(arg0->field_0x160 + 0x28);
         p->field_0x08 = 0;
     }

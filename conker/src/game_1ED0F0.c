@@ -431,9 +431,176 @@ s32 func_151C1940(s32 arg0, s32 arg1, Struct151C1940 *arg2) {
     return func_151C02E4(arg0, arg1, arg2->unk0, arg2->unk4);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1ED0F0/func_151C196C.s")
+typedef struct {
+    /* 0x0 */ f32 x;
+    /* 0x4 */ f32 y;
+    /* 0x8 */ f32 z;
+} Vec151C196C;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1ED0F0/func_151C1D5C.s")
+/* 0x12 bytes, 2-byte aligned: copied whole with lwl/lwr + lhu. */
+typedef struct {
+    /* 0x00 */ u8  unk00[0x10];
+    /* 0x10 */ s16 unk10;
+} Blob151C1D5C;
+
+typedef struct {
+    /* 0x00 */ u8 pad00[0x4F];
+    /* 0x4F */ u8 unk4F;
+} Obj151C1D5C;
+
+typedef struct {
+    /* 0x00 */ f32 unk00;
+    /* 0x04 */ Blob151C1D5C unk04;
+    /* 0x18 */ s32 unk18;
+    /* 0x1C */ s8  unk1C;
+    /* 0x1D */ s8  unk1D;
+    /* 0x20 */ Obj151C1D5C *unk20;
+} Res151C1D5C;
+
+typedef struct {
+    /* 0x00 */ s32 unk00;
+    /* 0x04 */ f32 unk04;
+    /* 0x08 */ Vec151C196C unk08;
+    /* 0x14 */ Vec151C196C unk14;
+    /* 0x20 */ Vec151C196C unk20;
+    /* 0x2C */ Vec151C196C unk2C;
+    /* 0x38 */ Vec151C196C unk38;
+    /* 0x44 */ Blob151C1D5C unk44;
+    /* 0x56 */ s16 unk56;
+    /* 0x58 */ u8  unk58;
+    /* 0x59 */ u8  unk59;
+    /* 0x5A */ u8  unk5A;
+    /* 0x5B */ u8  pad5B;
+    /* 0x5C */ Obj151C1D5C *unk5C;
+    /* 0x60 */ s32 unk60;
+} Ray151C196C;
+
+void func_151C1D5C(s32, Vec151C196C *, Vec151C196C *, Ray151C196C *, f32, s32, s32, s32, s8,
+                   s32, Vec151C196C *, f32 *, Res151C1D5C *, s32);
+s32 func_15145128(Vec151C196C *, Vec151C196C *, f32 *, f32 *);
+
+s32 func_151C196C(Ray151C196C *arg0, Vec151C196C *arg1, Vec151C196C *arg2, Vec151C196C *arg3,
+                  Vec151C196C *arg4, s32 arg5, s32 arg6, Vec151C196C *arg7, f32 *arg8,
+                  Res151C1D5C *arg9, s32 arg10) {
+    u8 trace;
+    u8 hit;
+    Vec151C196C *src;
+
+    trace = 1;
+    hit = 0;
+
+    if ((arg3 != NULL) && (arg4 != NULL)) {
+        arg0->unk2C = *arg3;
+        arg0->unk38 = *arg4;
+        func_151C1D5C(arg5, &arg0->unk2C, &arg0->unk38, arg0, 0.0f, 0, 0, 1, 3, arg6, arg7,
+                      arg8, arg9, arg10);
+
+        if (arg0->unk59 == 0) {
+            if ((arg1->x != arg0->unk2C.x) || (arg1->y != arg0->unk2C.y) ||
+                (arg1->z != arg0->unk2C.z)) {
+                arg0->unk2C = *arg1;
+                arg0->unk38 = *arg4;
+            } else {
+                trace = 0;
+            }
+        } else {
+            if ((arg1->x != arg0->unk2C.x) || (arg1->y != arg0->unk2C.y) ||
+                (arg1->z != arg0->unk2C.z)) {
+                arg0->unk2C = *arg1;
+                arg0->unk38.x = arg0->unk08.x - arg1->x;
+                arg0->unk38.y = arg0->unk08.y - arg1->y;
+                arg0->unk38.z = arg0->unk08.z - arg1->z;
+                if (func_15145128(&arg0->unk38, &arg0->unk38, &arg0->unk04, NULL) == 0) {
+                    return 0;
+                }
+            }
+        }
+    } else {
+        arg0->unk2C = *arg1;
+        arg0->unk38 = *arg2;
+    }
+
+    if (trace != 0) {
+        func_151C1D5C(arg5, &arg0->unk2C, &arg0->unk38, arg0, 0.0f, 0, 1, 1, 3, arg6, arg7,
+                      arg8, arg9, arg10);
+        if (arg0->unk59 != 0) {
+            hit = 1;
+        }
+    }
+
+    if (hit == 0) {
+        arg0->unk00 = 0;
+        arg0->unk04 = 5000.0f;
+        arg0->unk2C = *arg1;
+        if (arg4 != NULL) {
+            src = arg4;
+        } else {
+            src = arg2;
+        }
+        arg0->unk38 = *src;
+        arg0->unk08.x = arg0->unk2C.x + arg0->unk38.x * 5000.0f;
+        arg0->unk08.y = arg0->unk2C.y + arg0->unk38.y * 5000.0f;
+        arg0->unk08.z = arg0->unk2C.z + arg0->unk38.z * 5000.0f;
+        arg0->unk14 = arg0->unk08;
+        arg0->unk20 = arg0->unk08;
+        arg0->unk56 = 0;
+        arg0->unk58 = 0;
+        arg0->unk59 = 0;
+        arg0->unk5A = 0;
+        arg0->unk5C = NULL;
+        arg0->unk60 = 0;
+    }
+    return 1;
+}
+
+void func_15081690(s32, f32, f32, f32, f32, f32, f32, Ray151C196C *, f32, s32, s32, s32, s32,
+                   s32, s32);
+
+void func_151C1D5C(s32 arg0, Vec151C196C *arg1, Vec151C196C *arg2, Ray151C196C *arg3, f32 arg4,
+                   s32 arg5, s32 arg6, s32 arg7, s8 arg8, s32 arg9, Vec151C196C *arg10,
+                   f32 *arg11, Res151C1D5C *arg12, s32 arg13) {
+    Obj151C1D5C *obj;
+    Vec151C196C pos;
+    f32 dist;
+    s32 more;
+
+    dist = 0.0f;
+    *arg11 = 0.0f;
+    pos = *arg1;
+
+    do {
+        func_15081690(arg0, pos.x, pos.y, pos.z, arg2->x, arg2->y, arg2->z, arg3, arg4, arg5,
+                      arg6, arg7, arg8, arg9, arg13);
+        dist += arg3->unk04;
+        if (arg3->unk5C != NULL) {
+            Obj151C1D5C *p = arg3->unk5C;
+
+            if ((p->unk4F & 0x60) == 0x40) {
+                pos.x = arg3->unk08.x + arg3->unk38.x * 0.1f;
+                obj = p;
+                pos.y = arg3->unk08.y + arg3->unk38.y * 0.1f;
+                pos.z = arg3->unk08.z + arg3->unk38.z * 0.1f;
+                *arg10 = arg3->unk08;
+                *arg11 = dist;
+                dist += 0.1f;
+                arg12->unk00 = arg3->unk08.y;
+                arg12->unk04 = arg3->unk44;
+                arg12->unk18 = arg3->unk60;
+                arg12->unk1C = 7;
+                arg12->unk1D = 3;
+                arg12->unk20 = obj;
+                more = 1;
+            } else {
+                more = 0;
+            }
+        } else {
+            more = 0;
+        }
+    } while (more);
+
+    arg3->unk2C = *arg1;
+    arg3->unk04 = dist;
+}
 
 struct sp18_151C1FB8 {
     /* 0x0 */ u8 unk0;

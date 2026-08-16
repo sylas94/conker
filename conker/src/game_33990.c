@@ -3,7 +3,7 @@
 #include "functions.h"
 #include "variables.h"
 
-extern u16 D_800BE2F0;
+extern u8 D_800BE2F0[];
 extern u8 D_800BE2F2;
 extern u8 D_800BE2F3;
 extern u8 D_800BE2F4[];
@@ -20,6 +20,19 @@ extern s32 func_151DD4E0(void *, u8, void *);
 extern void func_151DD9E4(void);
 extern void func_151E7EF8(void);
 extern void func_15007168(void);
+
+typedef struct Struct33990 {
+    /* 0x00 */ u8 unk0;
+    /* 0x01 */ s8 unk1;
+    /* 0x02 */ s8 unk2;
+    /* 0x03 */ s8 unk3;
+    /* 0x04 */ s8 unk4;
+    /* 0x05 */ u8 unk5;
+    /* 0x06 */ u8 unk6;
+    /* 0x07 */ u8 unk7;
+    /* 0x08 */ u8 unk8;
+    /* 0x09 */ u8 unk9;
+} Struct33990; /* size = 0xA */
 
 
 void func_150064E0(void) {
@@ -57,8 +70,41 @@ void func_150064E0(void) {
 //     }
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_33990/func_1500707C.s")
-// requires jump table
-#pragma GLOBAL_ASM("asm/nonmatchings/game_33990/func_15007168.s")
+void func_15007168(void) {
+    s32 i;
+
+    for (i = 0; i < 0x68; i++) {
+        D_800BE2F0[i] = 0;
+    }
+
+    for (i = 0; i != 10; i++) {
+        ((Struct33990 *)D_80082BBC)[i].unk1 = 3;
+        ((Struct33990 *)D_80082BBC)[i].unk3 = 2;
+        ((Struct33990 *)D_80082BBC)[i].unk4 = 1;
+        ((Struct33990 *)D_80082BBC)[i].unk2 = 10;
+        switch (i) {
+            case 0:
+                ((Struct33990 *)D_80082BBC)[i].unk5 = 3;
+                break;
+            case 1:
+            case 2:
+                ((Struct33990 *)D_80082BBC)[i].unk5 = 5;
+                break;
+            case 7:
+                ((Struct33990 *)D_80082BBC)[i].unk5 = 20;
+                break;
+            case 5:
+                ((Struct33990 *)D_80082BBC)[i].unk5 = 20;
+                ((Struct33990 *)D_80082BBC)[i].unk2 = 0;
+                break;
+            case 8:
+            case 9:
+                ((Struct33990 *)D_80082BBC)[i].unk5 = 3;
+                break;
+        }
+        ((Struct33990 *)D_80082BBC)[i].unk9 = 0;
+    }
+}
 // PERMUTER CANDIDATE best 1165: loop structure byte-exact; remaining diff is a clean 3-register
 // rotation {sum,i,p}->{v0,v1,a0} (target sum=v0,i=v1,p=a0) plus seed 0xCC reassociation.
 // void func_1500727C(void) {

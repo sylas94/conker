@@ -208,8 +208,8 @@ segments:
       - [0x290D0, data] # could be larger/smaller
 
       - [0x2BF20, rodata]
-      - [0x2C080, rodata]
-      - [0x2C0A0, rodata]
+      - [0x2C080, .rodata, init_2E50]
+      - [0x2C0A0, rodata] # MIGRATION-READY -> [0x2C0A0, .rodata, init_49E0] (jtbl_8002C0A0, sole symbol/referrer func_100049E0). Apply ONLY together with the C decompilation: see note at top of file. PARKED 2026-08-15: C is structurally exact but loses a loop-invariant ranking tie (see tools/nearmiss/func_100049E0.c).
       - [0x2C0C0, rodata]
       - [0x2C120, rodata]
       - [0x2C1B0, rodata]
@@ -218,12 +218,13 @@ segments:
       - [0x2C250, rodata]
       - [0x2C450, .rodata, libultra/audio/init_128D0]
       - [0x2C460, rodata]
-      - [0x2C6B0, rodata]
+      - [0x2C6B0, .rodata, libultra/audio/init_15550] # D_8002C6B0 + D_8002C6DC (the two "freed too early" strings) + jtbl_8002C708, all _n_handleEvent
       - [0x2C750, rodata]
       - [0x2C760, .rodata, libultra/audio/cents2ratio]
       - [0x2C770, rodata]
       - [0x2C790, .rodata, libultra/audio/init_1D900]
-      - [0x2C7A0, rodata]
+      - [0x2C7A0, .rodata, init_1E530] # D_8002C7A0 + jtbl_8002C7A4 + D_8002C7C4/C8, all init_1E530
+      - [0x2C7D0, .rodata, init_20000] # jtbl_8002C7D0 (func_10020000's switch) + D_8002C814 (65535.0f literal in _getRate)
       - [0x2C820, rodata]
       - [0x2C830, rodata]
       - [0x2C850, rodata]
@@ -982,9 +983,9 @@ segments:
       - [0x2367E0, rodata]
       - [0x23A490, rodata]
       - [0x23A4A0, rodata]
-      - [0x23A4C0, rodata]
-      - [0x23A4F0, rodata] # , game/entrypoint] # jumptable 0x80095A30
-      - [0x23A510, rodata]
+      - [0x23A4C0, .rodata, game_33990]
+      - [0x23A4F0, .rodata, game/entrypoint] # jumptable 0x80095A30
+      - [0x23A510, rodata] # MIGRATION-READY -> [0x23A510, .rodata, game_34F20] (jtbl_80095A50, sole symbol/referrer func_15007B3C). Apply ONLY with the C decompilation. PARKED 2026-08-16: migration+chained-assignment fix took it 2927 -> 2007 (size 1700/1704) but the residual is a constant-hoist ranking tie -- see tools/nearmiss/func_15007B3C.c.
       - [0x23A5D0, rodata]
       - [0x23A600, rodata]
       - [0x23A630, rodata]
@@ -1010,6 +1011,7 @@ segments:
       - [0x23B3D0, rodata]
       - [0x23B3E0, rodata]
       - [0x23B420, rodata]
+      - [0x23B460, .rodata, game_49BE0] # jtbl_800969A0, sole symbol/referrer func_1501C730
       - [0x23B480, rodata]
       - [0x23B4E0, rodata]
       - [0x23B8A0, rodata]
@@ -1256,7 +1258,7 @@ segments:
       - [0x244BC0, rodata]
       - [0x244C80, rodata]
       - [0x244C90, rodata]
-      - [0x244CB0, rodata]
+      - [0x244CB0, .rodata, game_EEB10]
       - [0x244CD0, rodata]
       - [0x244D60, rodata]
       - [0x244DE0, rodata]
@@ -1318,7 +1320,7 @@ segments:
       - [0x246130, rodata]
       - [0x246140, rodata]
       - [0x246380, rodata]
-      - [0x2463E0, rodata]
+      - [0x2463E0, .rodata, game_11F780]
       - [0x246410, rodata]
       - [0x246440, rodata]
       - [0x2464A0, rodata]
@@ -1352,7 +1354,7 @@ segments:
       - [0x247170, rodata]
       - [0x247180, rodata]
       - [0x2476E0, rodata]
-      - [0x247780, rodata]
+      - [0x247780, .rodata, game_138520] # float pool for func_1510C8A8 (D_800A2CC0)
       - [0x247790, rodata]
       - [0x2477E0, rodata]
       - [0x247810, rodata]
@@ -1386,7 +1388,7 @@ segments:
       - [0x249560, rodata]
       - [0x249CC0, rodata]
       - [0x249F40, rodata]
-      - [0x24A190, rodata]
+      - [0x24A190, rodata] # MIGRATION-READY -> [0x24A190, .rodata, game_173D40] (D_800A56D0 + jtbl_800A56E4 + 19 floats, all func_15146970). Apply ONLY with the C decompilation. PARKED 2026-08-15: the 19 floats reproduce bit-exactly as literals, but func_15146970 stalls on a delay-slot plateau (see tools/nearmiss/func_15146970.c).
       - [0x24A220, rodata]
       - [0x24A230, rodata]
       - [0x24A240, rodata]
@@ -1430,11 +1432,13 @@ segments:
       - [0x24BE60, rodata]
       - [0x24BE80, rodata]
       - [0x24BE90, rodata]
-      - [0x24BEC0, rodata]
+      - [0x24BEC0, .rodata, game_1B8B60] # D_800A7400..740C, sole referrer func_1518B6B0
+      - [0x24BED0, rodata]
       - [0x24BF10, rodata]
       - [0x24BF20, rodata]
       - [0x24CAD0, rodata]
       - [0x24CAF0, rodata]
+      - [0x24CC20, .rodata, game_1BFCB0] # jtbl_800A8160, sole symbol/referrer func_151928B0
       - [0x24CC40, rodata]
       - [0x24CC70, rodata]
       - [0x24CC80, rodata]
@@ -1475,6 +1479,7 @@ segments:
       - [0x24F050, rodata]
       - [0x24F370, rodata]
       - [0x24F3F0, rodata]
+      - [0x24F480, .rodata, game_1ED0F0] # float pool: D_800AA9C0 5000.0f + D_800AA9C4 0.1f
       - [0x24F490, rodata]
       - [0x24F550, rodata]
       - [0x24F5C0, rodata]

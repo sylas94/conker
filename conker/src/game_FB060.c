@@ -18,6 +18,7 @@ extern f32 D_800A07E0;
 void func_15143794(s32, s32, f32, f32 *);
 s32 func_15132A4C(void *, s32, s32, s32, u8, s32);
 
+/* Near-miss at 315/35800; see tools/nearmiss/func_150CDBB0.c */
 #pragma GLOBAL_ASM("asm/nonmatchings/game_FB060/func_150CDBB0.s")
 
 s32 func_150CDCF4(s32 arg0, s32 arg1, f32 arg2, f32 arg3, f32 arg4, s32 arg5,

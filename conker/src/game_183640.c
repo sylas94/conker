@@ -366,16 +366,16 @@ struct15157010 *func_15157010(u8 *arg0, s32 arg1, f32 arg2, s32 arg3, s32 arg4, 
     struct15157010 *temp_v0;
     f32 (*mtx1)[4];
     f32 (*mtx2)[4];
-    s32 phi_v0;
+    s32 id;
     s32 i;
 
-    phi_v0 = 0x36;
+    id = 0x36;
     if (arg0[0] & 0x80) {
-        phi_v0 = 0x5B;
+        id = 0x5B;
     } else if (arg0[0] & 0x10) {
-        phi_v0 = 0x4C;
+        id = 0x4C;
     }
-    temp_v0 = func_15167A68(phi_v0, arg7, arg5 + 0x120, 1, arg6, 1);
+    temp_v0 = func_15167A68(id, arg7, arg5 + 0x120, 1, arg6, 1);
     if (temp_v0 == 0) {
         return NULL;
     }

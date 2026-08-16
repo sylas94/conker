@@ -145,7 +145,6 @@ void func_15044A28(void) {
     struct conker15044A28 *node;
     struct conker15044A28 *prev;
     struct conker15044A28 *next;
-    volatile s32 *delta;
     s32 (**funcs0)(struct conker15044A28 *);
     void (**funcs1)(void);
     s32 timer;
@@ -158,7 +157,6 @@ void func_15044A28(void) {
     prev = 0;
     minusOne = -1;
     if (node != 0) {
-        delta = &D_800BE9E4;
         funcs0 = D_80085E80;
         funcs1 = D_80085E8C;
         do {
@@ -170,7 +168,7 @@ void func_15044A28(void) {
                     funcs1[node->unkD]();
                 }
             } else {
-                delay = countdown - *delta;
+                delay = countdown - D_800BE9E4;
                 if (delay < 0) {
                     delay = 0;
                 }
@@ -178,7 +176,7 @@ void func_15044A28(void) {
             }
             timer = node->unk4;
             if (timer != minusOne) {
-                timer -= *delta;
+                timer -= D_800BE9E4;
                 if (timer <= 0) {
                     if (prev == 0) {
                         D_800CBE00[0] = node->next;

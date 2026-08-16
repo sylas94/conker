@@ -496,13 +496,13 @@ void func_151A9024(u8 *arg0, s32 arg1, u8 arg2) {
 extern void (*D_8008F984[])(void);
 s32 func_151A9060(u8 *arg0)
 {
-  s32 new_var;
+  s32 temp;
   s32 idx;
   arg0[0x16] |= 0x4;
-  new_var = *((s32 *) (arg0 + 0x18));
-  idx = new_var & 0xFFFFFFFFu;
-  new_var = idx < 0;
-  if (new_var || (idx >= 8))
+  temp = *((s32 *) (arg0 + 0x18));
+  idx = temp & 0xFFFFFFFFu;
+  temp = idx < 0;
+  if (temp || (idx >= 8))
   {
     return 1;
   }

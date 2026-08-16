@@ -93,7 +93,9 @@ typedef struct {
 
 void func_151CD3CC(struct260 *arg0, s32 arg1, u8 arg2) {
     Sub151CD3CC *sub;
-    volatile s32 unused[3];
+    /* Reserves 12 bytes at the top of the -g3 stack frame that the shipped
+     * build allocated but never referenced. */
+    s32 unused[3];
 
     sub = (Sub151CD3CC *)((s32)arg0 + 0x28);
     if (arg2 == 0x17) {
@@ -187,7 +189,6 @@ s32 func_151CEA20(f32 *arg0) {
 }
 
 struct260 *func_151CEAAC(void *arg0, void *arg1, u8 arg2, u8 arg3, s32 arg4) {
-    s32 pad_dummy;
     struct {
         f32 unk0;
         f32 unk4;
@@ -198,6 +199,7 @@ struct260 *func_151CEAAC(void *arg0, void *arg1, u8 arg2, u8 arg3, s32 arg4) {
         u8 unk14;
         u8 unk15;
         u8 pad16[2];
+        s32 unk18;
     } sp6C;
     struct {
         void *unk0;

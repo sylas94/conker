@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ char pad_0x00[0x6C];
-    /* 0x6C */ RandomLerpObject *volatile field_0x6C;
+    /* 0x6C */ RandomLerpObject *field_0x6C;
 } RandomLerpOwner;
 
 RandomLerpObject *func_150C6D90(RandomLerpOwner *arg0);
@@ -35,7 +35,7 @@ RandomLerpObject *func_150C6D90(RandomLerpOwner *arg0);
 void func_150C66F0(RandomLerpOwner *arg0) {
     RandomLerpState *temp;
 
-    if (arg0->field_0x6C != 0) {
+    if (*(s32 *)&arg0->field_0x6C != 0) {
         temp = &arg0->field_0x6C->field_0xB0;
         temp->field_0x04 = 1;
         done:

@@ -200,7 +200,7 @@ struct Entry1510D874
 extern struct Entry1510D874 D_800D9ED8[];
 void func_1510D874(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
-  struct Entry1510D874 *new_var;
+  struct Entry1510D874 *entry;
   u8 idx = D_800D9ED0;
   if (D_800D9ED0 < 8)
   {
@@ -208,8 +208,8 @@ void func_1510D874(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     e->unk0 = arg0;
     e->unk4 = arg1;
     e->unk8 = arg2;
-    new_var = e;
-    new_var->unkC = arg3;
+    entry = e;
+    entry->unkC = arg3;
     e->unkD = arg4;
     D_800D9ED0 = idx + 1;
   }

@@ -99,18 +99,18 @@ void func_15056150(struct127 *arg0) {
 void func_15056258(struct127 *arg0) {
     f32 temp_f2;
     f32 temp_f4;
-    f32 phi_f12;
+    f32 heightFactor;
 
     temp_f4 = arg0->unk11C;
     temp_f2 = arg0->unk118 - arg0->unk11C;
     arg0->unk11C = arg0->unk118;
-    phi_f12 = 2.0f * (arg0->y_position - ((arg0->unk118 - 60.0f) - 170.0f));
-    if (!(phi_f12 < 0.0f)) {
+    heightFactor = 2.0f * (arg0->y_position - ((arg0->unk118 - 60.0f) - 170.0f));
+    if (!(heightFactor < 0.0f)) {
         if (!(fabsf(temp_f2) > 30.0f)) {
-            if (phi_f12 > 300.0f) {
-                phi_f12 = 300.0f;
+            if (heightFactor > 300.0f) {
+                heightFactor = 300.0f;
             }
-            arg0->y_position += (phi_f12 * temp_f2 * D_80099444);
+            arg0->y_position += (heightFactor * temp_f2 * D_80099444);
         }
     }
 }
@@ -634,7 +634,7 @@ void func_150593C4(struct127 *arg0, u16 arg1, f32 arg2, f32 arg3) {
 
 void func_15059444(struct127 *arg0) {
     s32 sp1C;
-    s32 phi_v0;
+    s32 id;
     s32 tmp;
 
     sp1C = -1;
@@ -648,15 +648,15 @@ void func_15059444(struct127 *arg0) {
             break;
         case 41:
             if (func_150A29C8(D_800C3E78, 0x4028) == 0) {
-                phi_v0 = 12;
+                id = 12;
             } else if (func_150A29C8(D_800C3E78, 0x400E) == 0) {
-                phi_v0 = 10;
+                id = 10;
             } else if (func_150A29C8(D_800C3E78, 0x400D) == 0) {
-                phi_v0 = 9;
+                id = 9;
             } else {
-                phi_v0 = 6;
+                id = 6;
             }
-            sp1C = func_15083E0C(phi_v0);
+            sp1C = func_15083E0C(id);
             // FIXME: fakematch to force regalloc
             dummy_label_858530:;
             break;
@@ -665,11 +665,11 @@ void func_15059444(struct127 *arg0) {
             break;
         case 65:
             if (func_150A29C8(D_800C3E78, 0x401F) == 0) {
-                phi_v0 = 27;
+                id = 27;
             } else {
-                phi_v0 = 26;
+                id = 26;
             }
-            sp1C = func_15083E0C(phi_v0);
+            sp1C = func_15083E0C(id);
             break;
     }
 
@@ -681,7 +681,7 @@ void func_15059444(struct127 *arg0) {
 void func_1505959C(struct127 *arg0, s32 arg1) {
     struct252 *temp_v0;
     s32 *temp_v1;
-    s32 phi_v1;
+    s32 variant;
 
     arg0->unkF8 &= 0xFF7FFFFF;
     arg0->unk13D = arg1 + 100;
@@ -691,28 +691,28 @@ void func_1505959C(struct127 *arg0, s32 arg1) {
 
     D_800CC2D0[arg1].unk83 = 0xFF;
     D_800CC2D0[arg1].disable_run = 0xFF;
-    phi_v1 = 0;
+    variant = 0;
     if (arg0->id == 0x57) {
-        phi_v1 = 1;
+        variant = 1;
     }
     if (D_800CC2D0[arg1].id == 0x9B) {
-        phi_v1 = 2;
+        variant = 2;
     }
     if (arg0->id == 0x5E) {
-        phi_v1 = 3;
+        variant = 3;
     }
     if (arg0->id == 0x3C) {
-        phi_v1 = 4;
+        variant = 4;
         D_800CC2D0[arg1].unk13C = (u8)0;
         D_800CC2D0[arg1].unk76 = func_1505A630(arg0->x_position - D_800CC2D0[arg1].x_position, D_800CC2D0[arg1].z_position - arg0->z_position, 0);
     }
     if (arg0->id == 0x89) {
-        phi_v1 = 5;
+        variant = 5;
     }
-    func_1505E650(&D_800CC2D0[arg1], D_800860C0[phi_v1], D_800860CC[phi_v1], 0.0f, 0.0f, 0.0f, 0);
+    func_1505E650(&D_800CC2D0[arg1], D_800860C0[variant], D_800860CC[variant], 0.0f, 0.0f, 0.0f, 0);
     arg0->stunned = 0xFE;
     arg0->unk105 = 0;
-    arg0->unk106 = func_1505E7CC(D_800860E4[phi_v1], arg0);
+    arg0->unk106 = func_1505E7CC(D_800860E4[variant], arg0);
     arg0->unk84.uh = 0xFFFF;
     func_1505E874(D_800C3E78, arg0);
     temp_v1 = (s32*)D_800D1588[arg0->id];
@@ -764,7 +764,7 @@ u8 func_150599C8(struct127 *arg0, u8 arg1, u16 arg2) {
     s16 temp_t8;
     s32 temp_v0;
     s32 temp_lo;
-    s16 phi_v1;
+    s16 signedDelta;
 
     temp_v0 = (s32) (((arg1 << 8) + arg0->unk1E8) * D_800CC264) / 0x64;
     temp_a3 = arg2 - arg0->unk7A;
@@ -780,7 +780,7 @@ u8 func_150599C8(struct127 *arg0, u8 arg1, u16 arg2) {
         }
     }
 
-    phi_v1 = temp_a3;
+    signedDelta = temp_a3;
     if (temp_a3 < 0) {
         temp_a3 = temp_a3 ^ 0xFFFF;
     }
@@ -789,7 +789,7 @@ u8 func_150599C8(struct127 *arg0, u8 arg1, u16 arg2) {
     }
     if ((arg0->unkF4 & 1) == 0) {
         if (arg0->unk80 != 0) {
-            if (phi_v1 < 0) {
+            if (signedDelta < 0) {
                 arg0->unk7A -= temp_v0;
             } else {
                 arg0->unk7A += temp_v0;
@@ -804,13 +804,13 @@ u8 func_15059B54(struct127 *arg0, u16 arg1) {
     s16 temp_t8_2;
     s16 temp_t2;
     s32 temp_lo;
-    s16 phi_a2;
-    s16 phi_a1;
+    s16 absDiff;
+    s16 signedDelta;
 
     temp_t8 = arg0->unk78 - arg0->unk76;
-    phi_a2 = temp_t8;
-    if (phi_a2 < 0) {
-        phi_a2 = phi_a2 ^ 0xFFFF;
+    absDiff = temp_t8;
+    if (absDiff < 0) {
+        absDiff = absDiff ^ 0xFFFF;
     }
     if (arg0->unk1EA != 0) {
         temp_lo = (s32) (arg0->unk1EA * D_800CC264) / 0x64;
@@ -824,7 +824,7 @@ u8 func_15059B54(struct127 *arg0, u16 arg1) {
         }
     }
 
-    phi_a1 = temp_t8;
+    signedDelta = temp_t8;
     if (temp_t8 < 0) {
         temp_t8 = temp_t8 ^ 0xFFFF;
     }
@@ -832,7 +832,7 @@ u8 func_15059B54(struct127 *arg0, u16 arg1) {
         arg1 = temp_t8;
     }
     if ((arg0->unkF4 & 1) == 0) {
-        if (phi_a1 < 0) {
+        if (signedDelta < 0) {
             arg0->unk76 -= arg1;
             arg0->unk1EC = -arg1;
         } else {
@@ -840,7 +840,7 @@ u8 func_15059B54(struct127 *arg0, u16 arg1) {
             arg0->unk1EC = arg1;
         }
     }
-    return phi_a2 >> 8;
+    return absDiff >> 8;
 }
 // NON-MATCHING: 90% there, missing an s16 cast
 // u8 func_15059B54(struct127 *arg0, u16 arg1) {

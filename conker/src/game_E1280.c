@@ -45,7 +45,6 @@ void func_150B3EE8(void *arg0) {
 extern s32 func_15147A80(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
 s32 func_150B3F5C(void *arg0, void *arg1, s16 arg2) {
-    s32 pad_dummy;
     struct vec150B3F5C {
         s32 unk0;
         s32 unk4;
@@ -58,6 +57,8 @@ s32 func_150B3F5C(void *arg0, void *arg1, s16 arg2) {
         s32 unk10;
         u8 unk14;
         u8 unk15;
+        u8 pad16[2];
+        s32 unk18;
     } sp9C;
     struct {
         u8 pad0[0x40];

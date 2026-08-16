@@ -93,7 +93,46 @@ void func_16001830(OSContPad *data)
     while (i < (s32)__osMaxControllers);
   }
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/debugger_256F80/func_160018BC.s")
+// __osPackReadData
+void func_160018BC(void)
+{
+  u8 *ptr;
+  __OSContReadFormat readformat;
+  s32 i;
+
+  /* NOTE: this loop zeroes all 16 words of __osContPifRam (ramarray[15] + pifstatus),
+   * not just ramarray -- golden's bound is __osContPifRam + 0x40. IDO strength-reduces
+   * the index into a pointer walk whose limit it spells %hi/%lo(__osContPifRam+0x40),
+   * while the splat-extracted golden spells the same address %hi/%lo(__osContLastCmd)
+   * (undefined_syms_auto.txt pins __osContPifRam = 0x80042A10 and
+   * __osContLastCmd = 0x80042A50, so the two are the same word). That is the whole
+   * residual against golden: asm-differ scores 10, tools/relcheck.py PASSES, and the
+   * two sibling functions in this file already sit on the same floor. Spelling the
+   * loop as a pointer walk bounded by &__osContLastCmd names the symbol correctly but
+   * costs the separate base materialisation IDO gives the strength-reduced form
+   * (score 340), so the index form below is the closer of the two. */
+  ptr = (u8 *)&__osContPifRam;
+  for (i = 0; i < 16; i++)
+  {
+    ((u32 *)&__osContPifRam)[i] = 0;
+  }
+  __osContPifRam.pifstatus = 1;
+
+  readformat.dummy = 0xFF;
+  readformat.txsize = 1;
+  readformat.rxsize = 4;
+  readformat.cmd = 1;
+  readformat.button = 0xFFFF;
+  readformat.stick_x = -1;
+  readformat.stick_y = -1;
+
+  for (i = 0; i < (s32)__osMaxControllers; i++)
+  {
+    *(__OSContReadFormat *)ptr = readformat;
+    ptr += sizeof(__OSContReadFormat);
+  }
+  *ptr = 0xFE;
+}
 
 // another __osSiDeviceBusy function
 s32 func_16001984()

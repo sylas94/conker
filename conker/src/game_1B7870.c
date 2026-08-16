@@ -112,7 +112,52 @@ void *func_1518A3C0(struct Vec3F1518A3C0 *arg0, struct Vec3F1518A3C0 *arg1, f32 
     return ret;
 }
 
+// NEAR-MISS 990 (wave 60). Instruction MULTISET is identical to golden -- same count, same
+// opcodes, same registers, same frame (0x48), same stack slots; the residual is pure
+// list-scheduler tie-breaking in three spots: (a) the `lui/addiu a3,%hi/%lo(D_800BE9A4)` pair
+// is emitted before `lw a1,0x48(sp)` in golden and interleaved after it here; (b) the 0.5f
+// `lui at,0x3f00` is the first instruction of the post-loop block in golden (and is what the
+// `beqzl` delay slot duplicates) while we schedule `lwc1 f8,0x10(v1)` there; (c) `li v0,1`
+// (the `return 1`) lands late in golden and early here. BAIL SIGNATURE: unsteerable
+// scheduling residual. Candidate kept in tools/nearmiss/func_1518A5F4.c.
+//
+// WHAT IS PROVEN -- do not re-derive:
+//  * this is the same physics step as the MATCHED func_15157AA8 in game_183640.c; reuse its
+//    MotionState/MotionVec model and its exact spelling
+//    `posX += (oldVel.x + 0.5f * accelX * D_800BE9A4) * D_800BE9A4;`. The object layout here
+//    is pos at +0x48/0x4C/0x50 and the MotionState at +0x100 (not +0x54/+0x120).
+//  * `p = &arg0->motion;` MUST be written BEFORE the `func_15158AFC(arg0)` call. Written
+//    after, IDO copy-propagates the +0x100 into every member offset (`lw at,0x110(a1)`) and
+//    only materialises `v1` at the loop; written before, it rematerialises
+//    `addiu v1,a1,0x100` from the reloaded parameter exactly where golden has it. 1405 -> 990.
+//  * the damping loop is `for (i = D_800BE9E4; i != 0; i--)`, unrolled x4 by IDO with the
+//    `-(n&3)` remainder prologue -- reproduced byte-for-byte with no Makefile flag change
+//    (LOOP_UNROLL is empty; -O2 -g3 unrolls this on its own).
+//  * declaration list `MotionState *p; MotionVec oldVel; f32 accelX, accelY, accelZ; s32 i;`
+//    gives golden's frame and slots exactly; moving `i` earlier is free (990 either way).
+//  * spellings that are WORSE: `accelX * 0.5f * dt` (1020); interleaving each accel with its
+//    own position update (4464). `(0.5f*accelX)*dt` and `x = x + ...` are neutral (990).
+//  * permuter: selftest PASS at base 990, ~30 min at -j 4, never beat 990.
+//
+// WAVE 61 -- the residual was re-read and NAMED. Both remaining spots are the same IDO
+// behaviour, not two independent ties: golden materialises a CONSTANT AT THE HEAD OF ITS
+// BASIC BLOCK and we interleave it.
+//   (a) golden emits `lui a3,%hi(D_800BE9A4) / addiu a3,a3,%lo(...)` as an ADJACENT PAIR
+//       immediately after the func_15158AFC call and before `lw a1,0x48(sp)`; we split the
+//       pair and thread `lw a1` / `addiu t6,sp,0x38` / `addiu v1,a1,0x100` through it.
+//   (b) golden's post-loop block begins with `lui at,0x3f000000>>16` (the 0.5f, into $f18),
+//       which is why TWO branch-likely delay slots (`beql` at 0x6cc and `beqzl` at 0x30c)
+//       both duplicate it; ours begins with `lwc1 $f8,0x10(v1)` so the delay slots differ.
+// This is the SAME signature that was cracked on game_20A290/func_151DCDE0 in this wave --
+// there golden hoisted a constant load into the prologue and the cause turned out to be
+// real (the value was a FLOAT LITERAL in an owned .rodata pool, not the `extern f32` it had
+// been modelled as; IDO schedules a literal as a constant and hoists it, and the pool's own
+// ordering proved it). Checked here and NOT the same cause: D_800BE9A4 is loaded seven
+// times through `lwc1 $f0,0x0($a3)` in golden, so it is a genuine global re-read and not a
+// named local, and the 0.5f is already a literal (lui+mtc1, low16 == 0, no pool entry). So
+// (a)/(b) remain a scheduler ranking difference with no source lever found. Still parked.
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1B7870/func_1518A5F4.s")
+
 
 struct Sub1518A914 {
     /* 0x00 */ f32 unk0;

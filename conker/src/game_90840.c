@@ -101,13 +101,13 @@ struct sub150636A4
 };
 void func_150636A4(struct127 *arg0)
 {
-  struct tgt150636A4 *new_var;
+  struct tgt150636A4 *target;
   struct mid150636A4 *temp_v0;
   temp_v0 = ((struct sub150636A4 *) arg0->unk31C)->unkB0;
   if (temp_v0 != 0)
   {
-    new_var = temp_v0->unk31C;
-    if (new_var != 0)
+    target = temp_v0->unk31C;
+    if (target != 0)
     {
       temp_v0->unk31C->unk195 = 0x1E;
       temp_v0->unk31C->unk196 = arg0 - D_800CC2D0;
