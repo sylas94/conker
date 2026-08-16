@@ -3507,3 +3507,2477 @@ A screen failure worth noting: func_150D5124 was briefed as "never attempted" bu
 attempt as a comment block at game_100810.c:111-179 claiming best 105. The agent rebuilt it from
 scratch and reproduced exactly 105, so the baseline is confirmed rather than inherited — but
 **pick_clean.sh should screen for parked comment blocks inside live TUs, not just pragmas.**
+
+# ================================================================================
+# NEW LEVER, AND IT IS A FIRST-CLASS ONE: DELETE A LOCAL THAT ONLY CACHES A FIELD READ
+# ================================================================================
+
+func_150D5124 went **105 -> 0** on nothing but deleting one local and reading the field at each
+use site instead:
+
+    -  soundId = arg0->unk1C;          +  (deleted)
+    -  if (soundId == 0x5B3)           +  if (arg0->unk1C == 0x5B3)
+    -  arg0->unk0 = soundId;           +  arg0->unk0 = arg0->unk1C;
+    -  *arg6 = soundId;                +  *arg6 = arg0->unk1C;
+
+**The emitted code at those sites is identical either way** -- IDO CSEs the field back into a
+single load. What moves is the virtual-register NUMBERING downstream, which was the entire
+t6/t7 exchange on 20 of 199 rows. Two waves of hand-search had treated the named local as fixed
+*because its own register assignment already matched golden*.
+Semantic safety check that must accompany this edit: nothing may write the field between the
+reads. Here nothing writes `arg0->unk1C`, and the only call happens after the last read, so all
+five reads are provably the one value.
+
+**THIS IS THE MIRROR IMAGE OF AN EXISTING LAW.** The cookbook already records that ADDING a second
+read (`hp2 = arg0->health;` rather than `hp2 = hp;`) took a function 650 -> 0. Both directions are
+the same underlying lever: **the number of source-level reads of a field controls downstream
+register numbering, at zero instruction cost.** Sweep it in BOTH directions on any JUSTREG
+residual, before reaching for the permuter. At 0.7 s per variant it is nearly free.
+
+**IT IS NOT UNIVERSAL, measured the same wave:** applied to each of func_15084044's four cacheable
+locals it gave 673 / 163 / 205 / 17 rows, all WORSE than that function's base of 13.
+
+# ================================================================================
+# A PERMUTER ZERO IS A LOCATION, NOT AN ANSWER
+# ================================================================================
+
+On func_15084044 the permuter's FIRST zero was a banned forcer, and `--stop-on-zero` would have
+ended the wave holding it with no fallback:
+
+    -   if ((base->unk28C == 0) || ( base->unk28C       == tmpl))
+    +   if ((base->unk28C == 0) || ((obj = base->unk28C) == tmpl))
+
+`obj` is dead there -- its only read is far above and it is never read again. A dead assignment
+whose sole effect is to consume one more IDO virtual-register number: the temp-rotation forcer.
+**Refused.** (Preserved for audit rather than deleted.)
+
+TWO PROCEDURAL RULES FOLLOW, both cheap:
+  1. Run the permuter with `--only-if-below 1` and NO `--stop-on-zero`, so it ACCUMULATES every
+     distinct zero-scoring source for audit instead of halting on the first. Its hash set
+     suppresses duplicates.
+  2. **READ THE SUB-ZERO OUTPUT DIRECTORIES.** func_15084044's real win was sitting unexamined in
+     an `output-10-1/` dir -- an honest edit worth 70 -> 10 that nobody would have seen if the
+     zero had been taken at face value. The existing note about checking output dirs for unscored
+     wins now extends to BETTER-BUT-NOT-ZERO wins.
+
+**AND THE 70 -> 10 WAS ALSO DECLINED, on judgement rather than on the banned list.** It replaces
+`if (tmpl == 0)` with `if ((&D_800D19A0)[idx] == 0)` immediately after `tmpl` was assigned that
+exact expression. It emits IDENTICAL instructions at its own site; its only effect is the
+downstream colour. The ordering argues against it too: moving the assignment after the test --
+the form a human would more plausibly write -- scores 195, not 1. Recorded here because the
+distinction is subtle: a SECOND READ is honest when the source plausibly re-reads (see the law
+above); it is a forcer when it re-reads a value it just named, in the very next statement.
+
+# ================================================================================
+# EVERY NEGATIVE IN A PARK FILE IS CONDITIONAL ON THE COLOUR IT WAS MEASURED UNDER
+# ================================================================================
+
+func_15084044's park declared declaration order "INERT here -- do not sweep it again" on the
+strength of 720 cases all scoring 13. Once one edit changed the register colour, the whole list
+was re-run from the new base: histogram `{1: 720}` -- still inert, so the conclusion survived.
+**But it was not entitled to survive untested, and confirming it cost nine minutes on one core.**
+The same re-run DID overturn a derived rule that this file had recorded: *"IDO canonicalises a
+compare by register number, higher in rs."* With the colour fixed, our build emits rs=$a0(4),
+rt=$a3(7). That rule had held only by coincidence on the measurements that produced it.
+**RULE: after any change that moves the allocation, re-run the park's negative list before
+trusting it.**
+
+# ================================================================================
+# COUNT LOCALS AGAINST THE FRAME BEFORE THEORISING -- THE TENTH LOCAL COSTS 8 BYTES
+# ================================================================================
+
+On func_15084044, adding a tenth local moves the frame 0x60 -> 0x68 **in all ten declaration
+slots** (measured, all frame -104, all 204). Golden's frame is 0x60 and the function already has
+nine locals, therefore golden's `0x28C` value **cannot be a declared variable** -- it must be a
+compiler CSE. That kills two standing hypotheses (the previous wave's `cur` idea, scored 1220, and
+a role-swap idea) **by arithmetic rather than by search**. Refines the earlier "6..9 locals all
+give framesize 0x60" observation into a usable bound.
+
+# ================================================================================
+# TOOL BUG FIXED: fastscore.py FALSELY REPORTED "NOFN" FOR THE LAST FUNCTION IN A TU
+# ================================================================================
+
+The body regex `^([0-9a-f]+) <fn>:\n(.*?)\n\n` is terminated by a BLANK LINE, and the last
+function in `.text` has none. Any such function reported
+`mism=1000000 NOFN (still a #pragma GLOBAL_ASM?)` from a perfectly good object -- a false "your
+source did not compile" that silently kills an entire search. func_150D5124 is the last function
+in game_100810.c and hit exactly this.
+**FIXED IN TREE** by appending a sentinel before matching (`... .decode() + "\\n\\n"`), with the
+reason recorded in a comment at the site so nobody re-optimises it away.
+
+# ================================================================================
+# TWO ENVIRONMENT TRAPS, BOTH COST REAL TIME THIS WAVE
+# ================================================================================
+
+* **permuter_tu.sh cannot run from a path containing a space, and the repo path has one**
+  ("conker decomp"). Two distinct failures: (i) the generated compile.sh passes `"$OUT"` to IDO's
+  cc, and `cc -c -o "<path with a space>"` **exits 0 while writing no object** (an already-known
+  trap that the harness still trips); (ii) the permuter splits `objdump_command` on whitespace and
+  tries to exec `.../conker` -> `OSError Errno 8 Exec format error`, so the selftest reports
+  "base score = <none>".
+  **WORKAROUND, free and reliable:** pass the optional `[dir]` argument to `permuter_tu.sh setup`
+  pointing OUTSIDE the repo (`$HOME/permtu/<func>`). Everything then validates.
+* **Driving WSL from the Windows-side Bash tool:** `wsl.exe bash -lc '...$VAR...'` has the variable
+  eaten before it reaches WSL -- write `\$VAR`, or better, put the script in a FILE and run that.
+  Git Bash also rewrites `/mnt/c/...` arguments into `C:/Program Files/Git/mnt/c/...`; use the
+  PowerShell tool for `wsl.exe` invocations. And never `pkill -f <pattern>` through that path when
+  the pattern also appears in your own command line -- it matches the invoking shell and kills the
+  caller.
+
+# ================================================================================
+# MEASUREMENT TRAP #7: A SECTION COMPARE THAT CANNOT READ EITHER SIDE REPORTS "IDENTICAL"
+# ================================================================================
+
+My own verification script this wave printed `.text IDENTICAL (0 bytes)` for four sections when
+the object path was wrong and BOTH extractions produced nothing. **Comparing two failures reads as
+success.** Host `objcopy` also silently produces nothing on these MIPS objects.
+**GUARD EVERY BYTE COMPARE ON NON-EMPTINESS**, and prefer `readelf -x <section>` (which works on
+the cross objects) over `objcopy -O binary`. A compare must distinguish "identical", "differs",
+and "no evidence either way" as three separate outcomes.
+
+# ================================================================================
+# WAVE 47 RESULT
+# ================================================================================
+
+CLOSED: **func_150D5124, 788 B, game_100810.c** -- the per-frame update callback for a positional
+looping sound attached to a game object, registered for three sound ids; it re-derives volume and
+pitch each frame and ramps the volume toward its target.
+Verified independently of the agent: pragma gone with a live definition, score 0 **with and
+without -R**, **all 12 FUNC symbols in the TU still 0**, `.text` byte-IDENTICAL (0x20e0 = 8416
+bytes, matching hexdump sha1) with `.rel.text` identical at 0x480, zero banned constructs in the
+diff, grep GLOBAL_ASM 1738 -> 1737, and the full clean ROM gate passed on BOTH sha1s.
+ONE DISCREPANCY CHECKED AND DISMISSED: `st_size` reads 788 ours vs 796 golden. The `.text` bytes
+are identical, so golden's symbol merely covers 8 trailing alignment nops that exist in both
+builds; `st_size` is a symtab attribute and the symtab is stripped. The ROM gate is the authority
+and it passed.
+
+PARKED, all four with full negative lists and scores:
+  func_15013778 @17   BOUNDED -- float-constant materialisation order; 90-build 2-D statement grid
+  func_1501474C @21   BOUNDED for spelling -- stack-arg register placement on a trailing call
+  func_15014B60 @49   frame 8 B too big (compiler temp-reservation area) + one 4-instruction move
+  func_15084044 @10   BOUNDED -- 21,062 permuter iterations; the only zero is a banned forcer
+
+# ================================================================================
+# VERIFICATION MUST FAIL CLOSED -- tools/verify_match.sh, AND WHY IT HAS A NEGATIVE CONTROL
+# ================================================================================
+
+Every wave used to hand-roll its own comparison logic. That is how measurement trap #7 got in: a
+section compare whose two extractions BOTH failed printed `IDENTICAL (0 bytes)`, because **the
+failure state collapsed into the success state**. A verification routine that can report success
+without having read anything is a false-positive generator, and it is worse than no verification
+at all -- it is the one part of the pipeline whose only job is to be trustworthy.
+
+THE INVARIANT, now enforced in one shared tool instead of per wave:
+        read A  -> MUST succeed
+        read B  -> MUST succeed
+        compare -> only now is a verdict meaningful
+Any read failure is a VERIFICATION FAILURE, never an empty or absent comparison. Every check is
+three-state -- PASS / FAIL / NO-EVIDENCE -- and **NO-EVIDENCE is a failure, not a shrug.**
+
+    tools/verify_match.sh <tu> <func>
+
+It checks: pragma gone + definition live; forced rebuild (never score a stale object); the symbol
+exists in BOTH objects; score 0 with AND without -R; every sibling in the TU still 0; section bytes
+via `readelf -x` (host `objcopy` silently emits NOTHING on these MIPS objects, which is precisely
+the trap); and banned constructs in the DIFF only. Exits non-zero unless every check actually ran
+and actually passed.
+
+**ALWAYS TEST A VERIFIER WITH A NEGATIVE CONTROL.** A verifier that passes the good case proves
+nothing -- the good case passes under a broken verifier too. Run it against a function that does
+not exist and a TU whose golden object is absent, and confirm it exits NON-ZERO for the correctly
+named reason. Doing exactly that immediately found a bug of the same family in the new script:
+`grep -c` PRINTS `0` and ALSO exits non-zero when it matches nothing, so a `|| echo 0` fallback
+appends a SECOND zero. The count became `"0\n0"`, every numeric test errored, and a nonexistent
+function was reported as **"PASS: pragma gone"**. Fixed, with the reason recorded at the site.
+
+RESIDUAL LIMIT, stated so nobody over-trusts it: this tool cannot judge whether the SOURCE is
+honest. Score 0 is necessary, not sufficient. No tool detects a forcer -- read the diff yourself,
+and the ROM gate remains the final authority.
+
+# ================================================================================
+# THE PICKER DOES NOT SCREEN FOR OPTIMISATION LEVEL, AND THAT IS COSTING US THE
+# CHEAPEST BYTES ON THE BOARD
+# ================================================================================
+
+func_100210C0 was briefed as a cold -O2 -g3 target. **It is not an -O2 function at all.** Its
+golden is unmistakably unoptimised `-g` output, and the whole match turned out to be ONE Makefile
+line:
+
+    $(BUILD_DIR)/$(SRC_DIR)/init_210C0.c.o: OPT_FLAGS := -g
+
+which now sits between the `init_20000` and `init_214F0` lines -- **both of which already carried
+that exact override.** init_210C0 was bracketed on both sides by TUs the project had already
+classified as -g, and nobody had checked the one in the middle. Cold to matched in two
+compile-measure rounds, 1072 bytes.
+
+**THE CHEAPEST DISCRIMINATOR, no build required:** does the function home a0..a3 into the caller's
+argument slots at entry, AND reload the same stack slot two or more times for one variable? Then it
+is -g. Other tells: no register allocation whatsoever, and a dead `b <epilogue> / nop` after an
+explicit return. The prior art was already in the tree stating this in plain English -- the
+Makefile comment on game_221290 lists exactly these tells.
+
+**ACTION: a one-off scan of every remaining pragma for the -g signature is now the highest
+value/effort item available.** At -g the source is close to a literal transcription, so these are
+the cheapest functions in the backlog, and the picker has never distinguished them.
+
+# ================================================================================
+# THE -g LEVER: COMPARISON OPERAND ORDER, AND IT IS THE ONLY ONE THAT MATTERED
+# ================================================================================
+
+An honest reconstruction of func_100210C0 scored 65 with **all 268 instructions and the exact
+frame already correct** -- every one of the 65 differences was register NAMING. Flipping one
+comparison took it **65 -> 0 in a single build**:
+
+    if (maxPri < voice->pvoice->priority)   ->   if (voice->pvoice->priority > maxPri)
+
+MECHANISM: at -g, IDO allocates expression temps from a rotating free-list whose state is
+per-statement. Swapping the operands changes which side is allocated last (`maxPri` moves from the
+2nd temp to the 5th), which **re-seeds the free-list for the REST OF THE FUNCTION** -- the
+divergence appeared at index 54 and never resynced. The emitted instruction ORDER is identical for
+both spellings, so this is invisible unless you read the register NUMBERS.
+
+**RULE: on a -g residual that is purely register naming, sweep comparison operand order FIRST.**
+One build per comparison. It is the -g analogue of the read-count lever.
+Measured free: `(u32)x > maxPri` is byte-identical to `x > maxPri`, and the two `<` spellings are
+byte-identical to each other at 65.
+
+# ================================================================================
+# THE game_40490 MIGRATION SPIKE: STAGES 1 AND 2 PASS. THE MECHANISM IS PROVEN.
+# ================================================================================
+
+**STAGE 1 -- EXCLUSIVE OWNERSHIP: PASS.** game_40490's full .rodata extent is ROM
+0x23B040..0x23B180 (vram 0x80096580..0x800966C0, 0x140 B) and every symbol in it is referenced only
+by game_40490. First foreign symbol is jtbl_800966C0 (game_433F0) at 0x23B180. No interleave.
+Start 16-aligned, length a multiple of 16, last 8 bytes zero.
+
+**STAGE 2 -- CAN THE SIX ALREADY-MATCHING FUNCTIONS BE HELD AT 0 UNDER LITERALS? YES.**
+After converting all sixteen `extern f32` declarations to literals, the six show 17 differing rows
+between them -- and **every single one is `lwc1 $fN,<pool offset>(at)` vs `lwc1 $fN,0(at)`**, i.e.
+the o32 REL relocation addend, with zero non-addend rows and size delta 0 everywhere.
+PROVEN A RELOCATION ARTIFACT RATHER THAN CODEGEN, by direct comparison of the relocation tables:
+
+    mine  00000a88 R_MIPS_HI16 .rodata      00000a8c R_MIPS_LO16 .rodata
+    gold  00000a88 R_MIPS_HI16 D_80096648   00000a8c R_MIPS_LO16 D_80096648
+
+Same offsets, same order, same types. Every HI16 immediate is 0 on both sides (all pool offsets
+< 0x8000), so only the LO16 halves differ, and at link `%lo(.rodata+0xC8)` with .rodata at
+0x80096580 resolves to 0x6648 -- golden's exact bytes.
+
+**THE ORDERING QUESTION IS ANSWERED: A PARTIAL POOL IS STILL A VALID ORACLE.** IDO emits the pool
+in first-materialisation order and does not renumber, so with holes the slots that ARE present
+still appear in the right relative place. Watched it grow correctly 17 -> 19 -> 30 slots across
+three builds, matching golden 0x80096640..0x800966B4 exactly.
+POOL ARITHMETIC CLOSES INDEPENDENTLY: target 0x140 = 320 B; the 30 literals are 120 B; so
+func_150130B4 must contribute 192 B -- and it does (21 static words + 4 floats + a 19-word jtbl +
+4 floats = 192).
+
+**WHAT THE MIGRATION ACTUALLY BUYS, now measured rather than hoped:**
+    func_150144B8   207 -> **0 real rows** (2 rows are pool reloc addends). The park's diagnosis
+                    was exactly right: the +8 frame was IDO homing the memory CSE of a twice-read
+                    named extern, and it vanishes the moment the constant is a literal.
+    func_15014B60   49 -> **4 real rows**. HYPOTHESIS CONFIRMED -- both the +8 frame and the
+                    4-instruction block move were the named-extern CSE. What remains is one
+                    branch-delay-slot choice at the bottom of the spawn loop.
+    func_1501474C   21 -> 21. CLEAN NEGATIVE; its residual is stack-arg register placement,
+                    unrelated to rodata.
+    func_15013778   17 -> 17. CLEAN NEGATIVE; the guess that literals would reorder float-constant
+                    MATERIALISATION is answered -- **it does not**. The 90-build grid still stands.
+
+**THE ONE REMAINING BLOCKER IS func_150130B4** (1624 B, needs its jump table). Until it is live C
+the pool cannot be completed and nothing here can ship. The yaml edit was validated and reverted:
+replacing `- [0x23B040, rodata]` with `- [0x23B040, .rodata, game_40490]` + `- [0x23B180, rodata]`
+changes conker.ld by exactly two lines and nothing else.
+
+# ================================================================================
+# FRAME-LAW REFINEMENT: THE COMPILER-TEMP AREA IS ELASTIC, SO DO NOT SOLVE FOR THE
+# LOCAL COUNT FROM THE FRAME SIZE
+# ================================================================================
+
+The frame law is right about LAYOUT (home area laid out top-down in declaration order) but it does
+NOT fix the local COUNT, and reading it that way cost an hour on func_151CB5FC. Measured, same TU,
+same function:
+
+    sp90, void*, sp34            -> sp34 @ 0x34, frame 232
+    sp90, s32,   sp34            -> sp34 @ 0x2C, frame 224   (same 180 bytes of locals!)
+    sp90, s32,   sp34, void*     -> sp34 @ 0x34, frame 232
+
+The temp area absorbed 8 bytes. **PROCEDURE: solve the local layout by matching the OBSERVED LOCAL
+BASE OFFSETS -- which are hard evidence -- and let the frame size be the free variable.** Never
+infer the count from the frame. Note also that a reserved temp area is never stored to, so you
+cannot audit it by looking for spills.
+
+# ================================================================================
+# THE OPERAND-CANONICALISATION ASYMMETRY GENERALISES FROM `addu` TO `|`
+# ================================================================================
+
+IDO canonicalises an OR chain containing a small constant. All of these compiled **byte-identical**
+when `t` is a named local -- it sinks the constant and emits `or` then `ori` regardless of
+parenthesisation:
+
+    t|0x32|sh    (t|0x32)|sh    sh|(t|0x32)    sh|t|0x32    (u16)((t|0x32)|sh)
+
+**THE ESCAPE: the canonicalisation applies to a VARIABLE operand.** Substituting an inline ternary
+for the named local makes both operands expression temps, source order is then preserved, and the
+emission flips to `ori` then `or` -- golden's order, worth 84 -> 76. This is the same asymmetry
+already recorded for `addu` ("`<variable> + <temp>` canonicalises the TEMP first"); the way to
+defeat it is to stop one operand being a variable.
+
+# ================================================================================
+# LINE-JOIN LEVER: A THIRD FUNCTION SAYS IT IS A PER-FUNCTION PROPERTY
+# ================================================================================
+
+On func_151CB5FC, all 48 adjacent statement pairs joined one at a time gave exactly 76 -- dead
+flat. With func_1505A3A8 and func_15162B28 that is three data points. Enumerating cost 48 builds
+and settled it, which is the right trade -- but it should NOT be the first thing tried on a
+residual whose signature is "a long-latency load scheduled 30 instructions too early". Joins can
+only ENABLE more reordering, and that problem is too much of it.
+
+# ================================================================================
+# WORK CORPUS FAMILIES AS ONE CAMPAIGN, NOT AS INDEPENDENT COLD TARGETS
+# ================================================================================
+
+func_151CB5FC's whole shape (two 0x58-byte stack structs, ~35 constant field stores, a call to
+func_1515548C, memcpy to +0x70) is a copy of the ALREADY-MATCHED func_151CAB78 twelve lines up the
+same file. Reading the matched sibling handed over the struct field layout, the local declaration
+convention and the call signature for free, and reached 199/199 instructions with the right frame
+in three iterations.
+**game_1F4650 contains at least six more of this family** -- func_151CAD28, func_151CB110,
+func_151CBC60, func_151CC524, func_151CC840, func_151CCF08. They should be worked as ONE campaign
+against the shared struct.
+
+# ================================================================================
+# WAVE 48 RESULT
+# ================================================================================
+
+CLOSED: **func_100210C0, 1072 B, init_210C0.c** -- an n_audio aux-bus pull that walks the bus's
+N_PVoice source list twice, partitioning voices by priority.
+Verified through the new fail-closed tools/verify_match.sh: pragma gone with a live definition,
+score 0 with AND without -R, the TU's only FUNC symbol at 0, `.text` IDENTICAL, `.rodata`/`.data`
+absent on BOTH sides and recorded as *no evidence* rather than as a pass, zero banned constructs in
+the diff. Relocations compared directly -- 7 each, identical offsets, types AND symbol names, so
+the relocation-naming floor is cleared by comparison rather than by inference. st_size 1068 vs 1072
+is trailing alignment padding. Full clean ROM gate passed on both sha1s.
+The match required a Makefile OPT_FLAGS change, not a source change (see the -g law above).
+
+PARKED: func_151CB5FC @76 (a %hi/%lo global load hoisted ~30 instructions too early; the open
+question is what makes IDO refuse to hoist it -- find a MATCHED corpus function that reads a global
+late inside a long straight-line store block and copy its source shape), plus the four game_40490
+functions above, all banked in tools/nearmiss/game_40490_rodata_pool.c.
+
+# ================================================================================
+# THE -g SCAN IS DONE, AND ITS HEADLINE IS A NEGATIVE: NO TU IN THE BACKLOG
+# WARRANTS A NEW OPT_FLAGS LINE
+# ================================================================================
+
+The screen (now landed as **tools/opt_screen.py**) was run over the whole remaining backlog and
+**added ZERO Makefile lines**. The Makefile's -g override block is already complete. That retires
+the hypothesis that a pile of cheap -g functions is hiding in the queue misfiled as -O2 -- last
+wave's func_100210C0 was a genuine one-off gap, not the tip of anything.
+
+**THE SCREEN WAS CALIBRATED BEFORE IT WAS TRUSTED**, which is the part worth keeping: it was run
+against TUs already KNOWN to be -g (the Makefile override list) and known to be -O2 (the matched
+game_* TUs) and its rates reported, before any conclusion was drawn from unknowns. An uncalibrated
+screen is worse than no screen, because it aims the next several waves at the wrong targets.
+Useful per-function metrics it computes: `reload` (mean re-reads of one stack slot) and
+`delay_nop` (% of delay slots that are nops). game_21FC90 scores reload 7.57 / delay_nop 58.3.
+
+REMEMBER THE GRANULARITY: OPT_FLAGS is PER OBJECT. If a TU is -g, EVERY function in it is -g, and
+one Makefile line serves the whole TU. So the useful unit of search is the TU, not the function --
+and where the win now lies is **unclosed functions inside TUs already known to be -g**, which is
+exactly where this wave's three closures came from.
+
+## A HARD -g DISCRIMINATOR, proved with a 4-function standalone probe
+**At -g, IDO ALWAYS emits a `b <epilogue>` pair for a function that has a frame.** A function
+whose golden lacks one, and which merges the stack restore into the return block instead, CANNOT be
+-g no matter what else it looks like. That single tell is what exposed the TU-boundary bug below.
+
+## TWO FUNCTIONS ARE IN THE WRONG TRANSLATION UNIT -- A YAML SEGMENT BOUNDARY IS MISPLACED
+func_151F27E0 is `__osContAddressCrc` (16 iterations over a u16, poly 0x15, returns 5 bits) and
+func_151F2890 is `__osContDataCrc` (33 outer iterations, 8-bit inner loop, poly 0x85). Neither can
+be -g by the rule above -- an honest reconstruction scores 59 at -g and 32 at -O1, and only the
+-O1 build reproduces the instruction COUNT. But four siblings in game_21FC90 match AT -g, so the TU
+really is -g and these two cannot belong to it.
+They are the tail of the object splat splits as libultra/io/contramread2 / contramwrite2. **The fix
+is a one-line conker.us.yaml change moving the game_21FC90 segment start from 0x21fc90 to
+0x21fe10** (where func_151F2960, the first real audio function, begins). It needs a re-split, so it
+was correctly NOT executed mid-wave. Worth doing in a wave of its own.
+
+# ================================================================================
+# I BRIEFED THE MIGRATION WRONG: THE GRANULARITY IS A PARTIAL PREFIX, NOT THE BLOCK
+# ================================================================================
+
+I told the agent (and tools/nearmiss/game_40490_rodata_pool.c says) that the migration unit is the
+whole 0x140 block, so ALL ELEVEN pool users must be live C simultaneously -- making func_15013778
+(17), func_1501474C (21) and func_15014B60 (4) blockers that all had to close first. **That is
+false, and the correction makes the campaign roughly five times cheaper.**
+
+func_150130B4's .rodata contribution is a CONTIGUOUS PREFIX that ends exactly on a 16-byte
+boundary (its emitted .rodata is exactly 0xC0, with no tail padding):
+
+    0x23B040..0x23B100 = 0xC0 = 192 B   <- func_150130B4 ALONE
+    0x23B100..0x23B180 = 0x80 = 128 B   <- the 30-float pool of the other ten users
+
+So the correct edit is the PARTIAL one:
+
+      - [0x23B040, .rodata, game_40490]
+      - [0x23B100, rodata]
+
+With that, **only func_150130B4 must be live C.** The other ten pool users keep their sixteen
+`extern f32 D_800966xx` declarations, keep reading splat-generated asm data, and their objects do
+not change at all -- so the six already-matching functions are never put at risk and the three
+parked near-misses stop being blockers entirely.
+It also needs `asm/data/23B100.rodata.s` to exist: either a full splat run, or split the existing
+23B040.rodata.s at `glabel D_80096640` and move the old file out of asm/data/ (the Makefile
+wildcards it). CAVEAT: the partial migration still REQUIRES func_150130B4 to be live C, because its
+pragma'd .s references D_80096580..jtbl_800965E4.
+
+## func_150130B4 ITSELF: RODATA AND FRAME ARE BYTE-EXACT; ONLY .text ALLOCATION REMAINS
+Score 4807, but that number is badly inflated by Levenshtein shift from register renaming.
+[WAVE 51 CORRECTION: 4807 is an unbounded-window artefact and 3955 is the bounded asm-differ
+number; the real distance is **mism 227 of 406** (tools/fastscore.py) with **shape_miss 22**
+(tools/shapescore.py). Also corrected below: the "opcode multiset identical but for a single
+`nop`" reading is right about golden, but OUR side carries a spurious `move` in exchange, so the
+matching 406 instruction count is a coincidence. See tools/nearmiss/func_150130B4.NOTES.md.]
+What is PROVEN exact: the whole 192-byte .rodata contribution is byte-identical to golden
+0x80096580..0x8009663F -- the const-local image, the three static const tables, both halves of the
+float pool, and the 19-word jump table with the correct 4x/3x/1x/4x/6x/1x repeat pattern (section
+size exactly 0xC0); frame 0x190 with EVERY stack offset matching; and the opcode multiset identical
+to golden but for a single `nop`. The residual is a systematic temp-register rotation offset -- the
+documented unsteerable JUSTREG class, but systematic rather than isolated, which makes it the right
+handoff to decomp-permuter since the C is structurally correct and the search space is small.
+
+# ================================================================================
+# FIVE NEW MEASURED IDO LAWS FROM THE jtbl RECONSTRUCTION
+# ================================================================================
+
+**A. `const` ON A LOCAL ARRAY INITIALIZER DECIDES .rodata vs .data.**
+`s32 t[3]={..}` puts the image in .data; `const s32 t[3]={..}` puts it in .rodata; `u8 t[6]={..}`
+goes to .data and is copied lw/sw + lhu/sh. This identified golden's D_80096580 as a const local
+inside one case block, and D_80082E98 as a NON-const u8[6] local whose image lives in .data -- a
+different migration, so it must stay spelled as an extern struct copy (a 6-byte struct-of-u8[6]
+copy from an extern emits byte-identical code).
+
+**B. .rodata ORDERING: FUNCTION-SCOPE `static const` SORTS *AFTER* A CONST-LOCAL IMAGE OF THE SAME
+FUNCTION; FILE-SCOPE `static const` SORTS *BEFORE* IT.** Measured both ways in isolation. This one
+change is what made the 192 bytes exact -- with the three tables at file scope the order was wrong;
+moved inside the function it became golden's exactly.
+GENERAL TELL: if a rodata run starts with a small array that is copied to the stack, that array is
+a const LOCAL, and everything named after it is a function-scope static const. The literal pool and
+the jump table are always emitted LAST.
+
+**C. IDO SINKS A 16-BIT IMMEDIATE TO THE END OF AN `|` CHAIN.** Therefore a constant appearing
+MID-chain in golden can only come from separate `|=` STATEMENTS. Decisive corroboration: golden does
+NOT fold `0x40000|0x80000|0x10000|0x400000` into `0x4D0000`, and adjacent constants in one
+expression WOULD have been folded -- so they are separate statements.
+Also: `|=` on a LOCAL keeps the accumulator in a register and stores once; `|=` on an address-taken
+struct member reloads and stores every time.
+
+**D. `if (x)` vs `if (x != 0)` ON A u8 LOCAL DECIDES REGISTER PROMOTION -- the single biggest lever
+found this wave.** `if (fade != 0)` makes IDO promote the byte local to a register, hoist the `lbu`
+~30 instructions early, keep it live across two calls and therefore SPILL it -- costing 8 bytes of
+frame (0x190 -> 0x198) and inverting the evaluation order of two ternaries. `if (fade)` leaves it
+memory-resident with golden's exact 2 stores + 2 loads and no spill.
+DIAGNOSTIC: if golden re-reads a small local from its home where you keep it in a register, and
+your frame is 8 too big, try the bare truth test FIRST.
+
+**E. EARLY-RETURN vs IF-GUARD IS VISIBLE, AND GOLDEN MIXES BOTH IN ONE FUNCTION.**
+`if (p == NULL) return 1;` gives bnez+b+li, while `if (p != NULL) {...}` gives a bare beqz to the
+shared return. Getting these backwards cost ~1000 score and a b/beqz/bnez count mismatch. Do not
+assume a function picks one style throughout.
+
+# ================================================================================
+# TWO MORE SILENT-FAILURE TRAPS, BOTH OF THE MEASUREMENT-TRAP-#7 FAMILY
+# ================================================================================
+
+* **asm-differ needs `-f <object>` when the map file is absent.** Without it, it fails on the
+  missing build/conker.us.map and **silently produces no verdict at all** -- which is trivially
+  misread as "no differences". Use
+  `diff.py -o -f build/src/<tu>.c.o <func> -R --max-lines 4096`.
+* **A relocation comparator that flattens all relocation sections unsorted reports a false
+  DIFFERS.** One agent's first reloc compare failed for this reason -- its own parser, not the
+  object. Compare PER relocation-section, as sorted sets. Recorded because it is the same family as
+  trap #7: the tool, not the artefact, was wrong, and the failure looked like a real result.
+
+# ================================================================================
+# WAVE 49 RESULT
+# ================================================================================
+
+CLOSED: THREE functions, 964 bytes, all in libultra/audio/game_21FC90.c (an already-known -g TU):
+  **func_151F39E4, 568 B** -- re-arms a streaming voice's pan/volume ramp when the requested volume
+    or pan changes, latching the new values with the mono and headphone pan remaps and starting a
+    fresh segment rounded up to a whole 184-sample frame.
+  **func_151F3C4C, 300 B** -- copies `len` bytes of the audio stream out of ROM, clamping to what
+    remains, via the synth's DMA-new callback, KSEG0 conversion, dcache invalidate and bcopy.
+    Closed BY THE -g COMPARISON-OPERAND-ORDER LEVER: `D_800E0DE0 < D_800E0DE4 + len` scored 11;
+    `D_800E0DE4 + len > D_800E0DE0` scored 0 in the very next build, instruction order identical.
+  **func_151F3D78, 96 B** -- prefetches the next 0x810 bytes through the DMA callback; nothing is
+    copied, the point is warming the audio DMA cache.
+Verified through tools/verify_match.sh: pragma gone with a live definition, score 0 with AND
+without -R, **all 16 FUNC symbols in the TU still 0**, .text IDENTICAL, .rodata/.data absent on
+BOTH sides and recorded as *no evidence* rather than as a pass, zero banned constructs.
+**Full clean ROM gate passed on BOTH sha1s** -- which matters more than usual here, because this
+TU's expected/ object had to be SEEDED, making the object-level compare partly circular. The gate
+is the only non-circular authority for these three.
+
+PARKED: func_150130B4 @4807 [STALE -- see the WAVE 51 CORRECTION above: the true distance is
+mism 227 of 406 / shape_miss 22; 4807 was an unbounded asm-differ window] (rodata and frame
+byte-exact, residual is systematic temp-register
+rotation -- permuter handoff), func_151F27E0 @32 and func_151F2890 (both blocked by the misplaced
+yaml segment boundary above, NOT by spelling), func_151F2E88 (untouched, 2908 B, the largest item
+left in that TU -- mechanical but long).
+
+PROCESS NOTE, worth remembering when two agents share a tree: agent A's ROM gate failed three times
+inside agent B's in-flight migration spike, NOT its own work. It correctly declined to revert
+another agent's files and reported the blockage instead. The gate is uninformative while a partner
+TU is live-modified; take per-TU byte evidence then, and re-run the gate once the tree settles --
+which is exactly what happened, and it passed.
+
+# ================================================================================
+# WAVE 50 RESULT
+# ================================================================================
+
+NOT CLOSED: func_150130B4 (game_40490). But the CAMPAIGN's unknown half is now closed:
+**the partial rodata migration is proven byte-exact at the LINK level.** Full details and
+the exact procedure are in tools/nearmiss/func_150130B4.NOTES.md; the headline is that a
+whole inner image was built with
+
+      - [0x23B040, .rodata, game_40490]      # func_150130B4's own 192 B
+      - [0x23B100, rodata]                   # D_80096640.. 30-float pool, still asm
+
+plus a hand split of asm/data/23B040.rodata.s at `glabel D_80096640` (and the old file MOVED
+OUT of asm/data/, which the Makefile wildcards), and the resulting 2,467,288-byte image
+differs from golden ONLY inside func_150130B4's own .text. 0x23B040..0x23B100 (the C-emitted
+192 B incl. the jump table), the float pool at 0x23B100, jtbl_800966C0 at 0x23B180, all of
+.text before and after, and the whole tail are byte-identical, and the image size is unchanged.
+The linker script delta is exactly 3 lines. `../tools/split_conker.py ... --modes ld
+--keep-auto-syms` did its job -- it printed that it had restored both auto files after splat
+rewrote them empty, and they measured 8009 / 127 afterwards. Tree left REVERTED, every touched
+file `cmp -s` identical to its pre-wave byte-copy, full clean ROM gate PASSED on both sha1s.
+
+# ================================================================================
+# A SILENT MIS-SCORER: permuter_tu.sh TRUNCATED THE TARGET AT THE FIRST JUMP-TABLE
+# LABEL. FIXED. IT AFFECTED EVERY ONE OF THE ~135 SWITCH FUNCTIONS.
+# ================================================================================
+
+The generated `objdump_fn.sh` was `/^[0-9a-f]+ <.*>:$/ { p = ($0 ~ ("<" fn ">:")) }`, which
+clears `p` at ANY symbol header. A jump-table function's GOLDEN object carries its case labels
+(`.L15013584_game_data`, ...) as real symbols because they arrive via `#pragma GLOBAL_ASM`, so
+the TARGET side was cut at the first case label -- **204 of golden's 406 instructions** on
+func_150130B4 -- while our side was fed whole. The scorer then compared two different things
+and still returned a plausible number, so the harness reported a base score and the search
+would have run on a fiction. Fixed: a `.L*` header no longer ends the function, any other
+header still does (header lines are dropped by decomp-permuter's `simplify_objdump` anyway,
+so printing or not printing them changes no score). Behaviour on non-jtbl functions is
+unchanged. **The selftest's negative control is what caught it** -- "the object changed but
+the score did not". Never treat a selftest FAIL as noise; that control exists for this.
+
+# ================================================================================
+# THREE WAYS THE SCORE LIED ON ONE FUNCTION -- ADD TO THE MEASUREMENT TRAPS
+# ================================================================================
+
+1. **The asm-differ window is 4*max_lines BYTES, not the symbol.** Same object,
+   `--max-lines 4096` -> 4807, `--max-lines 406` (= exactly the function's 406 instructions)
+   -> 3955. ~20% of the headline was downstream functions shifted by a 4-byte length delta.
+   **Set --max-lines to the golden instruction count.**
+2. **The relocation-naming floor is permanent until expected/ is reseeded.** A migrated
+   function's .text relocations read `.rodata`+addend where golden's read `D_800965D4`+0.
+   asm-differ scores those rows forever; they resolve to identical bytes at link. This is why
+   `expected/build/src/init_2E50.c.o` (the first migrated jtbl function) had to be reseeded and
+   why its object-level 0 is partly circular. **tools/fastscore.py masks relocated fields and
+   is the honest search metric for any migrated-rodata function.**
+3. **decomp-permuter's score can be alignment, not matching.** On func_150130B4 it reported
+   3849 -> 3342 for a single line-join; enumerating ALL 134 adjacent line-joins with fastscore
+   moved the instruction metric 227 -> 226. **Re-rank permuter outputs with fastscore before
+   believing them.** (Fourth data point that the line-join lever is a per-function property,
+   and the third function where it is dead flat.)
+
+# ================================================================================
+# REGISTER-BLIND ROW DIFF: THE RESIDUAL MEASUREMENT THAT ACTUALLY TELLS YOU SOMETHING
+# ================================================================================
+
+Erase every GPR name from both instruction streams and diff them. On func_150130B4 that turns
+"227 of 406 instructions differ" into "**46 rows differ, and every one is a reordering (each
+`-X` has a matching `+X`) except a single unmatched `nop`**". That is the difference between
+"this needs a rewrite" and "the instruction multiset is already golden's and only the allocator
+and ~22 scheduling placements are left". Cheap to compute, and it should be the first thing run
+on any near-miss whose score is large but whose frame and stack offsets already match.
+
+# ================================================================================
+# A NEW FORCER FAMILY, REJECTED: SPLITTING A CONSTANT ACROSS EXTRA `|=` STATEMENTS
+# ================================================================================
+
+`temp |= 0x2006` split into `temp |= 6; temp |= 0x2000;` scored 227 -> 215. IDO folds both into
+the SAME single `ori v0,t7,0x2006`, so the construct has no footprint in the output at all --
+it only advances IDO's temp-register rotation counter. The discriminating experiment, which is
+the reusable part:
+
+    |= 6 ; |= 0x2000                    215
+    |= 0x2000 ; |= 6                    215
+    |= 0x2004 ; |= 2                    215
+    |= 6 ; |= 0x2000 ; |= 0             215   <- a provably DEAD |= 0 costs nothing
+    |= 4 ; |= 2 ; |= 0x2000             219   <- three is worse than two
+
+The constants are irrelevant and a dead statement scores the same as the "honest-looking"
+split: only the COUNT of statements matters. Same ruling as the `|= 0x0` question (commit
+1aa2c53). **REJECTED.** Contrast with the split that WAS kept on the same function --
+`flags = (fade ? 0x1000000 : 0) | 0x2006;` -> two statements -- which took the function from
+405 to golden's **406 instructions**. A statement split is honest when the instruction COUNT
+confirms it and a forcer when only the register names move.
+
+# ================================================================================
+# CORRECTION: DO NOT USE THE FRAME SIZE TO RULE OUT AN EXTRA SCALAR LOCAL
+# ================================================================================
+
+tools/nearmiss/func_150130B4.NOTES.md claimed "the frame admits EXACTLY two 4-byte
+function-scope scalars; three gives 0x198", and used that to justify reusing one scratch local
+for two roles. Re-measured: declaring a third scalar gives frame **0x190**, golden's, at a cost
+of 15 instructions. The frame does NOT forbid it. This is the cookbook's own frame-law
+refinement being forgotten one section later -- **the compiler-temp area is elastic; solve the
+layout from the observed local BASE OFFSETS and let the frame size be the free variable.**
+(What the frame does still prove on that function: dropping the two block-scoped `s32 slot`
+automatics gives 0x188, so those are real; and computing the table index inline twice gives
+411 instructions and 0x188, so golden computes it once through a local.)
+
+# ================================================================================
+# NEW -g LEVER, AND IT CLOSED A 2908-BYTE FUNCTION: `x += y` AND `x = x + y`
+# ARE NOT THE SAME -- THEY CHOOSE THE addu OPERAND ORDER
+# ================================================================================
+
+With func_151F2E88 otherwise perfect at 145 rows:
+
+    dmemL = dmemL + (len + len);   ->  addu t9,t8,t7    (sub-expression on the LEFT)
+    dmemL += len + len;            ->  addu t9,t7,t8    == GOLDEN, score 145 -> 0
+
+**The compound assignment is what puts the destination on the left.** Writing the same statement
+with the operands swapped in the EXPANDED form (`(len+len) + dmemL`) did NOT help -- still 145. So
+this is a DISTINCT lever from the documented comparison-operand-order flip, and the expanded form
+cannot reach it at all.
+Why one instruction was worth 145 rows: the register-release order of that `addu` re-seeds the
+temp free-list, so almost all 145 rows were rotation drift downstream of it.
+**THE ASYMMETRY, measured:** pure leaf-pair additions such as `nSamples + D_800E0DF0` DO follow
+source order. This only bites when ONE SIDE IS A SUB-EXPRESSION.
+RULE: at -g, when a `+=`-shaped statement's `addu` has its operands the wrong way round, try the
+COMPOUND ASSIGNMENT before anything else.
+
+# ================================================================================
+# -g CONTROL FLOW: A REDUNDANT `b <next-instruction>` AT THE END OF A THEN-BLOCK
+# MEANS THE SOURCE HAS AN `else`
+# ================================================================================
+
+IDO at -g emits the jump-past-else ONLY when an else clause exists. Three probes -- a plain nested
+if, a nested if with a call in the condition and a for loop in the body, and the same at depth 3 --
+never produced one.
+
+**AND THE DIAGNOSTIC LESSON IS BIGGER THAN THE LEVER: READ `n=<ours>/<golden>` BEFORE THE SCORE.**
+One missing branch made this function come out exactly ONE instruction short, and every row after
+that point was a pure shift -- so the raw score read **491** when the true residual was a single
+missing `b`. A score of 491 looks like a broken reconstruction; it was one keyword away. Whenever
+the instruction COUNT differs by one or two, the score is meaningless as a distance measure.
+
+# ================================================================================
+# THE DELETE-AND-MEASURE TEST DISTINGUISHES A REAL CONSTRUCT FROM A FORCER
+# ================================================================================
+
+Two constructs in func_151F2E88 look like forcers and are not. **A forcer costs NOTHING to remove
+-- that is what makes it a forcer.** So delete it and measure:
+
+  1. An empty `else { }` on `if (func_151F86B0(...) != 0)`. Delete it: **0 -> 491**, and n drops to
+     726/727. It PRODUCES a real ROM instruction (the `b` at 0x151F326C / ROM 0x22071C).
+  2. A doubled `& 0xFFFFFF` on `osVirtualToPhysical(...)`. Delete one mask: **0 -> 249** (726/727).
+     Delete both: **0 -> 280** (723/727). The ROM genuinely contains `and t2,v0,at` followed by
+     `and t8,t2,at`.
+
+Neither is a dead assignment, self-assignment, if(0), do{}while(0), unreachable block, volatile,
+pad local or gratuitous re-read. Both ADD instructions that the ROM actually contains.
+**GENERAL RULE: if deleting the suspicious construct LOWERS the instruction count below golden's,
+it is load-bearing source, not a forcer.** Comment it in place so the next reader does not "clean
+it up".
+
+# ================================================================================
+# SCORER BUG: A JUMP TABLE'S CASE LABELS TRUNCATED THE GOLDEN SIDE OF EVERY COMPARE
+# ================================================================================
+
+conker/permuter_tu.sh generates an objdump wrapper that restricts scoring to the target function
+by tracking symbol headers. The old form ended the function at ANY symbol header:
+
+    /^[0-9a-f]+ <.*>:$/ { p = ($0 ~ ("<" fn ">:")) }
+
+But a switch function's case labels (`.L15013584_game_data` and friends) ARE real symbols in the
+GOLDEN object, because they arrive through `#pragma GLOBAL_ASM`. So on a jump-table function this
+**cut the golden side at the first case label while leaving our side whole** -- measured on
+game_40490/func_150130B4, golden was truncated to 204 of its 406 instructions.
+**AND IT STILL RETURNED A PLAUSIBLE NUMBER**, so the harness reported a base score and the search
+would have run on a fiction. Fixed: a `.L*` header is an INTERNAL label (keep going); any other
+header is the next function (stop). Header lines are dropped by decomp-permuter's
+simplify_objdump anyway, so not printing them changes no score.
+
+**IT WAS CAUGHT BY THE SELFTEST'S NEGATIVE CONTROL** -- a perturbation changed the object but not
+the score. Without that control it would have been invisible. That is now three separate tools on
+this project whose FAILURE STATE PRODUCED A BELIEVABLE RESULT (the section compare that printed
+"IDENTICAL (0 bytes)"; the `grep -c` fallback that reported PASS for a nonexistent function; and
+this). **Assume any measurement tool is wrong until its negative control has failed.**
+
+# ================================================================================
+# NEW TOOL: tools/relcheck.py -- A NON-CIRCULAR BYTE PROOF THAT NEVER READS expected/
+# ================================================================================
+
+Some TUs have no original object in conker/expected/ and one has to be SEEDED from our own source.
+Verifying against a seeded golden is partly CIRCULAR -- it proves we reproduce ourselves. The ROM
+gate is the real authority but it is whole-ROM and says nothing about WHICH function was wrong.
+
+relcheck.py closes that at the function level. fastscore proves our words equal the ROM
+disassembly with every relocated field MASKED; the mask is the hole, because a relocation could
+point anywhere. This resolves EVERY relocation in the real object against the project's own address
+map -- splat's `glabel` + vaddr comments across conker/asm, plus undefined_*_auto.txt and
+symbol_addrs.us.txt -- and compares the composed field with what the ROM encodes.
+
+    tools/relcheck.py <object> <func> [golden.s]
+
+On func_151F2E88: 727/727 instructions, 456 unrelocated words identical, **271 relocated fields
+resolved to the ROM's bytes**, 0 unpaired HI16.
+FAIL-CLOSED BY CONSTRUCTION: an unresolvable symbol is a FAILURE, not a skip -- that is precisely
+the case where a wrong reference would hide. Unhandled relocation types fail too.
+NEGATIVE-CONTROLLED, four ways: right function/wrong golden -> FAIL (length mismatch); function
+absent from the object -> FAIL; and two genuine functions -> PASS.
+
+# ================================================================================
+# WAVE 50 RESULT
+# ================================================================================
+
+CLOSED: **func_151F2E88, 2908 B, libultra/audio/game_21FC90.c** -- the largest single function
+closed this session. It is one audio frame of the streaming music player: it slews the master
+volume two units at a time, runs the state machine on D_800E0E04 (opening / restarting / running /
+shutting down, freeing three buffers), and while running appends the acmds that DMA the decoded
+stream halves into DMEM, clears the two output halves, programs the pan/volume ramp and the
+envmixer, then advances the stream pointer clamped to its end. Returns 1 while still running.
+Verified: tools/verify_match.sh ALL CHECKS PASSED (score 0 with AND without -R, **all 16 FUNC
+symbols in the TU still 0**, .text IDENTICAL, symbol size 2908 both sides, no banned constructs);
+tools/relcheck.py PASS non-circularly; and the **full clean ROM gate passed on both sha1s**.
+
+NOT CLOSED: func_150130B4 -- its agent DIED mid-run (connection lost) with 12 permuter jobs in
+flight. ABORT RECOVERY WAS CLEAN, and this is the recovery routine working as designed: the
+catastrophic failure mode (truncated undefined_*_auto.txt) did NOT occur (8009/127 intact),
+conker.us.yaml and asm/data/ were untouched, game_40490.c had already reverted to its committed
+state, and no orphaned permuter processes remained. Its one lasting contribution is the scorer fix
+above -- which means every previous permuter run against a jump-table function was scoring a
+truncated golden, and any conclusion drawn from one should be re-measured.
+
+PROCESS NOTE: the surviving agent's first gate attempt failed inside the OTHER agent's live TU. It
+correctly refused to revert another agent's work, pre-checked that its own TUs compiled, waited for
+the tree to settle, and re-ran -- which passed. The rule stands: the ROM gate is uninformative
+while a partner TU is live-modified.
+
+# ================================================================================
+# WAVE 51: A METRIC THAT LIES BY MOVING THE RIGHT WAY, AND FOUR MEASURED LAWS
+# (all from game_40490/func_150130B4; see tools/nearmiss/func_150130B4.NOTES.md)
+# ================================================================================
+
+## MEASUREMENT TRAP #8: `mism` AND INSTRUCTION SHAPE CAN MOVE IN OPPOSITE DIRECTIONS
+`fastscore.py`'s `mism` counts words that differ AT THE SAME INDEX. That is the right final
+target (0 == the stream matches), but while a function's temp-register rotation is out of phase
+with golden's, most rows differ only in register NAME and `mism` is dominated by which rows
+happen to line up. Measured on func_150130B4 by two INDEPENDENT greedy searches over legal
+statement reordering, both run to a fixed point:
+
+    banked base              mism 227   shape_miss 22
+    adjacent-swap search     mism 212   shape_miss 29
+    arbitrary-move search    mism 212   shape_miss 28   <- different route, same plateau
+    shape-ranked search      mism 231   shape_miss 21
+
+The 15 `mism` points were bought by DESTROYING 6-7 rows of golden's instruction shape. So a
+falling `mism` is not by itself evidence of progress. **Read both numbers.**
+`tools/shapescore.py` (added this wave) is the companion: both sides decoded from raw words
+through ONE objdump, GPR->R, FPR->F, immediates->#, aligned with difflib, so a row that merely
+MOVED is not counted as wrong. It reports `shape_miss` plus the true insert/delete residue.
+
+## A MATCHING INSTRUCTION COUNT IS NOT EVIDENCE - READ THE SHAPE RESIDUE INSTEAD
+func_150130B4 was banked at 406/406 instructions on the theory that a statement split had
+"added the instruction the function was missing". The shape residue says otherwise:
+
+    banked base (406)              golden-only { nop x1 }   ours-only { move R,R x1 }
+    any single-statement form (405) golden-only { nop x1 }   ours-only { (none) }
+
+The split added a spurious `move`; golden's extra instruction is a SCHEDULER `nop` (an
+unfillable `mtc1`->`cvt.s.w` hazard), which no source statement can conjure. The counts agreed
+by coincidence, one wrong instruction standing in for another. **Whenever a count matches, ask
+shapescore which instruction you actually got wrong before treating the count as confirmation.**
+
+## LAW C REFINED: THE SINK IS REAL, AND IT MAKES GOLDEN'S TREE UNREACHABLE AS ONE EXPRESSION
+Law C above (IDO sinks a 16-bit immediate to the end of an `|` chain) is CONFIRMED and has a
+sharper consequence. Writing `(fade ? X : 0) | 0x2006 | (attr ? 0x10 : 0)` as one expression,
+IDO reassociates it to `(attr | fade) | 0x2006` -- it sinks the `ori`-able constant past BOTH
+ternaries. Golden's tree is `OR( ORI(TERN_fade, 0x2006), TERN_attr )`, with the two ternaries
+ALLOCATED left-to-right (fade->v0, attr->v1) but EMITTED right-to-left (attr's basic block
+first). 24 spellings failed to reach it: parenthesising does not block the sink, and no
+statement order reproduces the emission order either. Corollary for reading golden: a constant
+that survives MID-chain proves separate statements, but separate statements also force the
+operand blocks into source order -- if golden shows a mid-chain constant AND an out-of-source
+block order, neither pure spelling nor pure reordering will get you there.
+
+## CASTS THAT COMPENSATE FOR WRONG HEADER TYPES ARE CODEGEN- AND ALLOCATION-NEUTRAL
+structs.h types forced `(s16)`, `(u32)` and `*(f32 *)&` casts into the func_150130B4
+reconstruction to obtain golden's `lh`/`srl`/`lw`. A file-local typedef with the CORRECT field
+types, removing those casts in all 8 subsets, was **DEAD FLAT: mism 227 with every sub-metric
+identical**. So extra cast nodes do not consume IDO temp-rotation slots. Use this to kill the
+"my phantom register-rotation slots are cast nodes" hypothesis cheaply -- but note it also means
+retyping a header for readability is safe here, and cannot be the lever you are looking for.
+
+## DECLARATION ORDER IS A PER-FUNCTION LEVER, NOT A UNIVERSAL ONE
+All 720 declaration orders of func_150130B4's six locals: best is the order already banked
+(mism 227), with one tie at 227 and nothing below. The project's "declaration order is NOT free"
+note stands as a warning, but on a function whose frame and stack-offset multiset already match
+golden exactly, expect it to be flat -- sweep it once (720 x 0.7 s = 8 min) and move on.
+
+## PERMUTER SELFTEST: "THE OBJECT DIFFERS" DOES NOT IMPLY "THE SCORE MOVES"
+`permuter_tu.sh selftest` (d) reported FAIL on func_150130B4 and **the scorer was fine**. The
+control tested only the FIRST perturbation site whose object differed. Two measured classes of
+live-but-score-invisible site:
+  * ADDEND-ONLY -- site 0 is `static const s32 sKindTable[5]`; `[5]->[6]` shifts the sibling
+    tables 4 bytes, so every `%lo()` addend in .text changes and the raw objdump text changes,
+    but decomp-permuter normalises relocated operands BY DESIGN, so its score rightly does not
+    move. (This is the same normalisation that makes fastscore's relocation masking correct.)
+  * ALREADY-WRONG ROW -- `temp |= 0x2006` -> `0x2007` changes a real instruction word, but that
+    row was already counted as a mismatch, so the row count does not move.
+FIXED: (d) now tries up to `PERMUTER_TU_NEG_TRIES` (default 4) live sites and PASSES on the
+first that moves the score, listing the score-invisible ones it skipped; only if EVERY live site
+is score-invisible is the harness suspect. Selftest then PASSES, and the scorer was proven live
+independently (site 21, `arg0->unk16 |= 4` -> `|= 5`: 4129 -> 5916).
+
+# ================================================================================
+# THE game_1F4650 SPAWNER CORPUS: SEVEN LAWS, AND TWO MEMBERS THAT ARE ONE FUNCTION
+# ================================================================================
+
+**func_151CC524 and func_151CC840 ARE THE SAME FUNCTION with different constants** (2 spawns vs
+9). Both now sit at exact frame, exact stack-offset multiset and exact instruction count, with a
+residual that is **character-for-character identical**. One idiom closes both, and the same idiom
+will decide every other member. This is the case for working a corpus as ONE campaign.
+Full detail lives in tools/nearmiss/func_151CC524.c; the laws are here because they are general.
+
+**LAW 1 -- THE FRAME TELLS YOU HOW MANY LOCALS THE ORIGINAL DECLARED.**
+Corpus frame layout is `[outgoing args][ra @0x24][TEMP AREA][payload 0x58][4-byte hole][descriptor
+0x58 at frame-0x58]`. The temp area is **8 bytes when the function declares ZERO scalar locals**
+(payload base 0x2C) and **16 bytes when it declares one or more** (payload base 0x34). Measured
+hard: an UNUSED `void *p;` alone moves the frame 0xE0 -> 0xE8.
+Cross-checks: CC524 and CC840 have payload 0x2C (no locals); the MATCHED func_151CAB78 has 0x34
+(3 declared); func_151CB5FC has 0x34. **The one exception is the useful one:** a SINGLE local
+REUSED for both the flag and the call result also lands 0x2C.
+READ THE PAYLOAD BASE FIRST on any new member -- it fixes the declaration list before you write a
+line of C.
+
+**LAW 2 -- THE FRAME PREDICTS THE $v0/$v1 COLOURING, AND VICE VERSA.**
+The same fact from the register side. An 8-byte temp area (no named locals) means the flag ternary
+and every call result are anonymous temps and IDO colours them `$v0`. A named local takes `$v0` for
+the ABI-forced call result and pushes the flag web to `$v1`.
+    CC524 / CC840  golden uses $v0, payload 0x2C
+    CB5FC          golden uses $v1, payload 0x34
+**If a candidate has the flag in the wrong one of $v0/$v1, do not hunt spellings -- count the
+frame.** This retired func_151CB5FC's recorded "open question" (a global load hoisted ~30
+instructions early) as a NON-QUESTION.
+
+**LAW 3 -- THE u8 PARAMETER TELL.** `lbu 0xE7($sp)` (argument home + 3) with NO `andi` in the
+prologue means that parameter is declared `u8` and is only ever stored to a byte field. `lw` + `sb`
+means `s32`; `sll/sra 24` in the prologue means `s8`.
+Both twins were mis-prototyped `(void*, s32, s32, s32, u8, u8)` in the TU and are actually all-u8.
+Fix the forward prototype and the definition TOGETHER, and re-score func_151C9DE8 (currently
+matched) afterwards.
+
+**LAW 4 -- THE OR CHAIN, sharpened.** Golden's `ori tX,$vN,K` followed by `or tY,tX,tZ` (constant
+FIRST) cannot come from a flat `|` chain containing a named local: IDO reassociates and sinks the
+16-bit immediate to the END, giving `or` then `ori`. Ten parenthesisations and operand orders are
+byte-identical -- do not sweep them. **Only two escapes exist:** an inline ternary operand, or a
+cast on the sub-expression `(u16)(t | K)`.
+COUNTER-CASE worth knowing: func_151CAD28's golden emits sllv-then-ori, the ordinary flat chain, so
+it needs NEITHER escape. The escape is not a house style; check per function.
+
+**LAW 5 -- THE SHARED 0x58 DESCRIPTOR** is field-for-field identical across CAB78 / CB5FC / CC524 /
+CC840 / CAD28 and is written out in the parked file. Two corrections to what was previously
+assumed: **+0x14 is u16, NOT s16** (CC840 reads it back with `lhu` and does `andi 0xFFF9`), and it
+is always built as `(1 << (arg0[0x23D] + 0xB)) | (<flag> | <small const>)`.
+The 0x58 payload's source order that matches golden in all three functions is
+`unk0, unk4, unkD, unkC, unk8` -- note **unkD BEFORE unkC**.
+
+**LAW 6 -- PER-SPAWN TAIL ORDER:** `<unk14 RMW>, unk10, [unk44 on the FIRST spawn only], then the
+four floats with the ZERO-valued one first`.
+**TWO ORDER WINS ARE PER-FUNCTION AND MUST NOT BE CROSS-APPLIED:** `unk16 = 1` before the unk14
+assignment is worth 135 -> 109 on CC840 and is INERT on CC524; `unk44` before `unk10` is worth
+79 -> 67 on CC524 and +4 on CC840.
+Also: where golden stores the flag field TWICE (andi/sh then ori/sh, as in CAD28), that is two
+separate source statements, not one combined expression.
+
+**LAW 7 -- BUILD A FRAME-NORMALISED SCORER BEFORE WORKING ANY MEMBER WHOSE FRAME IS NOT YET RIGHT.**
+See the trap below; this is not optional advice.
+
+## WHAT IS LEFT, as one question
+**What C89 form holds a call's return value across a null test and a use WITHOUT declaring a
+local?** Everything else about both twins is solved. Ruled out and recorded: `register` (inert for
+stack allocation at -O2), nested per-spawn scopes (frame 0x108), assigning the result to a
+parameter (IDO promotes it to a local, +8), a combined payload+descriptor aggregate, and a full
+payload/descriptor size grid.
+
+# ================================================================================
+# MEASUREMENT TRAP #9: A WRONG FRAME BLINDS THE SCORER COMPLETELY
+# ================================================================================
+
+Raw fastscore was **PINNED at exactly 109 across eight materially different sources** -- s32 vs u8
+parameters, six declaration orders, if/else vs ternary. Not similar numbers: the SAME number.
+The cause is that the frame was 8 bytes wrong, so every sp-relative row differed and the metric had
+no resolution left to rank anything with. This is the "tool produces a believable number" failure
+mode again, and it nearly cost the wave.
+
+**THE FIX: normalise sp-relative immediates to a (region, delta) code before comparing.** That
+separated the same eight sources into 78 / 79 / 80 / 128, and is what made the u8-parameter and
+OR-chain findings visible at all.
+Its own negative control: it must still report nonzero for a source whose only defect is register
+naming -- and it does.
+**RULE: until the frame matches, a raw score cannot rank two candidates. Fix the frame first, or
+normalise it out.**
+
+# ================================================================================
+# A SELFTEST THAT REPORTS FAIL WHEN THE SCORER IS FINE: "THE OBJECT DIFFERS" IS
+# NECESSARY BUT NOT SUFFICIENT FOR THE SCORE TO MOVE
+# ================================================================================
+
+permuter_tu.sh's selftest check (d) perturbs the source and requires the score to change. It
+reported FAIL while the scorer was perfectly good, because it tested only the FIRST perturbation
+site whose OBJECT differed -- here `sKindTable[5]` -> `[6]`, which changes only `%lo()` relocation
+addends, and decomp-permuter normalises those BY DESIGN. A second score-invisible class exists: a
+perturbation that lands on a row that is already wrong.
+Fixed by trying up to 4 live sites and passing on the first that moves the score, listing the
+invisible ones. **Note this cuts the opposite way to the usual trap: here the false result was a
+FAILURE, which is the safe direction -- but a selftest that cries wolf gets disabled, and then the
+real bugs walk through.**
+
+# ================================================================================
+# WAVE 51 RESULT: NOTHING CLOSED, THREE BANKED CLAIMS CORRECTED
+# ================================================================================
+
+**func_150130B4 -- true baseline is mism 227 of 406, not 4807 and not 3955.** n=406/406, frame
+0x190 with all 152 stack displacements correct, and 384 of 406 rows already carry golden's exact
+instruction shape. The only CONTENT error is golden-only `{nop x1}` vs ours-only `{move R,R x1}`;
+the rest is a constant +2 temp-register rotation offset plus ~20 scheduling placements downstream
+of it.
+  * **MY OWN BRIEF'S PREMISE WAS WRONG.** I told the agent the jtbl truncation bug invalidated its
+    score. fastscore is symbol-bounded BY CONSTRUCTION, so that bug never touched it -- 4807 was
+    simply an unbounded asm-differ window. The re-measurement was still right to do; the reason I
+    gave for it was not.
+  * **LAST WAVE'S BANKED `temp |= 0x2006;` SPLIT IS NOT SUPPORTED BY THE OUTPUT.** It was banked
+    for taking 405 -> 406 instructions, "adding the missing instruction". Shape-aligned diffing
+    shows the split adds a spurious `move v0,t7`, while golden's extra instruction is a SCHEDULER
+    nop (an unfillable mtc1->cvt.s.w hazard) that no statement can conjure. **The counts agreed by
+    coincidence -- one wrong instruction standing in for another.** Kept as the best search
+    position, flagged loudly rather than left standing as fact.
+  * THE ACTIONABLE TARGET: golden's flag word lives in `t1` (case 19 reads it with no reload,
+    `and t8,t1,at`); ours is homed in `$v0` because `temp` is assigned from a ternary. That single
+    difference produces BOTH the spurious `move` AND one of the two reserved rotation slots, and
+    ~100 of the 227 differing rows differ by register NAME alone.
+  * BOTH JUDGEMENT CALLS RE-TESTED BY DELETE-AND-MEASURE, with a split verdict -- which is why
+    re-testing rather than inheriting matters: (a) the block-scoped `s32 slot` in cases 1-4 and
+    9-12 is **LOAD-BEARING** (removing either or both gives frame 0x188; golden's 0x190 needs
+    both) -- UPHELD; (b) the scratch local reused for two roles is **NOT proven by the frame** --
+    a third scalar still gives 0x190 at mism 242, so the reuse is worth 15 points, not forced.
+  * MEASURED AND REJECTED, do not repeat: all 720 declaration orders (best = existing, 227); 24
+    flag-word spellings including every single-expression form; the 6 opening-statement orders on
+    the 227 base; and a file-local typedef removing every cast in all 8 subsets -- DEAD FLAT at 227
+    with every sub-metric identical, killing the "phantom rotation slots are cast nodes" idea.
+  * Permuter: base 4129, 10,769 iterations, best 3799, no zero. Its score is alignment-dominated
+    here, so it is a WEAK tool for this function.
+
+**ONE CONSTRUCT FLAGGED, NOT HIDDEN:** the parked func_151CC524 uses `(u16)(temp | 0x390)`. It is
+semantically exact (unk14 is a 16-bit field, so the assignment truncates anyway) and is not dead
+code, but it exists only because the cast blocks IDO's constant-sinking reassociation. It is worth
+1 row. It is labelled SUSPECT in the file with an instruction to delete-and-measure it if the
+function is ever closed by another route, so it cannot quietly survive into a claimed match.
+
+# ================================================================================
+# THE "ONE QUESTION" WAS A MODELLING ERROR, NOT A COMPILER FACT:
+# A STRUCT DECLARED FOUR BYTES TOO BIG ATE A SCALAR HOME
+# ================================================================================
+
+The corpus twins were parked behind the question *"what C89 form holds a call's return value across
+a null test and a use WITHOUT declaring a local?"* **There is no such form, and none is needed.**
+
+**The payload struct is 0x58 bytes -- exactly the memcpy length -- not the 0x5C the parked model
+declared.** Those four phantom bytes were consuming the second scalar home. With the payload at
+0x58, golden's 0xE0 frame holds TWO 4-byte carriers, so the call result gets an ordinary declared
+local, exactly the idiom the ALREADY-MATCHED func_151CAB78 and func_150CF680 use:
+
+    void *temp_v0;
+    ...
+    temp_v0 = func_1515548C(...);
+    if (temp_v0 != NULL) memcpy((u8 *)temp_v0 + 0x70, &sp2C, 0x58);
+
+**GENERAL RULE, and it is the expensive lesson: MODEL EACH AGGREGATE AT THE SIZE THE CODE ACTUALLY
+COPIES OR PASSES.** An aggregate declared even 4 bytes too large silently consumes a scalar home,
+and every downstream conclusion -- declaration counts, register colouring, "impossible" idioms --
+inherits the error. The whole "no local can exist here" puzzle was manufactured by one wrong size.
+
+## LAW 1'S EXCEPTION IS DELETED, NOT CORRECTED
+The recorded exception -- *"8-byte temp area <=> zero scalar locals, 16 <=> one or more, EXCEPT one
+local reused for both roles also lands 0x2C"* -- was an ARTIFACT of the 0x5C payload. With only one
+carrier's worth of room, the single-local-shared-by-both-roles source was the only thing that
+fitted, so it looked like a compiler exception. It was a consequence of the bug.
+REPLACEMENT LAW (measured): homes are laid out in DECLARATION ORDER from the top of the frame down;
+**COUNT CARRIERS, NOT DECLARATIONS** -- an inline ternary costs one 4-byte carrier exactly like a
+declared scalar.
+
+## LAW 2 IS ABOUT ROLE SHARING, NOT LOCAL COUNT
+A local that receives BOTH the flag and the call result becomes one variable whose call-result web
+is ABI-preferenced onto `$v0`, which pushes the flag web to `$v1`. **Give the flag its own carrier
+and it takes `$v0`** (measured three ways).
+This also retires func_151CB5FC's open question in the OPPOSITE direction from the earlier note:
+its golden flag is in `$v1` because ITS source shares one carrier, not because it "has named
+locals".
+
+## THE SUSPECT CAST: OVERTURNED AND DELETED FROM BOTH TWINS
+`(u16)(temp | 0x390)` was flagged SUSPECT rather than hidden, and delete-and-measure on the
+CORRECTED model settles it: CC524 scores **65 without / 120 with**; CC840 **73 without / 120 with**.
+It existed only to block the `|`-chain constant sinking that the shared carrier forced -- and an
+inline ternary blocks it for free. Removed.
+HONESTY NOTE kept in the file: on the named-flag-local variant of CC840 the cast is still worth 11
+points, so it must be re-adjudicated if anyone revives that variant.
+
+## A COOKBOOK LAW NEEDS A CAVEAT
+*"A written-to register parameter is homed in the CALLER's argument slot, so it costs no local-area
+bytes"* does NOT hold when the parameter is LIVE BEFORE THE WRITE. Here `arg0 = func_1515548C(...)`
+makes IDO promote arg0 to `$s0` and GROW the frame 8 bytes (ra moves 0x24 -> 0x2C).
+
+## NEW FAMILY LAW (LAW 8): A DEAD STORE THE COMPILER FOLDS IS AN HONEST SOURCE CHOICE
+Writing the flag-word edits as TWO statements (`f.unk14 &= ~0x6;` then `f.unk14 |= N;`) instead of
+one `f.unk14 = (f.unk14 & ~6) | N;` is worth 9-13 points and 6 shape rows on CC840 with n
+unchanged -- IDO folds the intermediate store. **Golden's store COUNT at that address tells you
+which spelling the original used** (func_151CAD28's golden stores unk14 twice).
+
+## THE TWO PER-FUNCTION ORDER WINS FROM THE PREVIOUS WAVE HAVE MOVED
+Under the corrected model, `unk16 = 1` belongs BEFORE unk14 on CC524 (+6) and AFTER it on CC840
+(+9) -- **the opposite of the previous note, which was measured on the wrong frame.** A per-function
+tuning result measured against a wrong structural model is worthless; re-derive, never inherit.
+
+# ================================================================================
+# func_150130B4: THE FLAG WORD IS AN ALLOCATOR PROPERTY, NOT A SPELLING PROPERTY
+# ================================================================================
+
+**Answer: NO.** ~90 forms, and ours homes the flag in `$v0`/`$v1` in every one.
+HARD EVIDENCE that golden's `t1` is RESERVED rather than allocated: **`$t1` occurs exactly THREE
+times in golden's entire 406-instruction listing** (`or $t1,$t2,$v1`, `or $t1,$t5,$at`,
+`and $t8,$t1,$at`), with zero uses as a rotation temp. In a 406-instruction function with ~100 temp
+allocations, a register in the rotation pool appears ~11 times. So golden reserves t0=kind AND
+t1=flag, rotating over t2..t9; we reserve only t0 and rotate t1..t9. **That is the entire "+2 phase
+offset" and the ~100 rows differing by register NAME alone.** Every spelling lever is exhausted;
+the next experiment is a corpus one -- find a matched function where a local lands in t1 with t0
+taken, and read off what distinguishes it.
+
+## THE ONE REAL WIN: shape_miss 22 -> 15, AND THE RESIDUE IS NOW ONE-SIDED
+    temp = (attr16 ? 0x10 : 0) | ((fade ? 0x1000000 : 0) | 0x2006);
+kills the spurious `move v0,t7`. Parenthesising 0x2006 INSIDE the fade operand leaves nothing
+sinkable, so the `ori` stays bound to the fade ternary and IDO emits golden's exact order. The new
+position **emits no instruction golden does not emit** -- residue is golden-only `{nop x1}` versus
+ours-only `{NOTHING}` -- and that nop is golden's own unfillable mtc1->cvt.s.w hazard filler, which
+no statement can conjure.
+**READ THE TWO POSITIONS TOGETHER:** mism 353 is NOT "126 worse than 227". n=405 shifts every row
+from golden index 67 onward, which alone accounts for ~340 of it. Banked as
+tools/nearmiss/func_150130B4.shape15.c and it is the better starting point.
+
+## MEASURED NULLS WORTH KEEPING
+* **`if/else` instead of the ternary compiles BYTE-IDENTICAL** to the ternary. It is not a distinct
+  lever. THIS CONTRADICTS the cookbook line *"a conditionally-assigned value spills"* -- here it
+  does not. Caveat that line.
+* **`register` is completely inert in IDO 5.3** -- five forms, scores identical to their non-register
+  twins. A clean, reusable negative.
+* A separate index variable: 22 variants (10 declaration positions, three types, plus 9
+  frame-compensated), **home is `$v1` in ALL 22**. The "variable reused for two roles pins it to a
+  v-register" hypothesis is REFUTED.
+* `fade = ((u32)arg0->unk20 >> 24) & 0xFF;` shifts the ENTIRE temp rotation by exactly +1 with ZERO
+  shape change and +1 mism -- a pure register-renaming knob, NOT banked (the mask is redundant
+  after >>24), but it is the measured mechanism if a future wave needs a one-slot rotation nudge.
+
+## A CORRECTION TO A CORRECTION: THE BLOCK-SCOPED `slot` PAIR WAS OVER-CLAIMED
+The previous wave recorded *"removing one gives frame 0x188, mism 284"*. **That is wrong.** Removing
+ONE (either group) leaves frame 0x190 intact with shape unchanged and mism 353 -> 354; only removing
+BOTH drops the frame to 0x188. So the frame proves only that ONE extra 4-byte local is needed.
+Keeping both is still the better position and is stylistically symmetric across two identical case
+groups -- **but stop citing the frame as proof that both are load-bearing.**
+UPHELD in the same sweep: `fade = 0;` in the else branch IS load-bearing (deleting it costs a real
+`sb zero` that golden emits and drops n to 404).
+
+# ================================================================================
+# WAVE 52 RESULT: NOTHING CLOSED; BOTH TARGETS NOW REDUCE TO REGISTER NAMING
+# ================================================================================
+
+    func_151CC524   mism 65, **shape_miss 0** -- we emit golden's instruction sequence EXACTLY
+    func_151CC840   mism 73, **shape_miss 1**  -- all nine spawn tails structurally exact
+    func_150130B4   mism 353, shape_miss 15, residue one-sided (golden's scheduler nop only)
+All three have the correct frame, the correct stack-displacement multiset and the correct
+instruction count. **What remains on the twins is purely which t-registers the allocator picks.**
+Prototype fix verified NEUTRAL as required: with both twins corrected to all-u8, the disassembly
+sha1 of func_151C9DE8, func_151CAB78, func_151CB49C and func_151CC77C are UNCHANGED.
+
+RANKING NOTE, third occurrence: raw score and shape moved in OPPOSITE directions again (59/shape 3
+versus 65/shape 0). **The shape-0 source is the one parked.** A score win that costs shape is not
+progress.
+
+# ================================================================================
+# THE -g WORK QUEUE: THE CHEAPEST REMAINING BYTES, ENUMERATED
+# ================================================================================
+
+OPT_FLAGS is a PER-OBJECT setting, so if a TU carries `OPT_FLAGS := -g` in conker/Makefile then
+EVERY function in it is -g -- and at -g there is essentially no register allocation and no
+scheduling freedom, so the source is close to a literal transcription.
+TUs carrying -g: everything under src/libultra/audio/ (pattern rule), src/game_221290.c, and root
+TUs init_1E530 / init_20000 / init_214F0 / init_22460.
+**33 functions were still behind #pragma GLOBAL_ASM in those TUs; 4 closed this wave; 2 are
+off-limits (func_151F27E0 / func_151F2890, wrong TU, see the segment-boundary note).**
+
+REMAINING 27, ranked by instruction count / bytes -- work smallest first, and prefer several in
+ONE TU because the struct model carries over:
+    64/256   init_1E530/func_1001F978        69/276   n_csplayer/__n_CSPHandleNextSeqEvent
+    87/348   init_15550/func_10017438        96/384   init_15550/func_10016F80
+    110/440  game_221290/func_151F6970       119/476  init_1E530/func_1001F79C
+    125/500  init_214F0/func_10021E4C        126/504  init_1E530/func_1001F5A4
+    131/524  init_214F0/func_10021C40        164/656  init_22460/func_10022460
+    182/728  init_15550/func_100155A0        198/792  init_1E530/func_1001F28C
+    322/1288 game_221290/func_151F3DE0       328/1312 init_1E530/func_1001ED6C
+    335/1340 game_221290/func_151F8088       363/1452 game_221290/func_151F63C4
+    369/1476 init_1CBF0/n_alFxNew            427/1708 game_221290/func_151F78B4
+    468/1872 init_214F0/func_100214F0        527/2108 init_1E530/func_1001E530
+    533/2132 game_221290/func_151F4F38       569/2276 game_221290/func_151F6FD0
+    606/2424 init_20000/func_10020000        684/2736 n_csplayer/__n_CSPVoiceHandler
+    788/3152 game_221290/func_151F42E8       954/3816 n_csplayer/__n_CSPHandleMIDIMsg
+    1363/5452 init_15550/_n_handleEvent
+**init_1E530 (5 left) and game_221290 (7 left) are the best single-TU clusters.** game_221290's
+AudInst struct is now modelled to 0x847C and shared, so the next function there starts with the
+field offsets already solved.
+
+# ================================================================================
+# NEW -g LAW: THE COMMA-INCREMENT `for` IS A DISTINCT SHAPE NO OTHER LOOP REPRODUCES
+# ================================================================================
+
+`for (i = 0; p != NULL; i++, p = p->next)` produces two signatures nothing else does:
+  (a) the guard emits `lw <p>` / `<store i=0>` / `beqz <p>` -- **the init store lands BETWEEN the
+      condition's load and its branch**;
+  (b) the back-edge FUSES the pointer advance into the branch:
+      `lw t4,0(t3); bnez t4,<top>; sw t4,<home>` -- store in the delay slot, p never re-loaded.
+
+MEASURED LADDER on func_10017780, and each rung isolates one half:
+    `i = 0; while (p)` with a plain advance ............ 549
+    do-while with `(p = p->next) != 0` in the condition . 120   (fixes (b) only)
+    `for (i=0; p; i++)` with the advance in the body .... 347   (fixes (a) only -- this is what
+                                                                 PROVED the init is a for-init)
+    comma-increment `for` ............................... **0**
+**DIAGNOSTIC: if a -g loop diff shows the init store one slot off AND a re-loaded pointer at the
+back-edge, go straight to this form.**
+
+# ================================================================================
+# NEW -g LAW: A GUARD WHOSE BODY IS A SINGLE JUMP COMPILES TO A NON-FOLDED TWO-WAY BRANCH
+# ================================================================================
+
+IDO -g normally folds `if (c) { block }` into ONE inverted branch (`beqz`). But when the body is
+exactly one jump statement (`break`, `goto`), it emits the un-folded pair:
+    bnez X,THEN ; nop ; b ELSE ; nop
+Recognising this in func_151F86B0 identified an early-exit `goto` to the function tail and took it
+**400 -> 0**. The tell was that the same shape ALREADY appeared in that function's
+`if (... == 0) break;`, so the two could be compared inside one listing -- look for a known jump
+guard in the same function before theorising.
+**COROLLARY:** exactly one `lw v0,<slot>` in the tail means exactly one `return expr;` in the
+source, so every other path reaching it is a skip or a goto, NOT a return.
+
+# ================================================================================
+# LEVER #3 REFINED: `if (x)` vs `if (x != 0)` BITES ON OPERAND WIDTH, NOT "LOCAL-NESS"
+# ================================================================================
+
+CLEAN NEGATIVE on an s32 local: `if (sp128)`, `if (sp128 != 0)`, `if (0 != sp128)` and
+`if ((sp128 = f()) != 0)` are ALL byte-identical (four builds, all 630).
+IT BITES ON A NARROW OPERAND: on a u8 array element, `!= 0` emits a boolean materialisation
+(`sltu t5,zero,s0; move s0,t5`) that the bare truth test omits --
+`while (buf[i++] != 0)` -> `while (buf[i++])` was worth **630 -> 400**.
+So test the bare form when the operand is NARROW; do not spend builds on it for an s32 local.
+
+# ================================================================================
+# THE TWINS: THE ROTATION PHASE IS SET BY BLOCK 0's INTEGER WEB COUNT
+# ================================================================================
+
+func_151CC524 is at shape_miss 0 -- **we emit golden's instruction sequence exactly** -- and every
+differing row is the same instruction with the register renamed under ONE uniform rotation
+(ours + 3, across 74/74 register pairs).
+
+**THE PHASE IS A COUNT, AND IT IS MEASURABLE.** Read which register `ori rt,$v0,0x390` lands in:
+    one FEWER block-0 integer web ... $t8
+    THE PARKED SOURCE ............... $t9
+    +1 integer store in block 0 ..... $t0
+    +2 .............................. $t1
+    +3 .............................. **$t2 == GOLDEN** (and the reserved register lands in $t3)
+Phase is LOCAL to block 0: deleting the second spawn, reordering it, adding stores to it, or
+appending a third spawn all leave the ori at $t9.
+
+**THE RESERVED-REGISTER HUNT DOES NOT APPLY HERE, and the check is free.** Golden's `$t3` occurs
+exactly THREE times in func_151CC524's 150 instructions where pool registers appear 8-12 -- the
+same signature as func_150130B4's reserved t1. But OUR `$t0` has the same three occurrences and
+maps onto golden's `$t3` under the +3 rotation, so the BODY census is an exact multiset match. The
+reservation is reproduced already; only the phase differs. (func_151CC840 has no outlier at all:
+golden reserves nothing there.)
+
+**WHERE THE THREE MISSING WEBS MUST LIVE.** func_151CC840's block 0 is CC524's minus two
+`swc1 $f0` stores to sp88.unk50/unk54, and it has no deficit -- so golden's source for those two
+lines is NOT `sp88.unk50 = 0.0f; sp88.unk54 = 0.0f;`. It is some form emitting the same two `swc1`
+while burning three integer webs.
+CALIBRATION for what consumes a slot invisibly: on func_151CB5FC's golden, `sra $a3,$t8,24`
+consumes a slot without showing a t-register, while its two `or $aN,$tN,$zero` copies are free --
+**an operation whose result is coalesced onto a FIXED register still consumes a rotation slot; a
+pure copy does not.**
+
+## THE WEB CURRENCY, measured -- do not re-derive
+COSTS ONE SLOT (and two instructions, which is why none is usable as-is): any integer-valued store
+into either aggregate.
+COSTS ZERO SLOTS: all float stores (`= 0.0f`, a fresh lui+mtc1 constant, chained
+`unk50 = unk54 = 0.0f`, descending order, the read-back `unk54 = unk50`, and an integer literal
+`= 0` into an f32 field); constant-folded `|` chains (0x390 spelled seven ways, all byte-identical
+-- **so the attractive "0x390 is four flag bits, the twin's 0x10 is one, hence three extra ors"
+hypothesis is DEAD**); parameter types (all 32 u8/s32 combinations of arg1..arg5 byte-identical
+except arg4 s32 = 66 and arg5 s32 which grows the frame); flag-carrier types s32/u32/s16/u16/u8/s8
+all byte-identical, and if/else == ternary == inverted arms; five block-0 statement orders; and
+both alternative address forms.
+**A REDUNDANT STORE IS ELIMINATED *WITH ITS WEB*** -- `sp88.unk12 = 0x12C;` twice is byte-identical
+to once, so a redundant store is not a free web. A DEAD store later overwritten is NOT eliminated
+and costs real instructions.
+The one non-store phase lever found: `*(f32 *)((s32)&sp88 + 0x50) = 0.0f;` burns one integer web,
+but costs an instruction (n=151), and two of them push the frame to 0xE8.
+
+## A PRIOR READING REFUTED BY ITS AUTHOR
+"Golden evaluates 1 / 0xFF / 7 BEFORE the unk14 expression" came from seeing t9/t0/t1 immediately
+before t2 in the cycle. Re-derived against the twin and against func_151CAD28 and func_151CB5FC --
+whose join blocks run FORWARD through exactly our source order -- **golden's source order IS ours**.
+Re-measured: nothing hoisted 65/shape 3; unk16 only 59/shape 3; unk16+unk18 136/shape 7 n=151;
+all three 136/shape 9 n=151.
+
+# ================================================================================
+# TOOL FIX: relcheck.py NOW HANDLES TRAILING ALIGNMENT PADDING EXPLICITLY
+# ================================================================================
+
+Two of this wave's four matches made relcheck FAIL with a length mismatch (109 vs 112, 57 vs 60).
+**Both were genuine matches**: splat's golden .s covers the symbol as the ORIGINAL object sized it,
+which for the last function in a section includes the nops padding .text to 16 bytes, while our
+symbol stops at the code. Verified directly -- both goldens end `jr $ra` + delay nop + THREE
+`00000000` words.
+The tool now trims that padding, but only when **every** extra word is a real nop, and it PRINTS
+that it did so. If any extra word is an instruction it FAILS with a count of the non-nops.
+Negative-controlled: scoring a real function against a longer golden whose tail is code gives
+"golden is 53 words longer and 43 of them are NOT nops" and exit 1.
+**This is the fail-closed design behaving correctly -- it refused to pass what it could not fully
+account for, and the fix adds an explicit accounting rather than a tolerance.**
+
+# ================================================================================
+# WAVE 53 RESULT: FOUR CLOSED, 1196 BYTES
+# ================================================================================
+
+  **func_151F85C4, 236 B, game_221290** -- decoder-instance allocator: returns the fixed BSS
+    instance, seeds three fields to -1, stores the handle/read-callback/flags, zeroes the window
+    cursors and bzeroes a 0x900 region.
+  **func_151F7F60, 296 B, game_221290** -- bitstream window refill: slides the 0x2000-byte input
+    window down by 0x1000 when it would overflow, rebases the cursors, calls the host read
+    callback, zero-fills a short read, returns the pre-refill cursor.
+  **func_151F86B0, 436 B, game_221290** -- decode-next-block entry: advances a 6-slot ring index,
+    re-inits the decoder, invokes the instance's decode callback, hands back the ring buffer and
+    sample count, then optionally reads a NUL-terminated tag string and forwards it to a hook.
+  **func_10017780, 228 B, libultra/audio/init_15550** -- sets a per-MIDI-channel value under a
+    raised interrupt mask, then posts event 0x800 to the sound player's queue for every active
+    voice on that channel.
+All four verified through tools/verify_match.sh (score 0 with AND without -R, every sibling in the
+TU still 0 -- 13 and 23 respectively -- .text IDENTICAL, no banned constructs), through
+tools/relcheck.py NON-CIRCULARLY, and the **full clean ROM gate passed on both sha1s**.
+
+MEASUREMENT NOTE FROM THE SAME AGENT, worth keeping: its first instruction counter returned 0 for
+all 31 backlog functions, and it caught this because **0-for-everything is not a believable
+number** -- root cause was `^/\*` failing to match 4-space-indented asm lines. Rebuilt and
+negative-controlled (0 on a Makefile, 606 of 645 lines on a real .s). That is the fifth tool on
+this project whose failure state produced a plausible-looking result.
+
+# ================================================================================
+# WAVE 54: TWELVE FUNCTIONS, 14,772 BYTES -- THE -g CLUSTER STRATEGY VINDICATED
+# ================================================================================
+
+Two agents on two -g clusters closed **12 of 13 assigned functions in one wave**, more than the
+previous six waves combined. The strategy is now measured, not theorised: **work a -g TU as a
+CLUSTER, smallest-first, after reading its already-matched siblings.** At -g there is essentially
+no register allocation and no scheduling freedom, so the source is close to a literal
+transcription, and every struct field and idiom transfers to the next function in the same TU.
+
+game_221290 (7 closed, 10,636 B) is now down to ONE pragma; init_1E530 (5 closed, 4,136 B) to one.
+
+    func_151F6FD0  2276  layer-III side-info reader
+    func_151F4F38  2132  LSF (MPEG-2) scalefactor reader
+    func_151F78B4  1708  layer-III frame decoder proper -- mism=0 on the FIRST candidate
+    func_151F63C4  1452  per-granule Huffman-decode driver -- closed by a CHAINED ASSIGNMENT
+                         `sp54[0] = sp54[1] = sp60;`  (9 -> 2 -> 0)
+    func_151F8088  1340  MPEG frame-sync + header parser -- closed by replacing an if/else with an
+                         early `continue`  (288 -> 0)
+    func_151F3DE0  1288  builds the decoder's static float tables -- closed by the
+                         COMPARISON-OPERAND-ORDER lever  (13 -> 0)
+    func_151F6970   440  alias-reduction / stereo-position rewrite pass
+    func_1001E530  2108 | func_1001F28C 792 | func_1001F5A4 504 | func_1001F79C 476 |
+    func_1001F978   256
+
+# ================================================================================
+# MINE THE TREE FOR AN UNINCLUDED HEADER BEFORE WRITING A LINE
+# ================================================================================
+
+**conker/src/libultra/audio/n_abi.h was sitting in the tree, included by NOTHING, and contains the
+exact macros these functions are built from** -- n_aLoadADPCM, n_aPoleFilter, n_aLoadBuffer,
+n_aSaveBuffer, n_aResample -- with a block-scoped `Acmd *_a` that explains the multiple distinct
+stack homes in golden. **func_1001F978 and func_1001F28C both matched on the FIRST BUILD after
+using it.** abi.h supplies aMix, aClearBuffer and aDMEMMove for the commands n_abi.h lacks.
+Each macro expansion getting its own stack home is a POSITIVE TELL that the macro form is right,
+not evidence of hand-written stores.
+The uniform idiom `_SHIFTL((u16)x, 0, 16)` explains every `lhu` on a field that is read with `lh`
+everywhere else -- including an `lhu 0x36(sp)` reading the low half of an s32 stack home.
+**GENERAL RULE: before reconstructing library-shaped code, grep the tree for headers nothing
+includes. A macro corpus that the original used is worth more than any spelling lever.**
+
+# ================================================================================
+# STRUCT MODELS BANKED FOR THE init_1E530 / n_audio CLUSTER
+# ================================================================================
+
+`Voice`, stride 0x28 (func_1001E530, func_1001F28C, func_1001ED6C): 0x00 s32 delay start,
+0x04 s32 delay end, 0x08/0x0A/0x0C s16 mix gains (dry / wet-return / FX send), 0x10 f32 LFO
+increment, 0x14 f32 LFO phase, 0x18 s32 read cursor, 0x1C f32 LFO depth, 0x20 ALLowPass*,
+0x24 Resampler*.
+NOTE 0x10/0x14/0x1C are exactly the three slots func_1001FA78 reads as arg0[1][0], arg0[1][1],
+arg0[1][3] under an `f32[4][4]` FICTION -- that fiction is why callers need a `(f32 (*)[4])` cast.
+`SynBufs` (aux-bus FX state, reached as `((FxBus *)n_syn->auxBus)[bus].unk1C`, stride 0x44):
+0x00 s32 ring length in samples, 0x04 Voice* array, 0x08 u8 voice count, 0x20 u32 ring base[2],
+0x28 s32 ring head[2] -- the two arrays are two entries each because they are exactly 8 bytes apart
+and both indexed by sub-bus.
+`Resampler`: 0x14 state pointer ARRAY[2], 0x1C f32 ratio, 0x20 s32 upitch, 0x24 f32 delta,
+0x28 s32 first -- i.e. libultra's ALResampler with `state` widened to a per-bus array, which is
+what pushes delta/first from 0x20/0x24 out to 0x24/0x28.
+
+# ================================================================================
+# TWO MORE -g READING RULES, CONFIRMED
+# ================================================================================
+
+* **`base + -(a - b) * 2` IS A REAL SOURCE FORM** (subu, then negu, then sll, then addu) and it
+  appears four times in this cluster. Do NOT rewrite it as `base - (a - b) * 2`, which emits a
+  `subu` instead.
+* **IDO -g CONSTANT-PROPAGATES A LOOP'S INIT VALUE INTO THE FIRST CONDITION TEST.**
+  `for (i = 0; i < g->unk8; i++)` emits `blez g->unk8, end` at the top; and
+  `for (b = 0; b <= D_800428C4[bus]; b++)` with an UNSIGNED b emits the condition's LOAD but NO
+  BRANCH AT ALL, because `0 <= unsigned` is vacuous. **A dead-looking `lbu` before a loop is that,
+  not a missing statement.**
+
+# ================================================================================
+# THE RELOCATION-NAMING FLOOR MAKES verify_match's .text COMPARE FAIL ON A REAL MATCH
+# ================================================================================
+
+**All seven game_221290 closures FAILED verify_match's `.text` compare, and all seven are genuine.**
+The differing words are only ever the LO16 immediate field:
+
+    ours   918c0010   golden 918c0000      (lbu $t4,0x10($t4) vs 0x0)
+    ours   91080006   golden 91080000      (lbu $t0,6($t0)    vs 0x0)
+
+We emit `%lo(SYM+N)` with the addend IN THE FIELD against the base symbol; a golden built from
+`#pragma GLOBAL_ASM` emits `%lo(SYM_plus_N)` with a ZERO field against a name splat minted at that
+offset. Both link to the same address.
+**PROVED, not inferred, by reading the relocation tables:**
+
+    offset 0x140c   ours R_MIPS_LO16 D_800AEB5C   golden R_MIPS_LO16 D_800AEB6C   (0x5C+0x10=0x6C)
+    offset 0x1670   ours R_MIPS_LO16 D_800AEB54   golden R_MIPS_LO16 D_800AEB5A   (0x54+6   =0x5A)
+
+All **307 relocations have IDENTICAL offsets and types**; only three symbol names differ, and all
+three are splat-minted interior labels (D_800AEB55 / 5A / 6C). tools/relcheck.py passes all seven
+NON-CIRCULARLY, and the full clean ROM gate passes both sha1s.
+
+**tools/verify_match.sh NOW ATTACHES THE DIAGNOSIS INSTEAD OF A BARE FAIL.** When `.text` differs
+it compares relocation offsets+types, and if those are identical it lists the golden-only symbol
+names and says "CONSISTENT WITH THE RELOCATION-NAMING FLOOR, BUT NOT PROOF", pointing at relcheck
+and the ROM gate. **It still FAILS** -- the point is to hand over evidence, not to soften the
+verdict. If the offsets/types ALSO differ it says so explicitly: that is a real defect, not naming.
+It also reports NO-EVIDENCE when readelf returns zero relocations, because an empty read from the
+wrong toolchain otherwise looks like agreement.
+
+# ================================================================================
+# MY OWN PRAGMA COUNT HAS BEEN WRONG ALL SESSION (harmlessly, but fix it)
+# ================================================================================
+
+`grep -rc GLOBAL_ASM conker/src/ --include=*.c` counts COMMENT MENTIONS as pragmas. After this wave
+it read 1717 where 12 closures predicted 1716, which looked like a missing closure. There is no
+missing closure: **the true count is `grep -rhE '^\s*#pragma\s+GLOBAL_ASM' | wc -l` = 1712**, plus
+4 non-pragma mentions.
+Use the precise form for the integrity check. (Remember also the one INLINE `GLOBAL_ASM(` block in
+game_DAFA0.c that no pragma scan can see.)
+
+# ================================================================================
+# THE PROGRESS MONITOR IS THE SIXTH TOOL WHOSE FAILURE STATE LOOKS PLAUSIBLE
+# ================================================================================
+
+While one agent had already closed FIVE functions and finished, the live monitor printed
+`scouting/reading, no probe yet` eighteen times in a row. Measured tool mix for the two agents at
+that moment: 54/37 PowerShell/Bash and 36/52, with 25/26 Write -- and **18 Read calls between them
+across the entire run.** They were in continuous compile-measure loops.
+The tell that the label was wrong, available without opening anything: **its own "idle" counter kept
+RESETTING to 0-20 s.** A genuinely stuck agent shows monotonically climbing idle time.
+Likely cause: it watches for a probe signature it does not recognise, and these agents drive builds
+through PowerShell -> wsl.exe.
+**A status display that reports "stuck" while work completes is worse than none -- it teaches you to
+distrust waves that are succeeding.** Verify agent state from the transcript tool-mix, not the label.
+
+# ================================================================================
+# WAVE 55: TWO TRANSLATION UNITS RETIRED COMPLETELY, 7 CLOSED, 6,948 BYTES
+# ================================================================================
+
+**conker/src/init_1E530.c and conker/src/game_221290.c are now at ZERO pragmas.** Both are fully
+decompiled and off the backlog. Also closed: 3 in libultra/audio/init_15550 and 2 in init_214F0.
+
+    func_151F42E8  3152  game_221290  -- layer-III requantisation and reordering pass
+    func_1001ED6C  1312  init_1E530   -- n_alSynSetFXParam's back end (REQUIRED the rodata/jtbl
+                                         migration; see below)
+    func_100155A0   728  init_15550
+    func_10021C40   524  init_214F0   -- closed by SWITCH BODY REORDERING, 104 -> 0
+    func_10021E4C   500  init_214F0
+    func_10016F80   384  init_15550   -- libultra's static _removeEvent
+    func_10017438   348  init_15550
+
+# ================================================================================
+# A SCORE-0 FUNCTION WAS CORRECTLY REVERTED: .text SECTION SIZE IS PART OF THE MATCH
+# ================================================================================
+
+**func_10022460 reached score 0 and was thrown away, and that was the right call.** Its TU's
+`.text` came out **0x250 against expected 0x290 -- 64 bytes short.** conker.ld places
+`build/asm/libultra/libc/bzero.s.o(.text)` immediately after `init_22460.c.o(.text)` with
+SUBALIGN(16) and NO `ALIGN` between them, so a short section drags bzero from its ROM address
+0x226F0 down to 0x226B0 and breaks everything after it.
+
+**THIS IS A NEW FORM OF "SCORE 0 IS NECESSARY BUT NOT SUFFICIENT."** The function's own bytes were
+right; the TU's LAYOUT was not. The usual st_size WARN is benign only when `.text` compares
+identical, and for a TU's LAST function that is not automatic.
+**tools/verify_match.sh now checks `.text` SECTION SIZE explicitly** as its own PASS/FAIL/NO-EVIDENCE
+line, independent of the content compare -- because "content differs" does not tell you the linker
+layout moved, and that distinction is what saved this.
+
+# ================================================================================
+# THE RODATA/JTBL MIGRATION, PROVEN A SECOND TIME AND ON A DIFFERENT TU
+# ================================================================================
+
+func_1001ED6C could not close without it: its switch's jump table and two 173123.4062f literals had
+to be emitted by the C compiler. The edit, in conker/conker.us.yaml:
+
+    - [0x2C7A0, rodata]
+    ->
+    - [0x2C7A0, .rodata, init_1E530]   # D_8002C7A0 + jtbl_8002C7A4 + D_8002C7C4/C8
+    - [0x2C7D0, rodata]
+
+D_8002C7A0 became an in-C literal 1.4142f inside the already-matched func_1001E530, **which still
+scores 0**. conker.ld regenerated; asm/data/2C7A0.rodata.s deleted, 2C7D0.rodata.s created (both
+generated + gitignored).
+**EXPECTED SIDE EFFECT, verified benign:** undefined_funcs_auto.txt went 127 -> 126 lines, because
+the deleted asm block held the only reference to a symbol that is now C-emitted. The ROM gate
+passed on the settled tree, which is what settles it. Do not treat a *shrinking* auto-syms file as
+automatically catastrophic -- check whether the ROM still builds; it is truncation to near-zero
+that is fatal.
+
+# ================================================================================
+# `int` vs `s32` IS A REAL TYPE-MODELLING CHOICE, NOT A CAST -- AND IT WAS WORTH 101
+# ================================================================================
+
+func_1001ED6C was parked at 101 because golden evaluates the LEFT operand of
+`val * n_syn->outputRate` first while IDO evaluated the right first. The only spelling that flipped
+it was `(s32)val` -- a no-op cast the park file correctly REFUSED as a forcer.
+**The honest form is `int val`, not `s32 val`.** ultratypes.h in this repo has `typedef long s32`,
+so `n_syn->outputRate` is a `long`; a plain `int` local is a DIFFERENT TYPE, and C89's usual
+arithmetic conversions put a REAL widening node on the left operand. That node is what makes IDO
+treat the left side as a temp.
+Measured: `int` **0**, `s32` **101**, both 328 instructions in identical order -- the 101 was pure
+register naming.
+**GENERAL RULE: when a no-op-looking cast is the only thing that fixes an evaluation order, the
+original probably used a DIFFERENT TYPE, not a cast.** Check the typedef chain -- `s32` is `long`
+here, so `int` and `s32` are distinct types that convert differently.
+
+# ================================================================================
+# LIBRARY-SHAPED CODE: MACROS, HEADERS, AND A SILENT-FAILURE TRAP
+# ================================================================================
+
+* **alLink / alUnlink ARE MACROS.** libaudio.h declares them as functions and nothing ever calls
+  them; every audio TU inlines them. Each expansion carries block-scoped `ALLink *__ln` (and
+  `*__lst` for alLink) which take stack homes BELOW every function-scope local, `__ln` always at
+  the HIGHER address. **A dangling extra stack home in a list walk is this, not a hand-written
+  store.** Delete-and-measure confirmed load-bearing: with them 96/96 mism 0; a bare pointer chain
+  gives 90/96 and mism 132 -- BELOW golden's instruction count.
+* **n_abi.h / abi.h macros** each carry a block-scoped `Acmd *_a`, one stack home per expansion
+  (func_10021E4C has three: 0x24, 0x20, 0x1C). `pkt` is `p++`, emitting lw p / addiu +8 / sw p /
+  sw old,_a in that order. **A _SHIFTL term whose value is a literal 0 is folded away entirely** --
+  n_aResample's `o` argument left no instruction at all.
+* **K0_TO_PHYS LIVES IN <R4300.h> AND NOTHING IN THE AUDIO INCLUDE CHAIN PULLS IT IN.** Omit the
+  include and IDO compiles the macro NAME as an IMPLICIT FUNCTION CALL -- a `jal` where golden has
+  `lui/ori 0x1FFFFFFF; and` -- **with no error, only a believable 118/125.** A textbook
+  silent-failure trap: the build succeeds and the score looks like ordinary work remaining.
+* **functions.h and n_libaudio.h CANNOT BOTH BE INCLUDED** (duplicate n_alInit/n_alClose with
+  incompatible prototypes, a hard cfe Error). Audio TUs include ONLY "n_synthInternals.h", which
+  pulls n_libaudio.h + synthInternals.h + n_abi.h. Add <R4300.h> alongside when you need address
+  conversion.
+* **N_PVoice in n_synthInternals.h is ALREADY CORRECT AND COMPLETE** for the decoder/resampler
+  stages (dc_state 0x14 ... em_first 0x80) -- both init_214F0 functions fell straight out of it.
+  **N_ALSndPlayer, by contrast, is 4 bytes SHORT** -- func_100155A0 stores the wave-ROM address at
+  0x54. Handled file-locally with `typedef struct { N_ALSndPlayer sndp; void *unk54; } SndPlayer;`
+  rather than editing the shared header.
+
+# ================================================================================
+# THREE MORE -g LAWS
+# ================================================================================
+
+* **IDO -g SWITCH LAYOUT: dispatch comparisons are emitted in ASCENDING CASE VALUE order, but case
+  BODIES are emitted in SOURCE order.** func_10021C40 tests 4 then 5 while placing case 5's body
+  first, so the source writes `case 5:` before `case 4:`. That single reordering took it
+  **104 -> 0** with the instruction count already exact at 131/131.
+  **When the dispatch order and the body order disagree, reorder the SOURCE -- do not touch the
+  bodies.**
+* **LEVER 1 (comparison operand order) EXTENDS TO THE FLOATING-POINT REGISTER FILE.**
+  `f->rs_ratio > D_8002C840` vs `D_8002C840 < f->rs_ratio` produced identical instruction ORDER but
+  a different f4/f6/f8 rotation that poisoned the numbering of all six subsequent float statements
+  -- 17 rows, 207 -> 190 (i.e. zero real rows) from one operand swap. Previously recorded only for
+  integers.
+* **(a)** `if (guard) { do {...} while (A && B); ... }` is distinguishable from every other loop
+  form by the TOP test having FEWER conjuncts than the back-edge; that asymmetry decided
+  func_10017438. **(b)** An unsigned induction variable is forced by `sltu`/`sltiu` -- in
+  func_100155A0 the second loop's bound is a u16 struct field, so a signed `i` would have emitted
+  `slt`. **Signedness must be read off the COMPARE OPCODE, not chosen for readability.**
+* The `lhu` on an `s16 type` field is the MASK IDIOM: the sound player masks event types as bit
+  flags, so golden reads the type unsigned. A file-local `{u16 type; T *state;}` view over
+  `&item->evt` reproduces it, and that address-of is where the `addiu +0xC` comes from.
+
+# ================================================================================
+# TWO BUGS IN MY OWN VERIFICATION TOOLS -- BOTH FAILED IN THE SAFE DIRECTION
+# ================================================================================
+
+* **verify_match's new `.text` size check could not parse `readelf -SW`.** readelf prints the
+  section index as `[ 4]` (TWO awk fields) but `[12]` (ONE), so column positions shift with the
+  index and a fixed `$2`/`$7` reads nothing. Fixed by stripping the bracket prefix with sed before
+  parsing. It reported NO-EVIDENCE rather than PASS, so it failed closed -- which is the entire
+  point of the three-state design.
+* **relcheck.py needed `objdump -dzr`, not `-dr`.** Without `-z`, objdump ELIDES runs of zero words
+  as `...`, so any function containing a zero-filled block comes out SHORT and relcheck reports a
+  bogus LENGTH MISMATCH. Caught on func_1001ED6C, whose migrated .rodata jump table sits in such a
+  run.
+* **KNOWN LIMITATION, not yet fixed:** after a rodata migration, relcheck cannot resolve the
+  `.rodata` SECTION symbol (it is not in symbol_addrs), and reports "NO KNOWN ADDRESS" -- fail
+  closed. Resolve those by hand against conker.ld's placement: for init_1E530 at 0x8002C7A0,
+  `.rodata+0x04 -> 0x8002C7A4`, `+0x24 -> 0x8002C7C4`, `+0x28 -> 0x8002C7C8`, all six equalling
+  golden exactly, with the linked ELF holding the golden block byte-for-byte.
+
+# ================================================================================
+# THE NEXT UNLOCK IS ONE YAML LINE AND IT IS WORTH 5,728 BYTES
+# ================================================================================
+
+libultra/audio/init_15550 and n_csplayer each have exactly ONE pragma left, and BOTH are blocked
+only on a jump table: `_n_handleEvent` (1363 instrs / 5452 B) and `__n_CSPHandleNextSeqEvent`
+(jtbl_8002C4CC, 276 B). Both functions are already fully reconnoitred in this wave's notes. The
+migration mechanism has now been executed successfully twice (game_40490 groundwork, init_1E530
+shipped). **Whoever gets a quiet tree with no other live agents should do that migration first.**
+
+# ================================================================================
+# WAVE 56 (part 1): THE JTBL MIGRATION IS NOT A STANDALONE UNLOCK
+# ================================================================================
+
+**The yaml line and the C decompilation MUST ship as ONE change.** Migrating `.rodata` to a TU
+stops the linker taking that block from `asm/data/<OFF>.rodata.s.o`, but while the function is
+still `#pragma GLOBAL_ASM` **nothing emits the table into the `.c.o`**. Applying five migrations
+on their own broke the link outright:
+
+    mips-linux-gnu-ld: build/src/init_49E0.c.o: in function `_asmpp_func1':
+    src/init_49E0.c:11: undefined reference to `jtbl_8002C0A0'      (+4 more, one per TU)
+
+There is no "prepare the migration now, decompile later". Migrate ONE TU, decompile it, gate it,
+move on. The memory note already said "flip the yaml LAST" -- correct advice; the wave-55 cookbook
+entry telling the next person to do the migration FIRST is what contradicted it. That entry is
+now wrong and is superseded by this one.
+
+**THE CHEAP SET IS BIGGER THAN "BLOCKS WITH ONE SYMBOL".** The right test is: *every symbol in the
+block is referenced only by the function you are decompiling*, because that function's C source
+emits them all as its own literals. A 21-symbol block qualifies if all 21 belong to it. Verified
+by cross-referencing every block symbol against every nonmatching function:
+
+    0x2C0A0 -> init_49E0                    1 sym    func_100049E0     976 B
+    0x23A510 -> game_34F20                  1 sym    func_15007B3C    1704 B
+    0x2C7D0 -> init_20000                   2 syms   func_10020000    2424 B
+    0x2C6B0 -> libultra/audio/init_15550    3 syms   _n_handleEvent   5452 B
+    0x24A190 -> game_173D40                21 syms   func_15146970     296 B
+
+Four more are blocked only by needing a segment SPLIT, not by sharing: init_11FA0 (split at
+jtbl_8002C410), game_49BE0, game_1BFCB0, game_DAFA0 (split at base+0x10).
+
+# ================================================================================
+# TWO ARTEFACT-STALENESS TRAPS, BOTH OF WHICH PRODUCED A CONFIDENT WRONG ANSWER
+# ================================================================================
+
+* **`conker/build/conker.ld` is generated by CPP during a BUILD, not by `make extract`.** After a
+  re-split it is stale. Reading it, I concluded for ten minutes that the migration had silently
+  done nothing -- while the freshly generated `conker/conker.ld` had all five `.rodata` placements
+  and zero `asm/data` references. **Always read `conker/conker.ld`.**
+* **`asm/<TU>.s` at the TOP LEVEL of asm/ is STALE for any TU the yaml now declares as `c`.**
+  352 such files exist; `asm/D4450.s` is dated 2026-03-11, has **0 references in conker.ld**, and
+  its yaml segment is `[0xD4450, c, game_D4450]`. The live representation is
+  `asm/nonmatchings/<tu>/<func>.s`. A survey that globs `asm/*.s` is therefore scanning a
+  months-old parallel copy of the tree, and any "this function is hand-written asm" conclusion
+  drawn from finding it there is unfounded.
+* **`tools/first-diff.py` compares `build/conker.us.z64`.** After a build that FAILED, that file
+  was never rebuilt, so first-diff cheerfully reports "No differences!" against a stale ROM. It is
+  not a safe attribution tool unless the build exited 0. (Measurement trap #8.)
+
+# ================================================================================
+# THE BARE `cvt.w.s` CLUSTER -- REAL, BUT NOT WHAT IT FIRST LOOKED LIKE
+# ================================================================================
+
+IDO emits `trunc.w.s`, or `cvt.w.s` wrapped in a `cfc1`/`ctc1` FPU-control fixup, for float->int.
+886 `cvt.w.s` exist across asm/; a recursive scan (NOT `asm/*.s`) finds **18 functions containing a
+BARE `cvt.w.s`** with no fixup within +/-5 instructions.
+
+**All 18 are in `asm/nonmatchings/` -- i.e. all 18 are ordinary `#pragma GLOBAL_ASM` C targets, and
+not one of them has ever been decompiled.** The original claim that "every one is hand-written asm"
+came from the stale `asm/*.s` glob above and does not survive; what survives is that this construct
+has resisted the entire project. They cluster hard:
+
+    game_D0F20  func_150A3FC4 func_150A44F0 func_150A4B04
+    game_D3040  func_150A6210 func_150A6360
+    game_D3D10  func_150A6860      <-- a single-pragma TU, 1856 B
+    game_D4450  func_150A6FA0 func_150A70C0 func_150A71C8 func_150A7360 func_150A751C
+    game_D5650  func_150A8A18 func_150A9984
+    game_D86A0  func_150AB1F0 func_150AC1C4
+
+`-mips1` does not help (it ADDS the cfc1/ctc1, moving further away). Treat a bare `cvt.w.s` as an
+open blocker, and do not spend a wave on one until it is understood.
+
+# ================================================================================
+# TRIAGE CORRECTION: THE CHEAPEST SINGLE-PRAGMA TUs ARE IN THE REGION THAT HAS
+# RESISTED THE WHOLE PROJECT
+# ================================================================================
+
+Ranking the 119 single-pragma TUs by byte size puts a run of 32-608 byte functions at the top, and
+they look like free retirements. **They are concentrated in the 0xD4450-0xD5650 math region, and
+that whole region has zero live C.** The yaml interleaves the two unmatched `gu` routines directly
+into it:
+
+    [0xD4450, c, game_D4450]   [0xD4c40, c, libultra/gu/guMtxF2L]   [0xD4C20, c, game_D4C20]
+    [0xD4E10, c, game_D4E10]   [0xD5030, c, game_D5030]   [0xD5070, c, libultra/gu/guMtxIdentF]
+    [0xD50C0 ...] [0xD5160] [0xD51B0] [0xD5250] [0xD52A0] [0xD5500] [0xD5650]
+
+Every one of those `game_*` TUs is 100% pragma with **zero** live C definitions. Meanwhile the `gu`
+routines that ARE matched live somewhere else entirely (0x750B0 cosf/sinf/guPerspectiveF/guRotateF,
+0x21D4A0 guNormalize/mtxcatl). **This ROM links `gu` from two different places**, and the second
+one behaves like a different code generator.
+
+Evidence from `guMtxIdentF` (80 B, best honest score 1110, instruction mix and count already exact):
+`-O2` CSEs the 1.0f into ONE `mtc1` but allocates `$f0`; `-O1`/`-g3` allocate the correct `$f4` but
+emit FOUR `mtc1`. The ROM has one `mtc1` into `$f4`. The FP-store sinking reproduces at EVERY
+optimisation level including `-g3`, so it is the code generator, not a flag.
+**Do not rank this region by byte size. Size is not the cost here.**
+
+# ================================================================================
+# `-O1` IS A REAL LEVER AND IT HAS PRECEDENT IN THIS MAKEFILE
+# ================================================================================
+
+`__osInitialize_common` (672 B) went **11737 -> 506** on three measured steps, none of them forcers:
+
+1. **Build the TU at `-O1`**: 9170 -> 2097. Precedent already exists: `libultra/os/getthreadpri.c`
+   carries `OPT_FLAGS := -O1`.
+2. **`register u32 sr`**: 2097 -> 550. One storage-class keyword fixed the frame size, the `s0`
+   save, AND a whole-function temp-register rotation at once.
+3. **Local DECLARATION ORDER sets stack offsets**: 550 -> 506. At `-O1` IDO gives the
+   LAST-declared local the LOWEST address.
+
+Also established: `bcopy(...,0x10)` is NOT inlined by this IDO, and the ROM's four exception-vector
+copies come from a 16-byte STRUCTURE ASSIGNMENT. Recorded dead end: a named `u64` intermediate
+makes it WORSE (506 -> 678).
+
+**The cross-cutting hypothesis, from three independent functions:** the shipped libultra was
+compiled by something that hoists far less aggressively than this project's IDO 5.3 at `-O2` --
+address CSE in `aisetnextbuf`, loop-invariant argument hoisting in `initialize`, store scheduling
+in the `gu` pair. **Screen `-O1` before grinding a libultra function at `-O2`.**
+
+# ================================================================================
+# A WRONG PARK NOTE CORRECTED: THERE WAS NEVER A HARDWARE-REGISTER BLOCKER
+# ================================================================================
+
+`osAiSetNextBuffer`'s old park note claimed a "hardware-register symbolization blocker" on the AI
+stores. **False, and it was the relocation-naming floor again.** We emit `lui $t1,0xa450 /
+sw $v0,0($t1)`, which is EXACTLY the words the ROM encodes; `relcheck.py` passes them. `IO_WRITE`
+is correct.
+The real blocker is ordinary: IDO hoists `&hdwrBugFlag` into `$v0` once where the ROM
+re-materialises it at each of three uses. Not fixable by storage class (`static` scores an
+identical 555) nor by `-O1` (right addressing, wrecked allocation). Survey rule across matched
+functions: **IDO hoists when >=2 references share a call-free dominator path** -- which is exactly
+this function's shape, so no honest rewrite avoids it.
+
+# ================================================================================
+# WAVE 56 (part 2): ZERO CLOSURES, AND THE TREE IS STILL BYTE-PERFECT
+# ================================================================================
+
+**0 of 10 assigned functions closed. Nothing was faked, nothing was left live, the ROM gate is
+green on both sha1s after a FORCED rebuild of all ten touched TUs.** A wave that closes nothing
+and correctly refuses to fake anything is a *successful* wave under the standing policy; the
+failure mode to fear is the opposite one.
+
+**Pragma count did not move: 1704.** Note the two counting forms disagree by exactly one and both
+are "right":
+
+    grep -rhE '^\s*#pragma\s+GLOBAL_ASM\("' ... | wc -l   -> 1704   <-- USE THIS
+    grep -rhE '^\s*#pragma\s+GLOBAL_ASM'    ... | wc -l   -> 1705   (prefix-matches the single
+                                                                     #pragma GLOBAL_ASM_DISABLED
+                                                                     in game_18D770.c)
+I briefed agents with the 1704 figure but the 1705 command, and both correctly reported 1705,
+which then looked like drift. Brief the number and the command that produces it.
+
+# ================================================================================
+# IDO FLOAT LITERALS: THE SHORTEST ROUND-TRIPPING DECIMAL IS THE ANSWER
+# ================================================================================
+
+The 19-literal float pool of `func_15146970` was reproduced **19/19 bit-identical** against golden
+`.rodata`. The rule: **IDO converts decimal literals round-to-nearest, so the shortest decimal that
+round-trips to the golden word IS the original source text.** Do not hand-tune.
+**Four of the 19 are wrong by one ulp if you write the "obvious" decimal** -- the ROM's constants
+are genuinely `0.024999999f`, `7.9760003f`, `0.94000006f`, `-0.40300003f`, NOT `0.025f`, `7.976f`,
+`0.94f`, `-0.403f`. Round-trip every literal; never assume the tidy decimal.
+
+Also confirmed for a migrated TU: IDO emits the C-side `.rodata` in golden's order --
+**local-array initialiser image, then the jump table, then pooled float literals in source order**
+-- and `SUBALIGN(16)` + `FILL(0)` in conker.ld reproduces the block's trailing zero padding free.
+
+# ================================================================================
+# TWO PARKS THAT ARE STRUCTURALLY EXACT -- BOTH HIT NAMED BAIL SIGNATURES
+# ================================================================================
+
+* **`func_15146970` (296 B, score 210, ZERO register-only rows.)** Every instruction matches
+  including the dispatch. The whole residual is a **4-byte displacement**: golden puts the default
+  `li v0,-1` in the switch bounds-check DELAY SLOT and lets the dispatch `sll` follow; IDO fills
+  that slot from the fall-through and leaves `li v0,-1` as a one-instruction tail block. Nine
+  honest spellings of the default (trailing return, `default:` last/first/`;`, a `ret` variable in
+  four forms, no trailing return, `(u32)` scrutinee, explicit guard, `-g3` reflow) ALL filled the
+  slot identically -> the *unsteerable delay-slot* family. Bail.
+* **`func_100049E0` (976 B, score 2674, structurally exact.)** Residual is one ranking decision:
+  golden gives the constant `1` TWO callee-saved registers and `&D_8002AC6C` none; IDO does the
+  reverse. Reproduced in a standalone probe, and adding the client-walk inner loop FLIPS it --
+  so it is a genuine internal depth-weighted tie with identical use counts on both sides. Four
+  spellings left the score EXACTLY unchanged -> named bail signature.
+
+**Levers banked from those two, all verified by rebuild:**
+- **An uninitialised declaration plus a separate assignment statement is NOT the same as a
+  declaration initialiser**: `OSMesg msg; ... msg = NULL;` in golden's store order took the frame
+  from `0x70` to `0x68`. A declaration initialiser costs 8 bytes of temp area.
+- `sll t6,v0,0 ; bltz` is `(osAiGetStatus() & AI_STATUS_FIFO_FULL) == 0` and nothing else; eight
+  cast/compare spellings all fold to a bare `bltz`.
+- **Three `variables.h` type errors corrected**: `D_8003B234` is a scheduler client list, NOT
+  `OSPfs*`; `D_8003B240` and `D_8003A5C8` are `OSScMsg` (the `sh` stores of `OS_SC_RETRACE_MSG` /
+  `OS_SC_PRE_NMI_MSG` are the tell); `D_8003A588` is an `OSTimer`.
+- **`arg0 = arg0;` in the old near-miss is NOT load-bearing** -- deleting it leaves the object
+  byte-identical. It is a banned construct in verify_match and it was never doing anything.
+
+# ================================================================================
+# verify_match.sh CHECK 6 FIXED: A STALE expected/ IS NOT A BYTE DEFECT
+# ================================================================================
+
+A migrated TU legitimately grows a `.rodata` its `expected/` object predates, and check 6 reported
+that as `".rodata present on one side only"` -- which reads like a byte defect. **Measured:
+`init_1E530` expected/=none, built=48 B; but `init_2E50` -- whose expected/ WAS reseeded after its
+migration -- is 32 B on BOTH sides.** So the defect is not "every migrated TU", it is "every
+migrated TU whose expected/ was never reseeded".
+
+Check 6 now consults `conker.us.yaml` (the authority on which TU owns a migrated rodata block) and,
+for exactly the asymmetry ours-has/golden-lacks, reports **NO-EVIDENCE with the reseed
+instruction** instead of a bare FAIL. It still does NOT pass -- a stale golden proves nothing.
+Negative-controlled: the guard returns 1 for init_1E530 / init_2E50 / cents2ratio and 0 for
+init_214F0 / game_221290 / init_49E0 / game_34F20, and a non-migrated TU still reports
+`ALL CHECKS RAN AND PASSED`.
+
+# ================================================================================
+# MEASUREMENT TRAP #9, AND A REMINDER THAT #6 STILL BITES
+# ================================================================================
+
+* **#9 -- `make` saying "Nothing to be done" means your gate graded SOMEONE ELSE'S OBJECTS.** After
+  a wave, `make -C conker` may have nothing to do because the agent already built it; the ROM then
+  passes without a single source file being recompiled. **Force the touched TUs to rebuild
+  (`rm build/src/<tu>.c.o`) before gating**, or the gate is a tautology.
+* **#6 caught me again, one command after I wrote the guard for it.** Running `readelf` from Git
+  Bash (no MIPS toolchain) emits NOTHING, and an awk that prints "no .rodata section" when it finds
+  no matching line reports that absence as a *finding*. It produced a confident, wrong answer that
+  contradicted the agent -- the agent was right. **Any readelf/objdump one-liner must assert its
+  output is non-empty before interpreting it, and must run under WSL.**
+
+# ================================================================================
+# WAVE 57: FOUR TUs RETIRED FROM ONE CLUSTER, 2,516 BYTES
+# ================================================================================
+
+    func_150D08C0  1488  game_FDD70  -- matched on the FIRST try
+    func_150D1530   736  game_FE9E0  -- closed by DECLARATION SCOPE (see below)
+    func_150D149C   148  game_FE850  -- closed by the file-local prototype shadow
+    func_150D1B40   144  game_FEFF0  -- ditto
+
+All four independently re-verified: `verify_match.sh` = ALL CHECKS RAN AND PASSED, `relcheck.py`
+= PASS with `unpaired HI16 left over: 0`, and `.text SECTION SIZE` equal on both sides
+(0xae0 / 0x2e0 / 0x190 / 0xf0). All four TUs are now at ZERO pragmas.
+
+**The single-pragma TU is the best-shaped target in the backlog**, and this is why: every *other*
+function in the file is already matching C, so the struct models, field offsets and idioms are
+sitting in the same file. Four of five closed in one cluster. Prefer these over raw byte size.
+
+# ================================================================================
+# A REAL SELF-ASSIGNMENT IN THE ORIGINAL SOURCE -- AND THE TEST THAT PROVED IT
+# ================================================================================
+
+`func_150D1530` genuinely contains, in the shipped source:
+
+    arg0->unk1A4 = arg0->unk1A4;
+    arg0->unk1A8 = arg0->unk1A8;
+
+**This is a construct the fake-match policy BANS, and `verify_match.sh` passed it.** Do not resolve
+that on explanation -- resolve it on bytes. THE LOAD-BEARING TEST, run independently:
+
+    as shipped                 score 0     .text 0x2e0
+    both statements deleted    score 400   .text 0x2d0     (16 bytes = exactly 4 instructions)
+
+The object CHANGES, so the statements emit real instructions the ROM contains: this is original
+code (an f32 field self-assignment IDO renders as lwc1/swc1), not a forcer. **The semantic-vs-forcer
+distinction is decided by deleting the construct and rebuilding, never by how convincing the story
+is.** A banned construct that survives the delete test is a finding about the original game; one
+that does not is a fake match.
+
+# ================================================================================
+# MEASUREMENT TRAP #10: WHOLE-FILE `cmp` ON AN OBJECT IS THE WRONG EQUALITY TEST
+# ================================================================================
+
+Rebuilding the SAME source twice produces objects that differ on a whole-file `cmp` -- first
+difference at byte 170439. Section-by-section: **`.text` IDENTICAL, `.rodata`/`.data`/`.bss` absent
+on both, and the only delta is `.mdebug`** (0x370d4 bytes of `-g3` debug info, which embeds
+build-varying data).
+**Compare ALLOCATED sections, never the whole file.** A whole-file compare reports a false
+inequality on every `-g3` TU, which is the mirror image of the old `objcopy`-emits-nothing bug that
+reported false EQUALITY. Both directions of that failure have now bitten this project.
+
+# ================================================================================
+# TWO NEW LEVERS
+# ================================================================================
+
+* **DECLARATION SCOPE is a lever independent of declaration ORDER.** `func_150D1530` sat at 3 rows
+  through ~40 variants of spelling, operand order, statement structure, declaration order and line
+  reflow. Moving `f32 speed; s32 ok;` from function scope INTO the `if (arg0->unk5F0 & 0x80)` block
+  took it to **0** -- with the frame size and every stack offset already identical both ways. It
+  also removed the need for a `dummy_label` the attempt had been leaning on.
+* **A WRONG PROTOTYPE IN `functions.h` SHOWS UP AS AN `andi 0xFF` IN THE CALLER.**
+  `func_1515D4D4(u8,u8,u8,s32)` is wrong at these call sites -- the callee masks its own fourth
+  argument, so golden has no `andi`. Fixed with the file-local prototype shadow already used in
+  `game_18A8F0.c`, NOT by editing the shared header. **That single fix was the entire delta on both
+  the 144- and 148-byte functions.** When a caller has an unexplained `andi`/`andi 0xFFFF`, suspect
+  the declared parameter type before suspecting the body.
+
+# ================================================================================
+# TWO permuter_tu.sh HARNESS TRAPS
+# ================================================================================
+
+* It must be given a **space-free absolute** working directory (`/tmp/...`). The recompiled IDO
+  `cc` silently writes **no object at all** to a path containing a space -- and the tell is the
+  empty-string sha1 `da39a3ee...0709` appearing in selftest (b)/(b2). Our checkout path contains a
+  space, so this is the default failure, not an edge case.
+* Selftest **(b2) fails for every macro-heavy display-list builder**: the harness preprocesses the
+  region, which splits `gSP*`/`gDP*` macro bodies across source lines, and under `-g3` that changes
+  the schedule. Treat a (b2) failure on a DL builder as a harness limitation, not a source defect.
+
+# ================================================================================
+# THE FOUR SPLIT-NEEDED JTBL BLOCKS, FULLY SCOPED -- COPY-PASTE YAML
+# ================================================================================
+
+Whole-block migration works only when EVERY symbol in the block belongs to the one function being
+decompiled. These four have a PREFIX owned by other functions, so the block is CUT: the prefix
+stays plain `rodata`, the suffix becomes `.rodata, <tu>`. Wave 55 proved this exact shape
+(0x2C7A0 migrated, 0x2C7D0 created as the remainder).
+
+**Offsets are INTRA-BLOCK deltas off the block's own base**, taken from splat's data filename
+(which IS the yaml offset). Never compute these with a global vram<->rom constant -- two yaml
+comments give two different constants and both are wrong for the general case.
+
+**Remember the atomicity rule: apply a line only together with that function's C decompilation,
+or the link dies with `undefined reference to jtbl_...`.**
+
+    init_11FA0   func_10012020   1344 B   prefix D_8002C250/C3F8/C3FC + D_8002C400/C404 (shared
+                                          with func_10011624); suffix = jtbl + 9 float literals
+        - [0x2C250, rodata]
+        - [0x2C410, .rodata, init_11FA0]
+
+    game_49BE0   func_1501C730    304 B   prefix D_80096960 + jtbl_80096964 + jtbl_80096980 (both
+                                          shared with func_1501C57C); suffix = jtbl_800969A0 alone
+        - [0x23B420, rodata]
+        - [0x23B460, .rodata, game_49BE0]
+
+    game_1BFCB0  func_151928B0    112 B   prefix is 26 symbols shared across func_151925C4 /
+                                          func_15191D54 / func_1519203C / func_15192358 including
+                                          jtbl_800A811C; suffix = jtbl_800A8160 alone (0x20 B,
+                                          8 entries, closed by the existing [0x24CC40, rodata])
+        - [0x24CAF0, rodata]
+        - [0x24CC20, .rodata, game_1BFCB0]
+
+    game_DAFA0   func_150ADAF0   1936 B   prefix D_800885B0 ONLY (shared with func_150ADA20 /
+                                          func_150ADA68 / func_150ADACC); suffix = FOUR jump
+                                          tables + D_80088628 + D_800886A4
+        - [0x22D070, rodata]
+        - [0x22D080, .rodata, game_DAFA0]
+
+Note `game_DAFA0` also holds the one INLINE `GLOBAL_ASM(` block that no pragma scan can see, and
+`func_150ADAF0` additionally references D_80087358/D_80088420/D_8008845C/D_80088498/D_800884D4,
+which live in EARLIER blocks and stay external -- that is fine, they remain ordinary externs.
+
+# ================================================================================
+# WAVE 58: THE FIRST JUMP-TABLE FUNCTIONS CLOSED SINCE THE MECHANISM WAS PROVEN
+# ================================================================================
+
+    func_151928B0   112  game_1BFCB0   -- split migration [0x24CC20, .rodata, game_1BFCB0]
+    func_1501C730   304  game_49BE0    -- split migration [0x23B460, .rodata, game_49BE0]
+
+Both closed ATOMICALLY (yaml line + C in one change), both TUs now at zero pragmas, pragma count
+1699 -> 1697. Forced-rebuild ROM gate green on both sha1s.
+
+# ================================================================================
+# TWO IDO SWITCH IDIOMS, EACH WORTH A WHOLE FUNCTION
+# ================================================================================
+
+* **`default: ret = 0;` -- A REAL ASSIGNMENT -- IS NOT THE SAME AS `default: break;`.**
+  Golden had a `nop` in the default edge's delay slot AND a redundant `b` to the very next
+  instruction. Five honest spellings plateaued at 305. The original declares `s32 ret;`
+  UNINITIALISED and assigns it in an explicit `default:` arm; IDO hoists that `move v1,zero` to
+  the top and, because the default arm is now a REAL BLOCK, stops folding both the branch and its
+  delay slot. **`default: break;` is a codegen no-op and changes nothing.** A redundant branch to
+  the next instruction is a positive tell for this shape, not a scheduling artefact.
+* **A 0-BASED JUMP TABLE NEEDS AN EXPLICIT `case 0:`.** In func_1501C730 the table covers 0..6
+  with entry 0 pointing at the exit, so the source has `case 0: break;`. Omit it and IDO biases
+  the whole table by -1 (`addiu t7,t6,-1`) and every temp register rotates. Case bodies were in
+  source order `{4,6}, 1, 2, 3, 5`.
+  (Contrast func_10012020, whose table IS 1-based -- there the `D_8004277C == 4` test is the
+  DEFAULT arm, not a case.)
+
+`include/variables.h` is wrong for game_49BE0: `D_800BE9F4` is typed `u16 *` but holds an integer
+(case 5 stores `5`), and `D_800BEA00`/`D_800BEA04` are typed `s32 []` but are scalars. For a
+one-function TU, DROPPING the variables.h include and declaring all eight globals file-locally is
+cleaner than scattering casts.
+
+# ================================================================================
+# AFTER A MIGRATION, expected/ MUST BE RESEEDED -- OR `.text` LIES ABOUT ITSELF
+# ================================================================================
+
+func_1501C730 reported **`.text DIFFERS`** against its pre-migration golden. The differing words:
+
+    ours 10200038   golden 1020ffff
+    ours 10000024   golden 1000ffff
+
+`ffff` is an UNRESOLVED branch placeholder: the GLOBAL_ASM-built golden carries a relocation
+against splat's interior label `.L1501C848`, while our C object resolves the branch internally.
+Link-equivalent. **After the ROM gate passed I reseeded both goldens and BOTH TUs immediately
+reported `ALL CHECKS RAN AND PASSED` with `.text IDENTICAL` and `.rodata IDENTICAL`.**
+ORDER MATTERS: gate first, reseed second. Reseeding before the gate would launder an unverified
+object into the reference.
+
+**Do not compare ALL relocations when checking the naming floor -- compare `.rel.text` ONLY.**
+My own check compared everything and reported "OFFSETS/TYPES DIFFER" on a genuine match, because a
+migrated TU legitimately gains `.rel.rodata` R_MIPS_32 entries for the jump table's case labels
+that the external-rodata golden never had.
+
+# ================================================================================
+# game_DAFA0 IS STRUCTURALLY BLOCKED -- C CANNOT EXPRESS IT. STOP RANKING IT BY SIZE.
+# ================================================================================
+
+`func_150ADAF0` (1936 B) is not a hard function, it is an **impossible** one in plain C, and the
+jump tables are not the reason:
+
+* The INLINE `GLOBAL_ASM(` block in game_DAFA0.c defines `func_150AE280`, whose body is
+  `b .L150AE0AC` while swapping `$sp` -- a hand-written **stack-switching trampoline that branches
+  into `func_150ADAF0`'s INTERIOR** (its epilogue). That label exists only because asm-processor
+  assembles both into one unit. Rewrite the function in C and `.L150AE0AC` disappears, so the
+  trampoline stops assembling. **C cannot express an external entry point mid-function.**
+* `D_80088628` (31 entries) and `D_800886A4` are not data -- they are two MORE jump tables, emitted
+  as raw unresolved `.word 0x150ADExx` with no `glabel` anchors, and `D_800886A4` mixes
+  `func_1509DD10/20/30` (a DIFFERENT function) with in-function addresses. No C `switch` table can
+  hold that.
+
+Treat game_DAFA0 as blocked pending a plan for the mid-function entry point, not as backlog.
+
+# ================================================================================
+# THE PERMUTER HARNESS WAS BROKEN BY A SPACE IN ITS OWN DEFAULT PATH
+# ================================================================================
+
+`permuter_tu.sh` defaulted its working directory to `$HERE/permuter_tu/<func>`, and `$HERE` is
+`.../conker decomp/conker`. compile.sh passes that path to `cc -o`, and **the recompiled IDO 5.3
+`cc` silently writes NO OBJECT AT ALL when the output path contains a space** -- no error, no
+diagnostic. The tell is the empty-string sha1 `da39a3ee...0709` in selftest (b)/(b2), which reads
+as "the harness is broken" rather than "your path has a space". Two agents independently
+concluded the tool was unusable.
+Fixed: the default now falls back to `/tmp/conker_permuter_tu` **only when the computed root
+actually contains a space** (explicit `$4` and `PERMUTER_TU_ROOT` still win), so a normal checkout
+is unaffected. SELFTEST now passes all five controls, including the negative control and the
+TU-context control that proves a plain single-function permuter would optimise the wrong bytes.
+
+**FIRST RESULT IS A NEGATIVE ONE, AND IT IS WORTH KEEPING.** func_15010880 (parked at mism 11, a
+load/store ORDERING residual) ran **14,707 iterations without ever going below its 330 baseline**.
+The search repeatedly returned to 330 and otherwise scored worse. Ordering residuals appear to be
+outside what the permuter reaches; **allocation** residuals are its strength. Use it to
+distinguish "we did not find the spelling" from "no spelling exists" -- that is a real verdict, not
+a wasted run.
+
+# ================================================================================
+# THREE IDO FACTS FROM THE PARKED F4xxx CLUSTER (0 closed, 3 parked, nothing faked)
+# ================================================================================
+
+1. **FRAME FORMULA: `frame = round8(outgoing_args + 8 + locals)`**, locals flush against the frame
+   top and assigned in DECLARATION order at decreasing addresses. Verified against the matched
+   neighbour func_150D1204. This lets you reverse-engineer a local list FROM a golden frame size
+   instead of guessing.
+2. **A FUNCTION CALL INSIDE AN ARGUMENT LIST COSTS AN 8-BYTE HIDDEN STACK TEMP**, even when the
+   scheduled instruction stream is byte-identical.
+   `f(..., (func_150ADA20() % 0x65U) + 0x9B, ...)` forced frame 0x68 instead of 0x60. Hoisting it
+   to a statement fixes it -- but **the hoisted variable must not itself cost 8**: `s32 r1`
+   re-broke the frame (a 4-byte scalar between an `s16` and an `f32` array forces 8-byte
+   re-alignment of the array) while `u8 r1` landed in golden's otherwise-unexplained 6-byte hole
+   AND is the honest type. **DIAGNOSTIC: replace an inline call argument with a constant; if the
+   frame shrinks by 8, that is your bug.**
+3. **IDO gives NAMED `f32` locals `$f0`, while anonymous expression temps start at `$f6`.** Moving
+   the named local to the pre-multiply value was worth 100 points, and an explicit `(f32)` cast
+   does NOT substitute for it.
+
+All three F4xxx parks share one bail signature -- an **unsteerable scheduling residual**, flat
+across 6-10 honest spellings: golden hoists `li v0,1` into the entry block; golden reloads a `u8`
+parameter from its home slot before EACH call where IDO promotes it to `s0` once; golden emits a
+load before `sw ra` where IDO emits it four slots later (and golden's schedule is locally WORSE,
+eating a load-use stall, so it is not a preference reproducible by spelling).
+
+# ================================================================================
+# WAVE 59: THREE TUs RETIRED, 8,180 BYTES -- INCLUDING THE 5,452-BYTE _n_handleEvent
+# ================================================================================
+
+    _n_handleEvent   5452  libultra/audio/init_15550  -- jtbl migration [0x2C6B0, .rodata, ...]
+    func_10020000    2424  init_20000  (n_alEnvmixerPull) -- jtbl migration [0x2C7D0, ...]
+    func_150163D0     304  game_43880
+
+Pragmas 1697 -> 1694. All three re-verified independently: `.text IDENTICAL` (564 / 270 / 21 dump
+lines), `.rodata IDENTICAL` on both migrated TUs, and a FORCED-REBUILD ROM gate green on both
+sha1s. Five jump-table functions have now been closed with the migration mechanism.
+
+# ================================================================================
+# THE MIGRATED BLOCK MAY CONTAIN MORE THAN THE JUMP TABLE -- AND YOU MUST EMIT ALL OF IT
+# ================================================================================
+
+Migrating a block makes the C TU responsible for **every symbol in it**, not just the jtbl:
+
+* `init_20000`: `D_8002C814` (a `65535.0f`) had to STOP being an `extern` and become an in-source
+  literal so IDO emits it into the migrated `.rodata`. It lands at exactly +0x44, after the
+  17-word jump table, with 8 bytes of linker padding -- byte-identical to golden.
+* `init_15550`: the block is **strings + jtbl**. IDO emits the two
+  `"...has been freed too early..."` literals FIRST and the jump table LAST, reproducing golden's
+  offsets 0 / 0x2C / 0x58 exactly.
+  **Those strings only exist because the ROM contains an UNREACHABLE debug block** -- an
+  unconditional `b` over two `func_10002088` calls -- spelled `if (1) {...} else {...}`. It is
+  load-bearing in the strongest sense: deleting it removes 10 ROM instructions AND both rodata
+  strings. Dead-looking debug code that owns rodata is real source, not a forcer.
+
+**Resolve `relcheck`'s `NO KNOWN ADDRESS` against `build/conker.us.map`, not by eye.** The map
+names the section's placed address and size (`init_20000.c.o(.rodata)` at `0x8002C7D0` size 0x50;
+`init_15550` at `0x8002C6B0` size 0xA0); compose `%hi`/`%lo` from base+addend and compare to the
+golden word. Worked: `%hi(0x8002C7D0)=0x8003` -> `3c018003`, `%lo` -> `8c38c7d0`.
+
+# ================================================================================
+# FOUR NEW IDO -g LAWS, ALL MEASURED
+# ================================================================================
+
+1. **`-g` CACHES A POINTER DEREFERENCE ACROSS AN `&&`/`||` CHAIN** -- a 6-way
+   `event->type != N` chain loads the field ONCE. **Do not rewrite such a chain as a `switch`**:
+   IDO SORTS switch dispatch ascending, while an if-chain preserves source order.
+2. **`x == -1` compiles to `addiu t,x,1; sltiu t,t,1` REUSING the register.** The hand-rolled
+   `(u32)(x + 1) < 1` allocates a fresh temp instead. Write the comparison.
+3. **`x = c ? A : x` is FOLDED (the self-assign elided) when written as a statement-level
+   `if/else`, but NOT when it is a single assignment expression.** Worth 4 instructions:
+   `fxmix = (MAX(0,fxmix) > 0x7F) ? 0x7F : MAX(0,fxmix);`
+4. **Wrapping a case body in a negated condition is NOT the same as `if (cond) break;`** -- the
+   former jumps to the case's own join, the latter straight to the switch join.
+
+# ================================================================================
+# "AN INIT THAT SURVIVES WHERE IT LOOKS UNNECESSARY MEANS TWO REACHING DEFS"
+# ================================================================================
+
+func_150163D0's parked note had the premise WRONG: it read `addiu a0,zero,1` as a "+1-biased
+counter indexing `arr[i-1]`". That is IDO's OUTPUT, not the source. Every spelling built on the
+`arr[i-1]` reading sat on the same 80/74 plateau.
+
+The truth: `count` counts the NULL terminator and the 0-based index was eliminated as a redundant
+induction variable. Golden emits `or a1,zero,zero` TWICE because PRE inserts only on the
+loop-taken path, and that second reaching def blocks the `sll a0,a1,3` constant fold.
+
+**LAW: an initialisation that survives in a block that appears not to need it means TWO REACHING
+DEFS, and two reaching defs come from a variable clobbered on one path.**
+**DIAGNOSTIC: add a deliberate clobber; if the instruction count snaps to golden's, the model is
+confirmed.** That took it 80/n=74 -> 31/n=76 in ONE edit, and the permuter re-seeded from the
+corrected shape reached 0 in 1604 iterations -- having managed only 355 in 2039 from the wrong
+basin. **A permuter cannot escape a wrong structural basin; fix the model first.**
+
+# ================================================================================
+# TWO MORE READING RULES FOR GOLDEN
+# ================================================================================
+
+* **`$f0` IS A NAME TAG -- USE IT AS A READING RULE ON GOLDEN.** IDO gives NAMED `f32` locals
+  `$f0` while anonymous expression temps start at `$f6`. Golden holding a value in `$f0` therefore
+  tells you the ORIGINAL SOURCE HAD A NAMED LOCAL there.
+* **`-g3` GIVES EVERY NAMED LOCAL A STACK SLOT even when it is fully copy-propagated and never
+  touches memory.** So an unexplained 4- or 8-byte hole in a golden frame is **a declaration you
+  have not written**. Adding the missing `f32 scale` fixed 6 rows and moved an array from 0x44 to
+  golden's 0x40, which then forced the whole 5-local declaration order.
+
+# ================================================================================
+# TWO PERMUTER PROPOSALS CORRECTLY REJECTED AS FORCERS
+# ================================================================================
+
+On func_150CDBB0 the permuter made its biggest move yet (315 -> 202) and **proved the residual is
+an ALIASING question, not a register tie**: only `u8 *p = &arg1;` reproduces golden's per-call
+`lbu` reload. **REJECTED** -- nothing in the function takes `arg1`'s address, and a pointer local
+laundering a parameter through memory is a forcer. Its 305 candidate (a `(long long)` cast to
+break a different CSE) was rejected for the same reason. Three honest alternatives were then
+killed by measurement: K&R-style definition, 4-byte struct-by-value param, 8-byte struct-by-value
+param -- all byte-identical, still promoted to `s0`.
+**The permuter is a LOCATOR, not an author.** Take the hypothesis it exposes; write the C yourself.
+
+**MEASUREMENT TRAP #11:** on func_150C7670, adding a second parameter scores 4 with n=51/51 --
+which looks like a near-match but is an artefact: IDO merely HOMES the unused parameter, and the
+real defect (a stranded `li v0,1`) is untouched. A dramatic score drop from a signature change
+must be checked against the actual defect, not celebrated. That result does still prove the
+signature takes ONE argument.
+
+# ================================================================================
+# CHAINED ASSIGNMENT IS A REAL IDIOM IN THIS CODEBASE
+# ================================================================================
+
+`D_800D2457 = D_800D2456 = 3;` makes IDO materialise `&D_800D2456` with `lui+addiu` and store
+through it. That single idiom -- already used in `game_44A90.c` and `game_447B0.c` -- was worth
+**2927 -> 2007** on func_15007B3C, and the thing it replaced had been mis-diagnosed as a struct
+defect. When two adjacent globals are written with one materialised address, suspect a chain.
+
+# ================================================================================
+# WAVE 60: THREE TUs RETIRED, 2,140 BYTES -- AND TWO PROCESS ERRORS WORTH MORE
+# ================================================================================
+
+    func_1518B6B0   992  game_1B8B60  -- rodata migration, PREFIX split (a new shape)
+    func_150B54A8   796  game_E2880
+    func_150BE850   352  game_EBD00
+
+Pragmas 1694 -> 1691; 245 of 611 TUs now at zero. All three verified `.text IDENTICAL` +
+`relcheck PASS`, forced-rebuild gate green on both sha1s.
+
+# ================================================================================
+# THE ONLY VALID ACCEPTANCE TEST FOR A MIGRATED TU IS THE ROM sha1
+# ================================================================================
+
+I gated a migration on "the function must still score 0 from asm-differ AFTER the yaml flip", and
+**reverted a genuine 992-byte closure** when it came back 1500. That criterion is wrong and it
+contradicts a fact already banked: **once a TU's rodata is local, its `.text` relocations no longer
+name the external `D_`/`jtbl_` symbols, so asm-differ can only ever show a residual.**
+
+    correct order:  score BEFORE the yaml flip  ->  migrate  ->  full ROM gate decides
+
+(Do not over-generalise: func_1518B6B0 still scored 0 after migrating while func_150C16C0 scored
+1500. Whether a residual appears depends on how many rodata refs the function carries. That is
+exactly why the score is not the test.)
+
+# ================================================================================
+# A tools/nearmiss/ CANDIDATE IS A WHOLE-TU SOURCE -- CHECK ITS INVENTORY BEFORE COPYING
+# ================================================================================
+
+Replacing a 38-line TU wholesale with its 133-line candidate silently DROPPED functions the TU
+still provided, and the link caught it:
+
+    (.rodata+0x2c): undefined reference to `func_150C1978'
+
+**ALWAYS diff the symbol inventories first** -- every `func_` DEFINITION plus every
+`#pragma GLOBAL_ASM` name in the real TU must exist in the candidate:
+
+    current TU : 0 defs, 1 pragmas -> ['func_1518B6B0']
+    candidate  : 4 defs, 0 pragmas -> ['func_15132A4C','func_151429E0','func_1518B6B0','func_1518CA80']
+    MISSING FROM CANDIDATE: none -- safe to replace
+
+A candidate that omits anything must be MERGED into the existing file, not swapped in.
+
+# ================================================================================
+# A NEW MIGRATION SHAPE: THE PREFIX SPLIT
+# ================================================================================
+
+Previous splits kept a shared PREFIX as plain rodata and migrated the suffix. `game_1B8B60` is the
+mirror: its four floats are at +0x00..+0x0C and everything shared (`jtbl_800A7410`, `D_800A7434/38/3C`,
+`D_800A7440`, all belonging to func_1518BA90 / func_1518BD60) starts at +0x10. So the MIGRATION
+takes the prefix and the remainder stays plain:
+
+    - [0x24BEC0, .rodata, game_1B8B60]
+    - [0x24BED0, rodata]
+
+Both shapes work. Scope by listing every symbol with its intra-block offset and its referrers, and
+cut at the first index from which every remaining symbol is sole-owned (suffix split) or at the
+first shared symbol (prefix split).
+
+# ================================================================================
+# THE `extern f32` RODATA ESCAPE BREAKS INSIDE LOOPS -- FOUND INDEPENDENTLY TWICE
+# ================================================================================
+
+This narrows the standing "float literals are NOT blocked" note. Measured on func_150C16C0 and
+again on func_1518B6B0:
+
+* Written as a **literal**, IDO hoists the loop-invariant **VALUE** into a callee-saved f-register
+  (or, when `f20`-`f30` are all taken by named `f32` locals, re-emits `lui at; lwc1 %lo(at)` every
+  iteration) -- which is what golden does.
+* Written as **`extern f32`**, the extern's ADDRESS becomes a hoistable address node, outranks the
+  stack-address nodes, and wins the same 2-GPR/1-FPR hoisting budget. Cost: two extra callee-saved
+  registers, frame `0x148`->`0x150`, and every stack offset shifts. Best extern score 1575 vs
+  literal 0. **`extern volatile` does not defeat the hoist either** (1826).
+
+**RULE: a non-inlinable float constant used INSIDE A LOOP in an f-register-saturated function is
+rodata-blocked, not extern-escapable.** Outside a loop the escape still works (func_150BE850 closed
+at 0 using it). When a `-o` score refuses to move and the pool is loop-invariant, check for this
+before spending a wave on spellings.
+
+Related, settled the same way: **a literal `% N` divisor INSIDE a loop does reproduce golden's
+`divu` + `bnez`/`break 7`** -- IDO hoists the constant into a callee-saved register and keeps the
+trap. Outside a loop it uses `$at` with no trap. That killed an apparent "the divisor must be a
+variable" dead end.
+
+# ================================================================================
+# HEADER DEFECT: `u8 func_150ADA20(void)` IS WRONG, AND IT COSTS 867
+# ================================================================================
+
+`functions.h:1087` declares it returning `u8`; it actually returns a word. With the `u8`
+declaration every call gets an `andi 0xFF` at its save site that golden does not have. Golden
+instead truncates the RESULT into a `u8` local (`move s0,v0; andi t2,s0,0xff; move s0,t2`), which
+only happens with a WIDER return type.
+Fix with the established file-local `#define`-rename shadow (same idiom as `game_10CD70.c`) --
+worth **867 -> 0** on func_150B54A8 together with one comparison-operand swap. Where a shadow is
+impossible (conflicting redeclaration), `yaw = func_150ADA20() & 0xFF;` is the workaround, worth
+665 -> 215 elsewhere. **Do not edit the shared header.**
+
+# ================================================================================
+# TWO MORE PLACEMENT LEVERS
+# ================================================================================
+
+* **Write `p = &arg0->member;` BEFORE the call that uses `arg0`, not after** (1405 -> 990).
+  Written after, IDO copy-propagates the `+0x100` into every member offset; written before, it
+  rematerialises `addiu v1,a1,0x100` exactly where golden has it.
+* **A named local for a CSE'd load claims `$f0`; the same value as a plain expression does not.**
+  In func_150BE850 the store `arg0->unk374 = D_800A00B4;` had to sit before two other stores so its
+  load ranked early -- but as a plain expression, NOT a second named local, or it stole `$f2` from
+  the anonymous pool. Naming is a resource decision, not a style one.
+* An x4-unrolled damping loop reproduced byte-for-byte at plain `-O2 -g3`; **no `LOOP_UNROLL` flag
+  is needed** (that macro expands empty in this Makefile anyway).
+
+# ================================================================================
+# WAVE 61: FOUR TUs RETIRED, 1,360 BYTES -- AND A PROCESS FAILURE THAT BROKE THE GATE
+# ================================================================================
+
+    func_150C16C0   696  game_EEB10        -- rodata migration [0x244CB0, .rodata, game_EEB10]
+    func_15049350   240  game_76710        -- closed FIRST TRY off a sibling's struct model
+    func_1508EF80   224  game_BC430        -- closed by the -g3 frame-hole rule
+    func_160018BC   200  debugger_256F80   -- matched AT LINK (relocation-naming floor)
+
+Pragmas 1691 -> 1687; 249 of 611 TUs at zero.
+
+# ================================================================================
+# AGENTS THAT SPAWN SUBAGENTS CAN ORPHAN LIVE NON-MATCHING C IN THE TREE
+# ================================================================================
+
+Both wave agents delegated to subagents. When the parents reported "complete", **three TUs were
+left mid-edit**, and one of them (`game_E7380`) still had its `#pragma` REMOVED and a live,
+non-matching definition. That single TU put 72 wrong bytes into the linked image at ROM offset
+0xE7485 and was the sole cause of a red gate.
+
+**A size-only sweep does not find this.** All 611 objects matched `expected/` on `.text` SECTION
+SIZE while the sha1 still failed -- the deviation was same-size, different-content. The decisive
+diagnostic is to compare the LINKED image against the original extracted code image, which needs
+nothing from `expected/`:
+
+    cmp conker/conker.us.bin conker/build/conker.us.bin       # -> "differ: byte 947333"
+    cmp -l ... | wc -l                                        # -> 72 bytes
+
+and then check `pragma=? live-def=?` per suspect TU. `game_E7380` came back `pragma=0 live-def=1`,
+which is the signature of abandoned work.
+
+**PROCESS RULE: at the end of every wave, assert that no TU has `pragma=0` with a non-matching live
+definition, and finish with `cmp` against the original image -- not merely "make said OK".**
+Rescue the abandoned source into `tools/nearmiss/<func>.INFLIGHT.c` with a header saying it is
+unverified, then `git checkout` the TU. Losing the analysis is not necessary; shipping it is fatal.
+
+# ================================================================================
+# A NEAR-MISS CANDIDATE IS AUTHORED FOR A CONFIGURATION -- MEASURE IT IN THAT CONFIGURATION
+# ================================================================================
+
+`tools/nearmiss/func_150C16C0.c` was reported at score 0 but measured 1500. Both numbers are real:
+
+    candidate copied WHOLESALE over the TU  -> 1500
+    same body MERGED into the complete TU   -> 0     (max_score 18900)
+
+The candidate contained only `func_150C16C0`, while the real TU also provides `func_150C1660` and
+`func_150C1978`; its own header said to paste the body over the pragma. Wholesale replacement also
+broke the link, because `asm/data/22EEA0.rodata.s` holds `.word func_150C1978` -- a function-pointer
+table in ANOTHER TU's rodata -- so deleting that sibling unresolves it.
+**Always diff the symbol inventories (every `func_` definition plus every `#pragma` name) before
+copying, and record in the candidate's header which configuration its score was measured in.**
+
+# ================================================================================
+# A FUNCTION CAN BE "MATCHED AT LINK" WITHOUT EVER SCORING 0
+# ================================================================================
+
+`func_160018BC` (libultra's `__osPackReadData`, adapted) sits at score **10** permanently. The one
+4-byte difference is `%hi/%lo(__osContPifRam+0x40)` -- addend in the field -- against golden's
+`%hi/%lo(__osContLastCmd)` with a zero field. Both symbols are pinned absolute (`0x80042A10` and
+`0x80042A50`), so they are the SAME WORD.
+Evidence that settles it: `relcheck.py` PASSes, and the complete 200-byte golden sequence appears
+verbatim in the linked `conker.us.bin`. **Two pre-existing sibling functions in that same file
+already sit on this floor at score 10 each** -- so a persistent small score in that file is the
+floor, not a defect. Trying to remove it honestly (a pointer walk bounded by `&__osContLastCmd`)
+costs the separate base materialisation and scores 340; the index form is correct.
+
+# ================================================================================
+# NOT EVERYTHING IS DECOMPILABLE: func_16003650 IS HAND-WRITTEN TLB ASSEMBLY
+# ================================================================================
+
+`debugger_258ED0` / `func_16003650` (160 B) walks all 32 TLB entries with `mtc0 $t0,$0` / `tlbr` /
+`mfc0` of CP0 `$2/$3/$10/$5`, and uses `addi` (trapping) rather than `addiu`. **IDO has no inline
+assembly and no intrinsic that emits these.** spimdisasm labels it hand-written. It is documented
+above its pragma so it is not re-attempted, and it should be EXCLUDED from the near-miss backlog
+rather than counted as outstanding work.
+
+# ================================================================================
+# TYPE RECOVERY CAN PROVE A PROPOSED UNLOCK IS A FORCER
+# ================================================================================
+
+`func_150B67E0` was parked at 290 with the permuter offering 145 via `(unsigned short)(x & 0xFFF)`.
+Rather than argue about it, the callee was read: **`func_1509BFB0` walks its own `va_list` by hand**
+(`addiu $v1,$v1,3` / `and $v1,-4` / `lw`) and copies **every** variadic argument as a full 32-bit
+word into the `D_800D2F60` command buffer -- no `lhu`/`lbu` anywhere in that loop. So the 6th
+argument's real type IS `int` after default promotion, the cast emits nothing, and it is definitively
+a forcer. Eight honest spellings now pin at exactly 290: a CONFIRMED bail, not an open lead.
+Diagnosis for a future attempt: `$v0`/`$v1` are IDO's CSE/expression registers; golden puts the
+`D_80088710` load in a rotation temp (`$t8`) while we get `$v0`, so our rotation runs one step
+behind. Reading it into a named local does NOT stop IDO treating it as a CSE (measured).
+
+# ================================================================================
+# TWO CLOSURES THAT CAME STRAIGHT OFF BANKED RULES
+# ================================================================================
+
+* **`func_15049350`, first try, from a sibling.** `sw $a0..$a3` homing plus `lwc1` reads meant a
+  36-byte BY-VALUE struct parameter, not nine float arguments -- the sibling `func_15049260` in the
+  same file already had `typedef struct { s32 w[9]; } Va36;` passed by value, and the caller in
+  `game_36680.c` already named the type. Body is a plane-from-3-points.
+* **`func_1508EF80`, 602 -> 114 -> 0, by the `-g3` frame-hole rule.** An unexplained 8-byte hole
+  meant an undeclared local: the results go into a **local `struct17 out`**, not into `arg3`
+  directly. `out.unk0` spills across the `sinf`/`cosf` calls (hence the stack round-trip at 0x28)
+  while `out.unk8` never crosses a call, so its store is forwarded away -- which is exactly why
+  only one of the two appears in memory. Load-bearing test: deleting `out` moves the frame
+  0x40 -> 0x38 and the score 0 -> 602.
+
+# ================================================================================
+# THREE MORE HEADER INACCURACIES (shadowed file-locally, headers untouched)
+# ================================================================================
+
+* `variables.h:948` -- `D_800C6654` declared `s32`, is really **`u32`** (golden bounds-checks with
+  `sltu`).
+* `structs.h` -- `struct160.unk6` declared `s16`, is really **`u16`** (golden uses `lhu`).
+* `variables.h:947` -- `D_800C6650` declared `struct160[]`, is really **`struct160 *`**
+  (`game_32490.c` already works around this identically).
+
+# ================================================================================
+# THE BUILD LOCK IS NOW THE BOTTLENECK
+# ================================================================================
+
+With two wave agents plus their subagents, `buildlock.sh` queued **12 deep**, with waits over 12
+minutes, and one subagent was starved into abandoning its TU mid-edit -- which is what left the
+tree red. **Two top-level agents is the right number, and they should not delegate further.**
+The serialisation is correct and must not be removed: unserialised builds produce plausible but
+corrupt scores.
+
+# ================================================================================
+# WAVE 62: ONE CLOSURE, AND THE HARD BOUNDARY OF THE RODATA-MIGRATION TECHNIQUE
+# ================================================================================
+
+    func_1518C900   260  game_1B9DB0   -- was parked at 16; verify_match ALL PASSED, relcheck PASS
+
+Pragmas 1687 -> 1686; 250 of 611 TUs at zero. Gate green, linked image `cmp`-IDENTICAL to the
+original.
+
+# ================================================================================
+# **IDO 5.3 NEVER PUTS INITIALISED DATA IN .rodata.** THIS BOUNDS THE WHOLE TECHNIQUE.
+# ================================================================================
+
+A standalone probe compiled with the project's exact flags emitted **only `.text` and `.data` --
+no `.rodata` section at all**:
+
+    const s32  g_const  = 0x10;          -> .data
+    const f32  g_constf = 1.0f;          -> .data
+    static const ...                     -> eliminated outright
+
+Confirmed on a real TU: defining a pool's two addressed objects as `const` produced
+`.rodata = 16` (the four float literals only) and `.data = 16` holding `00000010 3f800000`.
+**The ONLY `.rodata` IDO emits is the anonymous literal / jump-table pool.**
+
+**RULE: a rodata block is migratable only if it consists ENTIRELY of anonymous pool entries
+(float literals, jump tables). One NAMED, ADDRESSED object anywhere in it puts the block out of
+reach of C.** Splitting past such an object usually fails too: IDO gives `.rodata` `2**4`
+alignment, so a cut that is not 16-byte aligned makes the linker pad and shift everything. Every
+migration that has shipped began on a 16-byte boundary.
+
+This retires `game_20A290`/`func_151DCDE0` as PERMANENTLY BLOCKED even though its C scores 0 --
+its pool starts with two addressed objects and the only legal cut, 0x250018, is 8-aligned.
+**Check a block for named symbols BEFORE spending a wave on the C.**
+
+# ================================================================================
+# A SCORE OF 0 DOES NOT VALIDATE A MIGRATED POOL -- THE BYTES ARE A SEPARATE TEST
+# ================================================================================
+
+`func_151DCDE0` scored **0** while emitting a pool that was WRONG BY ONE ULP:
+
+    ours    3e4ccccd bf316873 3e9ba5e3 41cdb646
+    golden  3E4CCCCD BF316873 3E9BA5E4 41CDB646
+                              ^^^^^^^^
+`0.304f` -> 3E9BA5E3; golden holds 3E9BA5E4, i.e. the original text is `0.30400002f`.
+**asm-differ cannot see this**: `.text` carries only the `%hi/%lo` reference, not the value. Had
+the migration shipped on the strength of the score, it would have put a wrong word in the ROM.
+**When migrating, diff the emitted `.rodata` against the golden block explicitly, as its own
+acceptance criterion.** (Same round-trip law as before: the shortest decimal that round-trips IS
+the source text -- never the tidy decimal.)
+
+# ================================================================================
+# A MEASURED FRAME-LAYOUT LAW (from the func_1518C900 closure)
+# ================================================================================
+
+    temp_top = (frame - 4) - roundup4(locals)
+    frame    = round8(base + locals + 4 * ntemps)
+
+So **a first spill at `frametop-4` pins the TOTAL size of named locals at 4 bytes** -- a 4-byte
+pointer local leaves room for nothing else. Also measured: unused locals AND inner-block locals
+both consume slots; `u8` is not byte-packed; `register` is completely inert; `static` is a
+diagnostic only.
+The match itself was **one** named local plus a **post-increment**:
+`if (D_800DF7D0[arg0] != 0xFF) D_800DF7D0[arg0]++;`. The `move v1,v0` pair that had been read as a
+named `u8 c` is IDO's own temporary -- the post-increment's old value -- while the CSE of the load
+feeds the `addiu`. The same code with `= x + 1` scores **847**.
+
+# ================================================================================
+# ONE MORE IDO CACHING LAW, AND A CORRECTED BLOCK SCOPING
+# ================================================================================
+
+* **A BYTE store does not invalidate IDO's cached pointer; a WORD store does.** Golden caches
+  `arg0->unk20` in `$v0` across two `sb` stores but reloads it after a `swc1`. Reproducing that --
+  a named `src` local for the first three reads, direct field reads afterwards -- took
+  func_150C0C38 from 2402 to 2210. Using `src` everywhere is worse (2580).
+* **game_E7970's pool scoping was recorded wrong.** `[0x2448D0, rodata]` is not a two-point split:
+  ownership is perfectly contiguous -- `+0x00..+0x1C` is entirely game_E7380, `+0x20..+0x48`
+  entirely game_E7970 -- so it is **one cut at 0x2448F0 giving two whole-block sole-owned
+  migrations**. Both halves still await their functions' C.
+
+# ================================================================================
+# CLOSED QUESTIONS (do not re-attempt)
+# ================================================================================
+
+* `func_150C1260` -- **23 honest spellings, never once below 710.** Narrowing is what triggers the
+  copy-propagation: without the file-local `s32` shadow, `s32 ang = func_150ADA20();` emits a bare
+  `move $s0,$v0` and no mask, which is golden's first instruction exactly -- but adding back any
+  narrowing in any spelling folds the pair to a single `andi`. Confirmed ranking tie.
+* `func_150B9ED0` -- both rescued INFLIGHT files score **exactly 1014**; they are the same program
+  differing only in which argument holds `dirY = 0.0f`. Residual is one cluster: golden
+  materialises `mtc1 zero,$f18` second, we do it seventh. Hoisting `dirX`/`dirZ` is worse (1594),
+  proving they must stay inline as `-(field - param)`.
+* `func_1503DDD0` -- twelve structures, none beating 260. Golden's exact CFG with a named
+  `Entry *p` local still emits `multu v0,a3` + `lhu -0xe(v1)` (745). IDO folds the displacement by
+  re-basing the pointer induction variable itself, downstream of anything source can express.
+* `func_1518A5F4` -- 990; both spots are one behaviour (golden materialises a constant at the head
+  of its basic block, we interleave). NOT the same cause as the literal-vs-extern finding:
+  `D_800BE9A4` is genuinely re-read seven times and the 0.5f is already an inline literal.
