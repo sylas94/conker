@@ -104,7 +104,11 @@ class Scorer(object):
         ob, err = self._compile(src, tag)
         if err:
             return (10 ** 6, err, [])
-        dis = subprocess.check_output([OBJDUMP, "-d", ob]).decode()
+        # The trailing sentinel is load-bearing: the body regex is terminated by a
+        # blank line, and the LAST function in .text has none.  Without it, a
+        # perfectly good object reports NOFN -- a false "your source did not
+        # compile" that silently kills a whole search.  Cost this project a wave.
+        dis = subprocess.check_output([OBJDUMP, "-d", ob]).decode() + "\n\n"
         m = re.search(r"^([0-9a-f]+) <%s>:\n(.*?)\n\n" % re.escape(self.func),
                       dis, re.S | re.M)
         if not m:
