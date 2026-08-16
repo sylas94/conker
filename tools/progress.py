@@ -4,6 +4,19 @@ import re
 import sys
 
 
+# The map lists every symbol the linker placed in .text, and splat types more
+# than just functions as @function: interior branch labels (.L1500ABCD,
+# L80001234), padding markers (func_XXXX_pad) and rodata/data symbols (D_*)
+# all appear alongside real functions.  Counting those inflates the totals --
+# and since none of them carries a #pragma GLOBAL_ASM, every one used to be
+# scored as "decompiled C", inflating the numerator too.
+NOT_A_FUNCTION = re.compile(r"^(\.L|L[0-9A-Fa-f]{6,}|D_)|_pad$")
+
+
+def is_function(name):
+    return not NOT_A_FUNCTION.search(name)
+
+
 def parse_map(mapfile, section, ending=None):
     functions = {}
     files = {}
@@ -62,8 +75,8 @@ def parse_map(mapfile, section, ending=None):
                 offset = int(offset, 16)
             else:
                 continue
-            if new_function.startswith("L8"):
-                # skip label entries
+            if not is_function(new_function):
+                # skip branch labels, padding markers and data symbols
                 continue
             if offset < previous_offset:
                 # sanity
