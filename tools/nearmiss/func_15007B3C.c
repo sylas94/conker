@@ -1,4 +1,43 @@
 /* ===========================================================================
+ * func_15007B3C  --  game_34F20.c  --  RE-MEASURED 2026-08-16 (rodata-migration wave)
+ *
+ * WITH the migration applied ([0x23A510, .rodata, game_34F20]) and blocker (1)
+ * therefore GONE, plus the fix for blocker (3) below, this file now measures
+ *     differ -R = 2007  (was 2927),  size 1700/1704  (was 1696/1704)
+ * i.e. ONE instruction short and 11 mnemonic rows + 40 register-only rows out.
+ *
+ * BLOCKER (3) IS SOLVED.  The two-instruction shortfall at D_800D2456/D_800D2457
+ * was NOT a struct.  It is a CHAINED ASSIGNMENT.  Golden materialises the address
+ * of D_800D2456 with lui+addiu and stores through it ("sb t6,0(v0)"), which is
+ * what IDO emits when the inner assignment is an EXPRESSION whose value is then
+ * stored again.  game_44A90.c and game_447B0.c -- both already matching -- write
+ * exactly this idiom.  Fixed below:
+ *     D_800D2457 = D_800D2456 = 3;      (was two separate statements)
+ * This alone took 2927 -> 2007 and 1696 -> 1700 bytes.
+ *
+ * WHAT IS LEFT, and why it is a BAIL:
+ * The whole residual is now one register web.  At 0x150080A8 golden HOISTS the
+ * constant 1 into v1 ABOVE the outer "if (D_800E0B99 || D_800DDE38 == 2)", then
+ * MATERIALISES "(D_800C35EA != 1) && (D_800DDE38 != 1)" into v0 as a BOOLEAN
+ * VALUE -- "move v0,v1" / "beql v1,t7" with an annulled "move v0,zero" /
+ * "bne v1,t8" -- and only then branches on "beqz v0".  This file short-circuits
+ * with two direct "beq"s against a per-test "li v0,1".  Both operand orders were
+ * probed: "(D_800C35EA != 1) && (D_800DDE38 != 1)" and
+ * "(1 != D_800C35EA) && (1 != D_800DDE38)" -- the score stayed EXACTLY 2007 and
+ * the size EXACTLY 1700 in both.  Score that does not move across genuinely
+ * different honest spellings is the cookbook BAIL signature for a
+ * loop-invariant / constant-hoist ranking tie -- the same one that parked
+ * func_100049E0.
+ *
+ * The yaml line has been REVERTED to "- [0x23A510, rodata]" so the tree still
+ * builds byte-perfect.  To resume: splice everything from the local-prototype
+ * block below into conker/src/game_34F20.c in place of the pragma, re-apply
+ * "- [0x23A510, .rodata, game_34F20]", and re-extract.  Attack ONLY the v1
+ * constant hoist.
+ *
+ * ORIGINAL NOTES (2026-08-14) follow.
+ * ===========================================================================
+ *
  * func_15007B3C  --  game_34F20.c  --  MEASURED 2026-08-14
  * ===========================================================================
  * backlog.tsv IS WRONG FOR THIS ROW.  It says `bytes=96, measured_2026_08_11=1`.
@@ -216,8 +255,7 @@ void func_15007B3C(void) {
 
     if (D_800BE616 == 0) {
         if ((D_800D2E4C->unk18 & 1) == 0) {
-            D_800D2456 = 3;
-            D_800D2457 = 3;
+            D_800D2457 = D_800D2456 = 3;
             func_15085710(0, 5, 3);
         }
     }
@@ -340,4 +378,59 @@ void func_15007B3C(void) {
     func_1509C3A0();
     D_800BE9F4 = (u16 *) D_800BE9F0;
     func_151D8DE8();
+}
+
+void func_150081E4(void) {
+    s32 i;
+
+    D_800D3668 = 0;
+    D_800CBE00 = 0;
+    D_800DDD64 = 0;
+
+    for (i = 0; i < 2; i++)
+    {
+        D_800DF7C8[i] = 0;
+    }
+
+    D_800D245C = 0;
+    D_800D2548 = 0;
+}
+
+
+void func_15008230(void) {
+    D_800C35C4 = (u8)0;
+    D_800C3C88 = (u8)0;
+}
+
+void func_15008248(s32 arg0) {
+    s32 i;
+
+    D_800C3638 = 0;
+    D_800C3671 = 0;
+    D_800C3670 = 0;
+    func_1501D044(0);
+    func_1501D044(1);
+    D_800C3663 = 0;
+
+    for (i = 0; i < 3; i++)
+    {
+        D_800C3CA0[i].unk0 = 0;
+        D_800C3CA0[i].unkC = 0;
+    }
+
+    D_800C3681 = 0;
+    D_800C3682 = 0;
+    D_800C3683 = 0;
+}
+
+void func_150082CC(void) {
+    s32 tmp = D_800C35C4 - 1;
+
+    if (D_800C35C4 != 0) {
+        if (D_800C35C5 == 0) {
+            D_800C35EA = 2;
+        }
+        D_800C35C4 = 0;
+        func_1501D348(D_800BE9F0, tmp, 0, D_800C3C90, D_800C3C94);
+    }
 }

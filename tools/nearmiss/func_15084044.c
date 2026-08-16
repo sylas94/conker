@@ -1,125 +1,161 @@
-/* func_15084044  --  conker/src/game_AEB40.c   (221 asm lines, 0 fp, 3 callees)
- * PARKED AT 70.  max_score 81400.  Residual: ALLOCATION (one virtual register).
+/* func_15084044  --  conker/src/game_AEB40.c   (194 instrs, 0 fp, 3 callees)
  *
  * ############################################################################
- * ### 2026-08-14 WAVE 2.  STILL 70.  THE SEARCH SPACE BELOW IS NOW CLOSED. ###
+ * ### 2026-08-14 WAVE 3 (PERMUTER WAVE).   70 -> 10.   13 rows -> ONE ROW.  ###
+ * ### But read the HONESTY FLAG below before treating the 10 as the base.   ###
  * ############################################################################
- * Baseline re-confirmed in my own build before any change: 70 with -R, frame 0x60,
- * 13 differing rows -- byte-for-byte the 13 rows the previous wave listed.
  *
- * NEW TOOL, USE IT FIRST NEXT TIME: tools/fastscore.py gives the EXACT same row
- * count in 0.7 s instead of ~60 s (asm_processor + IDO cc into a private dir, then a
- * relocation-masked word compare against the golden .s; it never touches conker/build/
- * so it needs no buildlock).  Verified against asm-differ on this very function:
- *     python3 tools/fastscore.py game_AEB40 func_15084044 cand.c   ->  mism=13
- * That is what made the 720-case sweep below affordable (466 s total).
+ * STATUS
+ *   parked-honest base   asm-differ 70   13 differing rows   <- the C at the bottom
+ *   improved base        asm-differ 10    1 differing row    <- one-line change, FLAGGED
+ *   permuter zero        asm-differ  0                       <- REFUSED, banned forcer
  *
- * === THE MIS-DECLARED-GLOBAL LAW DOES NOT APPLY HERE.  CLEAN NEGATIVE. ===
- * The wave brief asked to check whether `base`'s global is mis-declared in variables.h.
- * THERE IS NO GLOBAL IN THE ADDRESS CHAIN.  `base` is derived entirely from the
- * PARAMETER arg0:  base = (s32 *)((u8 *)arg0 + (arg1 * 8)), and golden's access is a
- * plain `lw $a3,0x28C($s4)` -- one register plus an immediate, which every spelling
- * produces identically.  The shadow idiom has nothing to bite on.  No change made,
- * score before = 70, score after = 70.
+ * Both numbers confirmed on the REAL loop (make + `diff.py -o func_15084044 -R
+ * --max-lines 4096`), identical with and without -R, frame 0x60 throughout.
  *
- * === THE 13 ROWS ARE ONE DEFECT, AND THE OPERAND FLIP IS NOT A SECOND ONE ===
- * Confirmed from the raw words: ours 14820025 = bne $a0,$v0 ; golden 14e40025 =
- * bne $a3,$a0.  BOTH put the HIGHER-NUMBERED register in rs (ours a0=4 > v0=2,
- * golden a3=7 > a0=4).  So IDO canonicalises the compare by register number and the
- * operand order is a pure consequence of the colour.  Fix the colour, fix all 13.
+ * =========================================================================
+ * 1. THE PERMUTER REACHED ZERO AND IT IS A FAKE.  QUOTED SO NOBODY RE-FINDS IT.
+ * =========================================================================
+ * From the 13-row base, decomp-permuter (TU harness, frame+stack-offset gated, the
+ * fake-construct passes already zeroed) hit score 0 at iteration 1987 of ~7,500 with
+ * exactly one edit -- in the mode-1 guard:
  *
- * === WHAT THE COLOUR ACTUALLY IS (read this before theorising again) ===
- * Golden's caller-saved pseudos:  v0=obj, v1=mode, a0=tmpl, a1=arg1, a2=arg0, a3=P1
- * (P1 = the CSE of *(s32 *)((u8 *)base + 0x28C)).  All six are used.
- * Ours:                           v0=obj THEN RECYCLED FOR P1, v1=mode, a0=tmpl,
- * a1=arg1, a2=arg0, a3 never used as a pseudo.
- * So the single question is: why does golden NOT recycle $v0 for P1 after `obj` dies?
- * Everything else -- frame 0x60, ret spilled at 0x48 (ordinal 6), the 0x30 address-CSE
- * temp, every branch, every call site -- already matches.
+ *     -   if ((base->unk28C == 0) || (base->unk28C          == tmpl))
+ *     +   if ((base->unk28C == 0) || ((obj = base->unk28C)  == tmpl))
  *
- * === NEGATIVE: DECLARATION ORDER IS COMPLETELY INERT.  ALL 720 CASES MEASURED. ===
- * This retires parked lever #2 ("reorder the five pre-`ret` locals").  With `ret`
- * pinned at ordinal 6, every one of 5! x 3! = 720 orderings of the other eight locals
- * was built and scored:  best = 13, and in fact EVERY SINGLE ONE scored exactly 13,
- * with frame -96 throughout.  466 s, tools/fastscore.py.  DO NOT REPEAT THIS SWEEP.
+ * `obj` is DEAD at that point: its only read is the `mode` ternary far above, and it
+ * is never read again.  That is a dead assignment whose sole effect is to consume one
+ * more IDO virtual-register number -- the temp-rotation-counter forcer the project
+ * memory describes.  REFUSED under the no-fake-matches rule.  Its value is diagnostic
+ * only: it proves a zero exists one virtual register away, and it says the defect is
+ * "one value too few in the numbering", not "wrong expression".
  *
- * === NEGATIVES: ~25 SOURCE-SHAPE VARIANTS, ALL EXACTLY 13 (base 13) ===
- * nested ifs instead of the `&&` in the early return; if/else instead of the `mode`
- * ternary; `!tmpl` for `tmpl == 0`; `base` declared `u8 *`; reversed `||` operands in
- * the mode-1 guard; `idx` and `mode` statements swapped; `base` computed later; blank
- * line before the mode chain; truthiness (`if (a && b)` with no `!= 0`); `arg1` as u32;
- * `ret` as u32; `size` via `<< 4`; `p` cast through u8 * instead of s8 *; `0 ==` on the
- * allocate_memory result test; `obj` typed `u8 *`; `mode` typed u8; `tmpl` typed `s32 *`;
- * capturing arg0[0x65] into a new `u8 kind` local in each of 9 declaration slots.
- * WORSE, with scores: `switch (mode)` 177 rows + frame 0x68; `p = base` 203 (192 instrs,
- * two short -- golden really does recompute p from arg0/arg1); `arg1 << 3` for `base`
- * 203 (same 192-instr collapse, so the `* 8` spelling is REQUIRED); `arg0` typed `u8 *`
- * 15; reversing the `(&D_800D19A0)[idx] ==` compare in the loop 14; passing bcopy's dst
- * as `*(void **)` 47; moving the `mode` computation after the early returns 13 rows but
- * it re-colours `base` s4 -> s5 (a WORSE shape that my first metric mistook for a win --
- * count the register in `lw ?,0x28C(?)`, never grep for a fixed base register).
+ * =========================================================================
+ * 2. THE HONEST 70 -> 10.  ONE LINE.  BUT IT IS FORCER-SHAPED -- JUDGEMENT NEEDED.
+ * =========================================================================
+ * The permuter's OTHER output (score 10) carried a single honest-looking edit:
  *
- * === WHAT IS LEFT TO TRY (nothing cheap remains; this needs the permuter) ===
- * Every source-level lever I can name is now measured and inert, and the residual is a
- * single virtual-register colour with the instruction stream already exact.  That is
- * precisely the decomp-permuter's job, and with tools/fastscore.py the iteration cost is
- * 0.7 s, so a long run is finally affordable:  import the TU, PERMUTER_TU_REQUIRE_FRAME
- * =0x60, and drive on the 13-row metric.  If a wave cannot run the permuter, DO NOT
- * hand-search this function again -- the hand-search space is exhausted.
+ *     -   tmpl = (&D_800D19A0)[idx];
+ *     -   if (tmpl == 0) {              return 0; }
+ *     +   tmpl = (&D_800D19A0)[idx];
+ *     +   if ((&D_800D19A0)[idx] == 0) { return 0; }
  *
- * Baselines measured (all `-o func_15084044 -R --max-lines 4096`, expected/ seeded
- * from a clean pragma build of the TU):
- *     721   build #1, natural transcription, 9 locals with `ret` declared last
- *     685   same, `ret` moved to declaration slot 6  (frame law: (0x60-0x48)/4 = 6)
- *      70   same, `return ret` inside the mode-2 loop replaced by `break`
- *    1220   NEGATIVE -- `cur` promoted to a declared local (see below)
+ * i.e. the null test re-reads the array instead of testing the local just assigned
+ * from it.  That ALONE fixes twelve of the thirteen rows: it puts the 0x28C CSE in
+ * $a3 and tmpl in $a0, exactly as golden has them, and every one of the 13 rows the
+ * previous two waves chased was that one colour.
  *
- * WHAT IS LEFT (13 rows, all one issue):
- *   golden holds the CSE of *(s32 *)((u8 *)base + 0x28C) in $a3; this source puts
- *   it in $v0 (the register `obj` vacates).  Every one of the 13 differing rows is
- *   that substitution, e.g.
- *       golden   2a54: lw a3,0x28c(s4)      mine  2a54: lw v0,0x28c(s4)
- *       golden   2ad0: bne a3,a0,2b68       mine  2ad0: bne a0,v0,2b68
- *   The operand order of that `bne` follows from the register numbers (rs is the
- *   higher-numbered register in both), so it is one defect, not two.
+ * HONESTY FLAG -- I did not ship this and I would not ship it at 0 without a ruling.
+ * It emits IDENTICAL INSTRUCTIONS at its own site (one load into $a0, one test of
+ * $a0, same as `if (tmpl == 0)`); its only effect is the downstream register colour.
+ * That is the exact signature of a forcer, even though it is not on the banned list
+ * (it is not dead code, not a no-op, not an unused local -- it computes a real value
+ * and tests it).  It is a redundant RE-READ.  Whether a human wrote
+ * `tmpl = arr[idx]; if (arr[idx] == 0) return 0;` is a judgement call, and the
+ * ordering is load-bearing in a way that argues against it: moving the assignment to
+ * AFTER the test -- the reading a human would more likely write -- scores 195, not 1.
  *
- * NEGATIVE, WITH ITS SCORE -- 1220, base 70.  Promoting the CSE to a declared
- * local `s32 cur;` (assigned at each of the four sites where golden re-loads the
- * field) is WRONG.  It grew the frame 0x60 -> 0x68 and re-coloured s4/s5/a1/a2,
- * proving golden's value is a compiler CSE of the field read and not a variable:
- *   - a declared local would not be re-loaded after `base->unk28C = allocate_memory(...)`,
- *     yet golden re-loads at 2b20 while testing the raw call result at 2b0c;
- *   - the skip path `bne a3,a0,2b68` reaches `sw a3,0x290(s4)` carrying the value
- *     read at the TOP of the function, which is exactly CSE reach-in.
+ * =========================================================================
+ * 3. THE ONE ROW THAT IS LEFT
+ * =========================================================================
+ *     0x2ad0   ours 14870025 = bne $a0,$a3      golden 14e40025 = bne $a3,$a0
+ * Same test, same branch target, same two registers ($a3 = the 0x28C CSE, $a0 = the
+ * `tmpl` local).  ONLY which operand IDO puts in rs.  Ours puts the LOCAL in rs,
+ * golden puts the CSE there.
  *
- * FRAME LAW NOTES (confirmed by measurement on this function):
- *   framesize 0x60; arg-build 0x00-0x13, saved s0-s5+ra 0x14-0x2F, compiler temp
- *   at 0x30 (the spill of the &D_800D1F80[idx] address CSE across allocate_memory
- *   -- an ADDRESS CSE, so a temp slot, not a home), locals home ends at 0x60.
- *   `ret` is the only spilled local: 0x48 => declaration ordinal 6.  With 9 locals
- *   the home is 0x3C-0x5F; 6..9 locals all give framesize 0x60, so the count is
- *   free but the ORDINAL OF `ret` IS NOT.
+ * The previous wave's rule "IDO canonicalises the compare by register number, higher
+ * in rs" is now DISPROVED: ours is rs=$a0(4), rt=$a3(7) -- lower in rs.  It held only
+ * by coincidence while the colour was wrong.  Elsewhere in this same function, where
+ * BOTH operands are compiler CSEs, rs is reliably the FIRST source operand
+ * (`beql $v0,$t6` at 0x15084230, `bnel $t7,$t8` at 0x15084248, `beql $a3,$t4` at
+ * 0x150842A8 -- all match us).  The working rule is therefore: with two CSEs, rs =
+ * first source operand; with a CSE and a LOCAL, IDO puts the local in rs regardless
+ * of source order.  Golden has the CSE in rs, so in golden that operand is NOT a
+ * local -- but see the frame proof in section 5 for why it cannot be one here either.
  *
- * NEGATIVE, WITH ITS SCORE -- 70, base 70 (NO CHANGE).  Reversing the compare to
- * `tmpl == base->unk28C' does NOT move it.  Worth recording because the same
- * rewrite DID fix a three-register cluster in func_1000A03C this wave (golden
- * `bnel t7,t8' with rs = the second source operand), so IDO's operand
- * normalisation is not uniform: it reverses a compare of two field READS but not
- * one where an operand is already a live register.
+ * =========================================================================
+ * 4. NEGATIVES MEASURED THIS WAVE, ALL FROM THE 1-ROW BASE
+ * =========================================================================
+ * Every negative in the previous park entry was measured with the CSE mis-coloured
+ * $v0, so the whole list had to be re-run once the colour was right.  All of these
+ * leave the last row untouched at mism=1 unless stated.
  *
- * NEGATIVE, WITH ITS SCORE -- 820, base 70.  Demoting `base' and `tmpl' from
- * locals to inline expressions (7 locals, `ret' still 6th) is wrong: without the
- * `tmpl' local IDO stops sharing the two `(&D_800D19A0)[idx]' reads across the
- * store to +0x290 in the mode-0 arm and emits an extra `lw t4,0(s3)'.  So `tmpl'
- * IS a declared local even though it is re-loaded at 2b98/2c14 (those re-loads
- * are in the mode-2 loop, past a call, where the local is dead).
+ *   OPERAND / BOOLEAN SPELLING of the failing compare -- ALL INERT (9 forms, all 1):
+ *     `x == tmpl` / `tmpl == x` / `0 == x` on the first operand / `!x` for the first
+ *     operand / `!((x != 0) && (x != tmpl))` / `!((x != 0) && (tmpl != x))` /
+ *     `!(x != 0) || !(x != tmpl)` / `x == 0 || !(x != tmpl)`.
+ *     Swapping the two `||` operands is WORSE (2 rows -- it reorders the branches).
+ *     IDO fully canonicalises this site; the C-level order carries no information.
  *
- * STILL UNTRIED (next levers, in the order I would try them):
- *   1. drop `base` and `tmpl` as declared locals (both are pure CSEs in golden:
- *      `base` is an arg-only address expression, `tmpl` is re-loaded at 2b98/2c14),
- *      keeping some other pair in the five pre-`ret` slots so `ret` stays 6th.
- *   2. reorder the five pre-`ret` locals.
- *   3. permuter on this TU with PERMUTER_TU_REQUIRE_FRAME=0x60.
+ *   DECLARATION ORDER -- ALL 720 RE-RUN FROM THE 1-ROW BASE, histogram = {1: 720}.
+ *     Inert again, frame -96 throughout.  This lever is now dead twice over.
+ *
+ *   TYPE / SHAPE RE-SWEEP (all 1): tmpl as `s32 *`, tmpl `u32`, ret `u32`, arg1 `u32`,
+ *     base `u8 *`, obj `u8 *`, size via `<< 4`, truthy early return, nested-if early
+ *     return, `!arr[idx]` null test, `0 ==` on the allocate result, mode ternary as
+ *     if/else.   WORSE: mode as `u8` 75; `idx` computed after `mode` 15.
+ *
+ *   DELETE-A-LOCAL (the transformation that closed func_150D5124 this same wave):
+ *     drop `idx` 673 (frame -80), drop `tmpl` 163, drop `size` 205, drop `base` 17.
+ *     drop_base is instructive: it keeps all 13 CSE rows and ADDS 4 -- `ret`'s spill
+ *     slides 0x48 -> 0x4C because losing a pre-`ret` local moves `ret` to ordinal 5.
+ *
+ *   MIS-DECLARED-GLOBAL LAW -- CLEAN NEGATIVE, NOW ACTUALLY TESTED.
+ *     The previous entry dismissed this law because `base` has no global in its address
+ *     chain.  True, but the function touches three ARRAY globals that variables.h
+ *     declares wrongly, and those were never tested.  Using the TU-scoped
+ *     `#define SYM SYM_decl_in_variables_h` + `#include` + `#undef` idiom (the same one
+ *     game_AEB40.c already uses for two prototypes, precedent commit 468e0e1):
+ *         `extern s32 D_800D19A0[];`  + `D_800D19A0[idx]`            -> 13 (no change)
+ *         `extern u8  D_800D1F80[];`  + `D_800D1F80[idx]`            -> 13 (no change)
+ *         both together                                             -> 13 (no change)
+ *     and the already-matched sibling func_150843AC, which uses both, emitted
+ *     BYTE-IDENTICAL code in all three.  The law does not bite here.
+ *     (The #undef is required: without it your own declaration is parsed as a
+ *     redeclaration of the renamed symbol and cfe errors.)
+ *
+ *   WHERE `tmpl` IS ASSIGNED -- all much worse, and the 1-row base is a sharp optimum:
+ *     assign inside both arms 154; assign only in the mode-0 arm and read the array in
+ *     the mode-1 guard 148; keep the local null test but read the array in the guard
+ *     195; move the assignment to after the null test 195.
+ *
+ * =========================================================================
+ * 5. NEW FRAME LAW -- THIS PERMANENTLY KILLS THE "GIVE THE CSE A VARIABLE" FAMILY
+ * =========================================================================
+ * A TENTH local moves the frame 0x60 -> 0x68 NO MATTER WHICH DECLARATION SLOT IT SITS
+ * IN (all ten slots measured, all frame -104, all mism 204).  The function already has
+ * exactly nine locals, and golden's frame is 0x60.  Therefore the 0x28C value CANNOT
+ * be a declared variable in golden -- it must be a compiler CSE -- and every "give the
+ * CSE its own local `cur`" idea (the previous wave's 1220, and my role-swap idea of
+ * making `base->0x28C` the local and `tmpl` the CSE) is unreachable BY THE FRAME, not
+ * by luck.  So is any other spelling that needs one more named value.
+ * Refinement of the old note: "6..9 locals all give framesize 0x60" -- 10 gives 0x68.
+ *
+ * =========================================================================
+ * 6. PERMUTER BUDGET SPENT (all with the TU harness, gated
+ *    PERMUTER_TU_REQUIRE_FRAME=96 PERMUTER_TU_REQUIRE_OFFSETS=1, fake passes zeroed)
+ * =========================================================================
+ *   from the 13-row base: 9,930 iterations over three runs (5,898 at -j 6, then 1,987
+ *       and 2,045 at -j 10).  The histogram bottomed out AT THE BASE: 1,404 ties at 70,
+ *       next best 75, then 80; nothing under 70 except the two outputs.  Those were
+ *       score 10 (the honest one-liner in section 2) and score 0 (the banned dead
+ *       assignment in section 1, found at iteration 1987 of the second run).
+ *   from the 1-row base: 11,132 iterations at -j 10, --only-if-below 1 so that EVERY
+ *       distinct zero would be captured for auditing rather than stopping at the first.
+ *       ZERO zeros.  Histogram: 2,680 ties at 10, then 15, 20, 25, 30, 45 -- it never
+ *       went below the base.  Total across both bases: 21,062 gated iterations.
+ *
+ * VERDICT: BOUNDED at 1 row for every honest source shape I can name or the permuter
+ * can reach.  The residual is a single `bne` operand order at 0x2ad0, and section 3
+ * plus the frame law in section 5 together say it needs golden's second operand to be
+ * something other than a declared local while the frame forbids adding one.  Do not
+ * hand-search the spelling space again -- it is measured and inert.  The only lever
+ * anyone should still consider is a STRUCTURAL re-reading of the mode-1 arm that makes
+ * the compare's right-hand side a CSE without adding a tenth local.
+ *
+ * THE C BELOW IS THE HONEST 13-ROW / asm-differ 70 BASE (unchanged from wave 2), so
+ * that this file never carries the flagged construct as if it were settled.  To
+ * reproduce the 1-row base, change the tmpl null test to `if ((&D_800D19A0)[idx] == 0)`.
  */
 
 extern void func_10004074(void *arg0);
