@@ -80,3 +80,23 @@ Ranking `asm/nonmatchings/*.s` reports ~2108 functions left; ~467 are ORPHANS wh
 already decompiled, and every splice against them fails with "pragma not found". Rank by
 `#pragma GLOBAL_ASM` lines actually present in `conker/src/*.c`: 1641 real, 1449 unattempted
 and unparked, only ~35 under 20 instructions -- and this session consumed most of those.
+
+## Second wave (13-30 word tier) -- diagnosed, none matched
+
+- **func_15167010** (game_1944C0, 23) -- **24 at n=22/23**, ONE short. Walks `D_8008B4A8` in
+  0x34-byte strides to `base+0x1484`, calling `entry->unk18` when non-NULL. Golden saves
+  `s0,s1,s2` but NEVER USES s1 -- that dead save is very likely the missing instruction, so the
+  source has a third variable that our version optimises away. `struct115 *` stride arithmetic
+  and a raw `u8 *` walk score the same. variables.h has `extern struct115 D_8008B4A8[]`; do not
+  redeclare it.
+- **func_1519ED24** (game_1CBE20, 24) -- 43 at n=26/24, two over. Copies 8 floats out of
+  `arg0->unk170` into arg0, scaling the first two by `D_800A8CD8`, returns 1. Dropping the
+  destination local (writing through `arg0` directly) did NOT help -- same 43 either way.
+- **func_150A7CB0 / func_150A7DA0** (game_D5160 / game_D5250, 20 each) -- these are **guScaleF**
+  and **guTranslateF**: a 4x4 float matrix with the diagonal at 0x0/0x14/0x28/0x3C, taking the
+  three values in `$a1..$a3`. The SDK-shaped source is structurally right but scores 100/99 at
+  n=28/20 -- EIGHT over, because our f32 parameters route through FP registers (`mtc1`/`swc1`)
+  where golden stores them straight from the GPRs (`sw $a1,0x0($a0)`) and writes the twelve
+  zeros as `sw $zero` rather than float stores. This is the SAME parameter-staging problem as
+  guMtxXFMF (see tools/nearmiss/guMtxXFMF.c) -- treat all three as one blocker, not three
+  functions, and do not re-sweep matrix spelling until that is understood.
