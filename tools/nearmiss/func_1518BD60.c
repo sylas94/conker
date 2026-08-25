@@ -1,8 +1,12 @@
 /* tools/nearmiss/func_1518BD60.c -- game_1B8F40, jtbl block 24BED0 (near-miss, 163)
  *
- * STATUS: PARKED at mism=128, n=214/214 (EXACT LENGTH), frame EXACT (-0x120).
+ * STATUS: PARKED at mism=162, n=214/214 (EXACT LENGTH), frame EXACT (-0x120).
  * The decode below is complete and was measured; the candidate C is at the bottom of this
  * file. Splice it over the pragma in conker/src/game_1B8F40.c to reproduce.
+ *
+ * *** THE PARKED SCORE WENT 128 -> 162 ON PURPOSE. READ "REVISED 2026-08-25" NEAR THE ***
+ * *** BOTTOM OF THIS HEADER BEFORE REACTING TO THAT NUMBER. The 128 was a structurally ***
+ * *** IMPOSSIBLE local minimum; 162 is the honest baseline that can still reach 0.     ***
  *
  * WHY IT MATTERS: it jointly owns rodata block 24BED0 with func_1518BA90 (which is at
  * score 0, see tools/nearmiss/func_1518BA90.c). The jtbl migration
@@ -188,6 +192,62 @@
  * gates tightened (PERMUTER_TU_REQUIRE_OFFSETS=1) rather than more iterations.
  */
 
+/*
+ * ================================================================ REVISED 2026-08-25
+ * TWO CORRECTIONS TO EVERYTHING ABOVE. The 128 was real but it is a DEAD END, and the
+ * residual it is attributed to is not the residual any more.
+ *
+ * (1) "STILL OPEN at 128: the extra hoisted 255" IS STALE. At 128 the 255 hoist is ALREADY
+ *     GONE. Measured on the full row list: rows idx21-idx26 put $s5=&D_800BE9E4,
+ *     $s6=23, $s7=0x160600, $fp=21 -- ALL FOUR INVARIANTS EXACTLY WHERE GOLDEN PUTS THEM,
+ *     with idx25/idx26 byte-identical to golden. The `lim` hoist killed the 255 as a side
+ *     effect (it occupies the saved register the 255 was taking). Do not go hunting the
+ *     255 from the 128 baseline; it is not there.
+ *
+ * (2) THE 128 CANNOT EVER REACH 0 -- IT IS STRUCTURALLY WRONG, NOT JUST MIS-COLOURED.
+ *     Hoisting `lim = arg0->unk22 + 1` to the top of the loop body puts `lh $s4, 0x22($s0)`
+ *     at row idx31. GOLDEN COMPUTES IT INSIDE THE SPAWN GUARD, at idx50 (`lh $t5, 0x22($s0)`
+ *     / `addiu $t6, $t5, 1`, immediately after the first `jal func_150ADA20`). An
+ *     instruction in the wrong position is not reachable by register colouring, so 128 is a
+ *     LOCAL MINIMUM BELOW THE STRUCTURALLY CORRECT ONE. The permuter found it precisely
+ *     because it optimises the score, and the score cannot see structure.
+ *
+ * THE PARKED C BELOW HAS THEREFORE BEEN REVERTED to computing the modulus inside the guard
+ * (golden's structure), which measures 162. 162 IS THE HONEST BASELINE; work from it.
+ *
+ * ---------------------------------------------------------------- THE REAL RESIDUAL AT 162
+ * Golden carries a TENTH saved value that we do not:
+ *      1518BE20:  jal   func_150ADA20
+ *      1518BE24:   or   $s4, $s3, $zero      <- delay slot: a COPY of the loop counter
+ * and $s4 is then used exactly once, at `sb $s4, 0x4($v1)` (the emitter index written into
+ * the spawned particle). $s3 is callee-saved and still live there, so the copy is redundant
+ * -- yet golden keeps both. That tenth value is what leaves golden with room for only FOUR
+ * hoisted invariants; we have nine values, spare capacity, and so IDO hoists the 255 too.
+ * Our first `jal` gets a bare `nop` delay slot where golden schedules that move.
+ *
+ * *** THE COPY IS NOT REACHABLE FROM SOURCE. SIX MORE SPELLINGS REFUTED 2026-08-25, ***
+ * *** all n=214/214, frame exact, ALL scoring exactly 162 -- IDO coalesces every one: ***
+ *      u8  which = i;  at top of spawn block ................... 162
+ *      s32 which = i;  at top of spawn block ................... 162
+ *      u32 which = i;  at top of spawn block ................... 162
+ *      s16 which = i;  at top of spawn block ................... 162
+ *      s32 which = i;  at top of LOOP body ..................... 162
+ *      counter retyped s32 with explicit `i = (i + 1) & 0xFF` ... 162
+ * Widening, narrowing and same-width copies all coalesce identically. A redundant
+ * register-to-register move CANNOT be conjured from C here, so "add a tenth value to crowd
+ * out the hoist" is a closed line of attack -- do not re-run it.
+ *
+ * WHAT IS LEFT is a saved-register assignment tie, the class [[conker-permuter-setup]]
+ * records as unreachable by source perturbation (43,573 frame-gated iterations from this
+ * same baseline moved nothing but the `lim` hoist). Before spending another pass here, note
+ * the cost/benefit: this function is the SOLE blocker on rodata block 24BED0, whose partner
+ * func_1518BA90 already scores 0, so cracking it ships TWO functions and the block migration
+ * `- [0x24BED0, rodata]` -> `- [0x24BED0, .rodata, game_1B8F40]`. Ownership is verified
+ * clean: func_1518BA90 owns jtbl_800A7410 + D_800A7434/38/3C, func_1518BD60 owns D_800A7440,
+ * nothing else references any of them, and the TU currently emits no .rodata at all.
+ * ================================================================
+ */
+
 extern s32 D_800BE9E4;
 extern s32 func_15147DA0(void *, void *, s32, s32, s32, s32, s32, s32, s32, s32, s32,
                          s32 *, s32, u8, s32);
@@ -278,17 +338,15 @@ void func_1518BD60(struct Emit1518BD60 *arg0) {
     s32 temp;
     s32 rnd;
     u8 i;
-    u32 lim;
 
     i = 0;
     do {
-        lim = (u32)(arg0->unk22 + 1);
         temp = arg0->unk2C[i] - D_800BE9E4;
         arg0->unk2C[i] = temp;
         if ((arg0->unk24 != NULL) && (arg0->unk24->unk0 != NULL) &&
             (arg0->unk24->unk1D4 != 0) && (arg0->unk28 == arg0->unk24->unk3B)) {
             if (temp < 0) {
-                rnd = func_150ADA20() % lim;
+                rnd = func_150ADA20() % (u32)(arg0->unk22 + 1);
                 temp_f22 = func_151423D8(rnd & 0xFF);
                 temp_f24 = func_151423D8((rnd - 0x40) & 0xFF);
                 temp_f20 = (func_150ADA68() * arg0->unk14) + arg0->unk10;
