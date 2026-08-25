@@ -24,7 +24,14 @@ Try it FIRST on any small pointer-chase function.
         func_15169804(arg0);                /* func_15169824 for the twin */
   ONE instruction too many. Golden puts `sw $a0,0x18($sp)` in BOTH the `jalr` delay slot and
   the following `jal` delay slot -- arg0 re-homed each time -- while we spill once and reload.
-  Declaring the table as `void (*[])(void *)` vs `void *[]` + cast makes no difference (both 28).
+  *** SPELLING IS REFUTED AS A LEVER. BAIL. *** Six honest spellings all tie at EXACTLY 28:
+  table declared `void (*[])(void *)` vs `void *[]` + cast; NO local at all (table entry
+  re-evaluated inside the `if`); local initialised at its declaration; local assigned as a
+  separate statement; the index hoisted into a `u8` local; and `if (f)` vs `if (f != NULL)`.
+  A score that does not move across genuinely different honest spellings is this repo's bail
+  signature. The residue is not source-level -- do not re-sweep spelling. The next honest
+  levers are the permuter or a flag question, and note the frame is ALREADY EXACT, so any
+  candidate that adds a local is wrong by construction.
 - **func_1507EEB8** (game_AC030, 15) -- 51 at n=11/15, four SHORT. A 5-byte shift register:
   p[4]=p[3]; p[3]=p[2]; p[2]=p[1]; p[1]=p[0]; p[0]=arg0&0xFF. Golden indexes off `v0 = arg1+4`
   with negative displacements, so the source likely walks a pointer DOWN from p+4 rather than
