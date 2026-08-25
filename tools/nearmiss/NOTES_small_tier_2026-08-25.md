@@ -32,10 +32,19 @@ Try it FIRST on any small pointer-chase function.
   signature. The residue is not source-level -- do not re-sweep spelling. The next honest
   levers are the permuter or a flag question, and note the frame is ALREADY EXACT, so any
   candidate that adds a local is wrong by construction.
-- **func_1507EEB8** (game_AC030, 15) -- 51 at n=11/15, four SHORT. A 5-byte shift register:
-  p[4]=p[3]; p[3]=p[2]; p[2]=p[1]; p[1]=p[0]; p[0]=arg0&0xFF. Golden indexes off `v0 = arg1+4`
-  with negative displacements, so the source likely walks a pointer DOWN from p+4 rather than
-  using literal indices. Not yet tried.
+- **func_1507EEB8** (game_AC030, 15) -- now **21 at n=14/15**, ONE short. A 5-byte shift
+  register: p[4]=p[3]; p[3]=p[2]; p[2]=p[1]; p[1]=p[0]; p[0]=arg0.
+  *** THE FIX WAS THE PARAMETER TYPE, AND IT IS A REUSABLE TELL. ***
+  The prologue `sw $a0,0x0($sp)` + `andi $t6,$a0,0xFF` + `or $a0,$t6,$zero` is the signature of
+  a **`u8` PARAMETER**: -g3 homes the incoming word, then IDO narrows it to 8 bits and keeps it
+  in `$a0`. It is NOT `(u8)arg0` or `arg0 & 0xFF` inside the body -- those produce neither the
+  home nor the `or`, and six such spellings all tied at 51 / n=11 (the bail signature).
+  Declaring the parameter `u8 arg0` -- AND changing the TU's own forward declaration to match,
+  or it is a redeclaration CCFAIL -- took it 51 -> 21 and 11 -> 14 words in one step.
+  Pointer-base spelling is a NO-OP: `p[4]=p[3]...` off `arg1` and `q[0]=q[-1]...` off `arg1+4`
+  score identically both before and after the type fix. Do not sweep that again.
+  Remaining: one instruction. Callers pass `*((u8*)&arg0 + 3)`, `0x12`, `0x11`, consistent with
+  a u8 parameter; the caller is already matched, so gate any install on the full ROM sha1.
 - **func_10001420** (init_1420, 9) -- 19 at n=10/9, one over. Zero-fills 0xFE0 bytes at
   `&D_80043B40` (note variables.h declares it `s32 *`, and its `// 4064` comment == 0xFE0).
   Golden: `a0 = base + 0xFE0; do { a1 += 4; *(a1-1) = 0; } while (a1 < a0);`. Deriving `end`
