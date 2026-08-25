@@ -100,3 +100,53 @@ and unparked, only ~35 under 20 instructions -- and this session consumed most o
   zeros as `sw $zero` rather than float stores. This is the SAME parameter-staging problem as
   guMtxXFMF (see tools/nearmiss/guMtxXFMF.c) -- treat all three as one blocker, not three
   functions, and do not re-sweep matrix spelling until that is understood.
+
+  **SUPERSEDED 2026-08-25 -- the "eight over" and the parameter-staging framing are both wrong
+  for func_150A7CB0. It is TWO over, and the blocker is a delay-slot scheduler tie.**
+
+  * **The parameter staging is not a mystery and not a blocker: it is a TYPE fact.** golden's
+    twelve `sw $zero` are NOT what IDO emits for `0.0f` -- measured, a `0.0f` store compiles to
+    `mtc1 $zero,$f0` + `swc1 $f0` (that is the whole of the "eight over": score 60, n=24/20).
+    `sw $zero` and `sw $a1` only come from INTEGER-typed stores, so the original source stored
+    integer words, and the punned reconstruction already parked in the TU is closer to the
+    original than the SDK float form is. It is not a forcer.
+  * **`-g3` is the second half.** The TU's own comment already said so. Scores for the parked
+    punned form: `-O2 -g3` = 3 (jr delay slot left as a nop), **`-O2` = 2**, `-O1` = 2,
+    `-g` = 59. Both TUs hold EXACTLY ONE function, so a per-TU `OPT_FLAGS := -O2` override
+    cannot break a sibling -- this is the ideal case for one. See [[conker-g3-delayslot]].
+  * **What is actually left is 2 words, and it is a scheduler tie, not a spelling.** golden ends
+    `swc1 $f4,0x3C` / `jr` / `sw $zero,0x38`(slot); we end `sw $zero,0x38` / `jr` /
+    `swc1 $f4,0x3C`(slot). IDO sorts our last two stores into ADDRESS order and then drops the
+    last one into the slot; golden's kept source order. **ELEVEN spellings measured, ALL exactly
+    2 at -O2, byte-identical output:** five statement orderings of the last row (incl. 1.0f
+    first / mid / top / plain address order), s32-typed matrix with the 1.0f as the cast access
+    and both orders of the final pair, 1.0f via a named `f32` local, an `f32 *` alias local, and
+    writing [3][2] through a separate `s32 *`. Statement order and which side carries the cast
+    are BOTH irrelevant here. Do not re-sweep matrix spelling -- that space is now measured out.
+  * The only known lever left is a code-motion barrier (`dummy_label:;`), which the TU's second
+    commented block already tried and labelled "fakematch to help". That is the banned class.
+  * **func_150A7DA0 measured too: `-O2 -g3` = 59, `-O2` = 16 (n=20/20, EXACT LENGTH),
+    `-O1` = 54.** Its parked note's "best 635" is stale by a wide margin -- the flag was the
+    whole story there as well, and it is now the closer of the two by structure.
+    Its residual is the SAME reordering law, in a bigger dose: golden interleaves the four
+    `swc1 $f4` diagonal stores among the `sw $zero`s in strict ADDRESS order
+    (0x4, 0x0, 0x8, 0xC, 0x10, 0x14, ...), whereas we emit every int store first and group all
+    four float stores at the end. We also CSE the 1.0f into `$f0`; golden uses `$f4`.
+    Note golden's `sw $zero,0x4` sits BETWEEN the `mtc1` and the first `swc1 $f4,0x0` -- that
+    is a scheduler hazard fill, which is why address order is broken at exactly that one spot.
+
+  **THE UNIFYING LAW, and the one thing left worth testing.** In both functions our IDO
+  REORDERS int stores ahead of float stores (guScaleF: the final pair; guTranslateF: wholesale
+  grouping), while golden preserves address order. That is an aliasing decision: our stores mix
+  `*(s32 *)&m[i][j]` with `m[i][j]`, two different types, so IDO is free to sink the float ones.
+  Golden's compiler was NOT free to, which suggested the original source reaches both through
+  ONE type rather than the cast-punning both reconstructions use.
+
+  **THAT UNION HYPOTHESIS IS REFUTED -- tested and byte-identical.** A
+  `typedef union { f32 f; s32 i; } MtxE;` matrix, every element written through one union type
+  (`.i` for the words, `.f` for the 1.0f), scores EXACTLY the same as the cast form on both
+  functions: guScaleF 2 / 3 / 2 and guTranslateF 16 / 59 / 54 at -O2 / -O2 -g3 / -O1. So the
+  reordering is NOT a type-based aliasing decision, and unifying the access type is not the
+  lever. Thirteen spellings are now measured out across the two functions. Whatever fixes this
+  is not reachable by how the stores are TYPED or ORDERED in C -- treat that as settled and do
+  not spend a fourth pass on matrix spelling.
