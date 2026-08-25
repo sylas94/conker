@@ -1,0 +1,208 @@
+score	len_delta	frame	tu	func	note
+0	0	-80	init_50A0	func_100052A0	
+0	0	-216	game_13D350	func_15113218	
+0	0	-72	game_1B8F40	func_1518BA90	
+2	0	-40	game_83300	func_150585F0	
+2	0	-48	game_205C90	func_151D8868	
+2	-	-	game_21C4F0	func_151EF080	
+3	0	-216	game_1B1600	func_15184FA4	
+5	0	-64	init_8180	func_10008CE8	
+5	0	-80	game_14F130	func_15121C80	
+8	0	-80	game_981E0	func_1506AD30	
+11	0	-80	game_357F0	func_15008340	
+11	0	-72	game_CCD00	func_1509F850	
+11	0	-256	game_1B1600	func_15187A98	
+12	0	-96	game_B3020	func_150870D0	
+12	0	-152	game_1C0B10	func_15193660	
+13	0	-96	game_AEB40	func_15084044	
+16	0	-200	game_40490	func_15013778	
+21	0	-176	game_40490	func_1501474C	
+21	-	-	game_DADB0	func_150AD900	
+22	0	-176	game_1E58B0	func_151B8908	
+27	2	-32	game_21D420	func_151EFF94	
+32	0	-48	game_E3C90	func_150B67E0	
+32	0	-192	game_1228D0	func_150F64DC	
+33	0	-40	game_142560	func_1511F4D0	
+33	0	-128	game_209B50	func_151DC6A0	
+34	0	-16	game_18A8F0	func_1515E544	
+35	0	-32	game_1944C0	func_15167E0C	
+36	0	-80	init_1050	func_10001194	
+37	0	-40	game_44A90	func_15017640	
+39	0	-256	game_FECC0	func_150D1810	
+40	-1	-136	game_12C1E0	func_150FF6E0	
+42	0	-264	game_100810	func_150D4D58	
+42	-1	-168	game_203E20	func_151D6BFC	
+43	0	-136	game_1355D0	func_15108120	
+43	0	-264	game_1E37D0	func_151B7328	
+46	-1	-256	game_18D770	func_15160E30	
+48	0	-144	game_3BA70	func_1500E8C0	
+49	0	-224	game_40490	func_15014B60	
+57	0	-224	game_203E20	func_151D69B4	
+60	-	-	game_77760	func_1504A2B0	
+64	-1	-56	game_12C1E0	func_150FF2D4	
+67	-1	-72	game_77AD0	func_15052F9C	
+71	0	-152	game_19A8B0	func_1516D738	
+87	0	-80	game_15B5F0	func_1512E140	
+97	1	-104	game_1A89B0	func_1517B89C	
+97	0	-80	game_203340	func_151D5E90	
+103	-1	-136	game_58F80	func_1502F01C	
+109	-1	-64	game_1188E0	func_150EB614	
+112	0	-288	game_126F60	func_150FAE18	
+116	0	-248	game_F15D0	func_150C4120	
+118	2	-96	game_83300	func_15060778	
+124	-1	-64	game_139FC0	func_1510D404	
+128	0	-288	game_1B8F40	func_1518BD60	
+131	0	-176	game_6D800	func_15040A78	
+135	-2	-240	game_11C2B0	func_150EFB80	
+136	4	-48	game_2DDF0	func_15000940	
+136	-2	-96	game_EF410	func_150C3230	
+136	1	-128	game_18A8F0	func_1515EC78	
+154	-4	-312	game_EE710	func_150C1260	
+154	1	-208	game_12C1E0	func_150FF474	
+168	0	-16	game_6E240	func_15040FCC	
+172	-1	-184	game_1A11B0	func_151742EC	
+176	-1	-136	game_B3020	func_1508BC20	
+176	-1	-168	game_1E73B0	func_151BDD8C	
+179	0	-88	game_6D800	func_150403C8	
+181	0	-120	game_14F8F0	func_15122440	
+181	-4	-104	game_15B200	func_1512DEA4	
+194	0	-272	game_119370	func_150EBEC0	
+199	0	-120	init_11FA0	func_10012020	
+206	4	-56	game_76E50	func_150499A0	
+206	-2	-96	game_18A8F0	func_1515E888	
+223	-5	-96	game_63A20	func_15036570	
+225	-1	-152	init_B1B0	func_1000CEAC	
+225	2	-168	game_113D60	func_150E7C9C	
+227	0	-400	game_40490	func_150130B4	
+241	4	-208	game_112F90	func_150E5AE0	
+242	2	-48	game_20AE20	func_151DF1BC	
+255	-3	-192	game_B3020	func_1508C5B8	
+272	6	-128	game_64120	func_150380C0	
+278	-6	-144	game_AEB40	func_15084558	
+287	-12	-96	game_EB020	func_150BDB70	
+288	4	-72	game_155C90	func_151287E0	
+322	-8	-264	game_12C1E0	func_150FFD84	
+338	-17	-128	game_63A20	func_150368C4	
+357	-5	-96	game_1A0790	func_151733E4	
+457	0	-328	game_13BB20	func_1510E950	
+	-	-	init_39C0	func_10003ACC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/init_39C0.fun
+	-	-	init_4470	func_1000480C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/init_4470.fun
+	-	-	init_49E0	func_100049E0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/init_49E0.fun
+	-	-	init_8F90	func_1000A03C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/init_8F90.fun
+	-	-	game_34F20	func_15007B3C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_34F20.fu
+	-	-	game_36680	func_1500AD84	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_36680.fu
+	-	-	game_3DC30	func_15010880	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_3DC30.fu
+	-	-	game_3F820	func_150124A0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_3F820.fu
+	-	-	game_40490	func_150144B8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_40490.fu
+	-	-	game_43620	func_15016170	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_48FD0	func_1501BBB8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_48FD0.fu
+	-	-	game_49D30	func_15021DB8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_49D30.fu
+	-	-	game_50D80	func_150242F8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_50D80.fu
+	-	-	game_58F80	func_1502BAD0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_58F80.fu
+	-	-	game_58F80	func_1502F9FC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_58F80.fu
+	-	-	game_6B280	func_1503DDD0	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_6B320	func_1503E5F8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_6B320.fu
+	-	-	game_6C960	func_1503F62C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_6C960.fu
+	-	-	game_6E770	func_150428D4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_6E770.fu
+	-	-	game_71820	func_15045AE4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_71820.fu
+	-	-	game_77AD0	func_1504CB98	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_77AD0.fu
+	-	-	game_83300	func_1505A3A8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_83300.fu
+	-	-	game_83300	func_1505D6F0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_83300.fu
+	-	-	game_83300	func_15060F28	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_83300.fu
+	-	-	game_83300	func_150611E8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_83300.fu
+	-	-	game_AD9B0	func_15080828	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_AD9B0.fu
+	-	-	game_B21B0	func_15085430	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_B21B0.fu
+	-	-	game_B3020	func_15089F9C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_B3020.fu
+	-	-	game_B3020	func_1508B9BC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_B3020.fu
+	-	-	game_B3020	func_1508E89C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_B3020.fu
+	-	-	game_BC510	func_1508F9F4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_BC510.fu
+	-	-	game_C8950	func_1509BBA0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_C8950.fu
+	-	-	game_CB1C0	func_1509DDFC	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_D52A0	func_150A7DF0	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_DAD60	func_150AD8B0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_DAD60.fu
+	-	-	game_DDB60	func_150B06B0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_DDB60.fu
+	-	-	game_E7380	func_150B9ED0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_E7380.fu
+	-	-	game_E7970	func_150BA55C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_E7970.fu
+	-	-	game_EB340	func_150BE494	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_EB340.fu
+	-	-	game_EDE60	func_150C0C38	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_EDE60.fu
+	-	-	game_F44D0	func_150C71C0	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_F4B20	func_150C7670	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_F4D20	func_150C79BC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_F4D20.fu
+	-	-	game_FA360	func_150CD59C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_FA360.fu
+	-	-	game_FB060	func_150CDBB0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_FB060.fu
+	-	-	game_FF0E0	func_150D1C30	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_FF0E0.fu
+	-	-	game_10EF60	func_150E1AB0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_10EF60.f
+	-	-	game_11C2B0	func_150F16DC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_11C2B0.f
+	-	-	game_124260	func_150F6DE4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_124260.f
+	-	-	game_126F60	func_150FA1B8	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_126F60.f
+	-	-	game_12BD10	func_150FE860	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_12BD10.f
+	-	-	game_12C1E0	func_150FF840	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_12C1E0.f
+	-	-	game_131620	func_151041E4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_131620.f
+	-	-	game_131A90	func_15104634	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_131A90.f
+	-	-	game_142560	func_15115368	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_142560.f
+	-	-	game_142560	func_1511650C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_142560.f
+	-	-	game_14EE80	func_151219D0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_14EE80.f
+	-	-	game_157840	func_1512B730	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_157840.f
+	-	-	game_157840	func_1512C20C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_157840.f
+	-	-	game_15F680	func_1513264C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_15F680.f
+	-	-	game_16EE20	func_15145740	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_16EE20.f
+	-	-	game_173D40	func_15146970	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_173D40.f
+	-	-	game_175250	func_15148BA4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_175250.f
+	-	-	game_182C30	func_1515589C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_182C30.f
+	-	-	game_188F90	func_1515BBF0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_188F90.f
+	-	-	game_18D250	func_1515FDA0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_18D250.f
+	-	-	game_18D770	func_15162B28	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_18D770.f
+	-	-	game_193E50	func_15166B50	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_193E50.f
+	-	-	game_196DB0	func_15169A48	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_196DB0.f
+	-	-	game_197C20	func_1516A7B0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_197C20.f
+	-	-	game_197C20	func_1516C934	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_197C20.f
+	-	-	game_19E040	func_151718F0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_19E040.f
+	-	-	game_1A0E60	func_151739B0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A0E60.f
+	-	-	game_1A1B40	func_15174690	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A1B40.f
+	-	-	game_1A20A0	func_1517685C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A20A0.f
+	-	-	game_1A5440	func_15177F90	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A5440.f
+	-	-	game_1A7260	func_1517A3A0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A7260.f
+	-	-	game_1A89B0	func_1517BBAC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A89B0.f
+	-	-	game_1A89B0	func_1517DE5C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1A89B0.f
+	-	-	game_1B1600	func_15184150	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1B1600.f
+	-	-	game_1B6DB0	func_15189A00	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_1B7870	func_1518A5F4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1B7870.f
+	-	-	game_1DD500	func_151B09BC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1DD500.f
+	-	-	game_1E30A0	func_151B5BF0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1E30A0.f
+	-	-	game_1E37D0	func_151B65D4	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1E37D0.f
+	-	-	game_1E37D0	func_151B7998	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1E37D0.f
+	-	-	game_1E6B40	func_151B9964	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1E6B40.f
+	-	-	game_1F4650	func_151CA6A0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1F4650.f
+	-	-	game_1F4650	func_151CB5FC	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1F4650.f
+	-	-	game_1F4650	func_151CC524	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1F4650.f
+	-	-	game_1F4650	func_151CC840	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1F4650.f
+	-	-	game_1FA770	func_151D15D0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1FA770.f
+	-	-	game_1FA770	func_151D197C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_1FA770.f
+	-	-	game_203340	func_151D61B0	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_203340.f
+	-	-	game_2062D0	func_151D9B8C	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_2062D0.f
+	-	-	game_20A290	func_151DCDE0	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	game_20AE20	func_151E1744	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_20AE20.f
+	-	-	game_20AE20	func_151E7F60	DOES NOT SPLICE: CCFAIL: cfe: Error: /home/sylas/.conker_triage/game_20AE20.f
+	-	-	debugger_258ED0	func_16003650	DOES NOT SPLICE: NOFN (still a #pragma GLOBAL_ASM?)
+	-	-	-	func_10022460	already decompiled (no pragma)
+	-	-	-	func_15010A60	already decompiled (no pragma)
+	-	-	-	func_15011D60	already decompiled (no pragma)
+	-	-	-	func_150163D0	already decompiled (no pragma)
+	-	-	-	func_1501C880	already decompiled (no pragma)
+	-	-	-	func_15036310	already decompiled (no pragma)
+	-	-	-	func_1507BDB0	already decompiled (no pragma)
+	-	-	-	func_1508114C	already decompiled (no pragma)
+	-	-	-	func_150825C0	already decompiled (no pragma)
+	-	-	-	func_150A09D0	already decompiled (no pragma)
+	-	-	-	func_150C16C0	already decompiled (no pragma)
+	-	-	-	func_1510AA44	already decompiled (no pragma)
+	-	-	-	func_1510C8A8	already decompiled (no pragma)
+	-	-	-	func_15121490	already decompiled (no pragma)
+	-	-	-	func_151438D8	already decompiled (no pragma)
+	-	-	-	func_1516E8CC	already decompiled (no pragma)
+	-	-	-	func_1518B6B0	already decompiled (no pragma)
+	-	-	-	func_1518C900	already decompiled (no pragma)
+	-	-	-	func_15195FF0	already decompiled (no pragma)
+	-	-	-	func_15196748	already decompiled (no pragma)
+	-	-	-	func_151C196C	already decompiled (no pragma)
+	-	-	-	func_151C1D5C	already decompiled (no pragma)

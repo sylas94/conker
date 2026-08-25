@@ -86,5 +86,48 @@
  * source-level branch that IDO folded away, or a second `return 1`.  Enumerate
  * matched functions in the 0xF4xxx-0xF9xxx callback cluster whose golden hoists
  * `li v0,1` and check whether ALL of them have a source-level if/else.
+ * ---------------------------------------------- REOPEN ATTEMPTED 2026-08-24
+ * The enumeration this park asked for has now been RUN (tools/nearmiss/_findli.py:
+ * scan every MATCHED function for `addiu $v0,$zero,K` in the entry block, i.e. before the
+ * first branch).  Result: only 20 matched functions do it, and EVERY ONE is 4-6 instructions
+ * long -- functions whose entire body IS the entry block, so the hoist is vacuous.
+ * NOT ONE long matched function hoists the return constant.
+ *
+ * That is a real, if negative, finding: the analogue set is thin, so "read a matched example
+ * and copy its shape" -- the method that cracked the eeprom pair in this same wave (see
+ * eeprom_switch_b.c and memory/conker-delayslot-duplication-family.md) -- has no material to
+ * work with here. func_150D88AC, which this park names as the analogue, does have the
+ * if/else and does return 1, but it is a 7-line function in the same vacuous class.
+ *
+ * So the if/else hypothesis is NOT confirmed by the corpus; it is merely not refuted. Before
+ * spending more on it, widen _findli.py to functions where the hoist is NON-vacuous (a `li
+ * $v0` early in a body with >= 15 instructions and branches after it). If that set is also
+ * empty, the construct may not be reachable from C in this compiler at all, which would make
+ * this a bail rather than a near-miss.
+ *
+ * ------------------------------------------ WIDENED SCAN DONE -- LEAN BAIL
+ * The widened enumeration (_findli.py, len>=12, `li $v0,K` in the first 6 instructions with
+ * branches after) returns FOUR matched functions, and exactly one survives the "v0 never
+ * redefined afterwards" filter: game_1A0100/func_15172D80, 63 instructions.
+ *
+ * READ IT AND IT DISQUALIFIES ITSELF. func_15172D80 is a **void** function. Its
+ * `addiu $v0,$zero,-0x1` is not a return value at all -- it is the constant -1, materialised
+ * once early because it has TWO uses in the source (`if (D_800DD2B0[arg0] == -1)` and
+ * `D_800DD2B0[arg0] = -1;`). The "never redefined" filter made a shared constant look like a
+ * hoisted return value. Beware that filter.
+ *
+ * So across all 683 matched functions there is NOT ONE example of a return constant hoisted
+ * into the entry block of a long function. The if/else hypothesis has no corpus support at
+ * all, and the real law the corpus DOES show is different and does not apply here:
+ *   **IDO hoists a constant into the entry block when the CONSTANT has multiple uses**,
+ *   not when the return has multiple predecessors.
+ * func_150C7670 uses the value 1 exactly once (at the return); the other `addiu $t0,$zero,1`
+ * pair belongs to the f32->u32 conversion template, which IDO expands AFTER the optimiser and
+ * therefore cannot share with it.
+ *
+ * RECOMMENDATION: treat this as a BAIL, not a near-miss. Reopen only if someone finds a
+ * second source-level use of the constant 1 that the ROM's behaviour actually requires --
+ * inventing one to move the score would be a forcer.
+ *
  * Left as #pragma GLOBAL_ASM.  NOT FAKED.
  */

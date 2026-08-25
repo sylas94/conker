@@ -1,3 +1,46 @@
+/* tools/nearmiss/func_150585F0.c -- game_83300
+ *
+ * STATUS: mism=2, n=170/170, frame -0x28 EXACT. Two rows, and they are ONE register:
+ *      idx17   ours  mul.s $f0,$f6,$f10      gold  mul.s $f14,$f6,$f10
+ *      idx19   ours  mfc1  $a3,$f0           gold  mfc1  $a3,$f14
+ * 168 of 170 instructions are identical. This is an FP ARGUMENT-STAGING tie, not a source
+ * defect: $f12 already carries the 0.0f first argument (`mtc1 $zero,$f12`, row 2, matches),
+ * so $f14 is the next free float-argument register. `1.0f` never consumes it because IDO
+ * materialises that constant straight into $a2 as the integer immediate 0x3F800000.
+ *
+ * WHAT IS SETTLED (all measured against a 2-scoring control in the same sweep):
+ *   the named local is RIGHT -- inlining the product into the call costs 34 more rows (36),
+ *      because it reorders every argument evaluation
+ *   `u16 phi_a2` is RIGHT and must stay sub-word -- s32 or u32 both score 32
+ *   byte-neutral: `(u32)` cast on the multiplicand; `(f32)` cast at the call site;
+ *      declaration order of the two locals
+ *   worse: two-step assign (`temp = f; temp *= g;`) -> 25
+ *
+ * IT IS NOT TEMP ROTATION. Declaring an extra unused f32 before or after the real locals
+ * leaves the score at 2 either way, so the FP register here is not being chosen by a
+ * declaration-order rotation counter. (Those two probes are NOT shippable source; they were
+ * run only to identify the mechanism, and they ruled it out.)
+ *
+ * *** THE PERMUTER RAN AND FOUND NOTHING. 3823 ITERATIONS, ZERO OUTPUTS. ***
+ * This was its ideal case and it still failed, which is worth recording because "run the
+ * permuter" is the obvious next suggestion and it has now been tried properly:
+ *   - selftest PASS on all five controls, including (e): the same C compiled in ISOLATION
+ *     produces different bytes than in-TU, so the TU-aware harness was load-bearing.
+ *   - BOTH gates were safe and both were armed -- PERMUTER_TU_REQUIRE_FRAME=40 and
+ *     PERMUTER_TU_REQUIRE_OFFSETS=1 -- because the base already matched golden's frame AND
+ *     its full stack-offset multiset (8 displacements). The search was therefore confined to
+ *     register allocation, which is all that is wrong.
+ *   - 3823 iterations, best score ever seen = the base. The permuter saves only improvements,
+ *     so it emitted no outputs at all.
+ * CONCLUSION: the randomizer does not generate a transformation that flips an FP register
+ * assignment. Do not spend another run on this residue class -- func_15040A78 (25 min, gated
+ * to golden's frame) likewise produced nothing better than its base. Both are FP/GPR
+ * allocation ties with everything else already exact.
+ *
+ * SUPERSEDED SUGGESTION: this is the exact class decomp-permuter exists for -- a 2-row pure register tie with
+ * correct length and frame. Set MAX_FRAME to the BASE frame (0x28), not the target.
+ */
+
 void func_150585F0(struct127 *arg0) {
     f32 temp_f14;
     u16 phi_a2;

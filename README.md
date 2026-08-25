@@ -1,17 +1,17 @@
 # Conker's Bad Fur Day Decompilation
 
-![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-32.11%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4042%2F5909-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
+![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-32.42%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4055%2F5913-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
 
 | Progress                                                                                                                                           | Functions                                                |
 |----------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| ![init Progress](https://img.shields.io/badge/init-47.98%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-325%2F538-blue)      |
-| ![game Progress](https://img.shields.io/badge/game-30.82%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-3685%2F5329-blue) |
-| ![debugger Progress](https://img.shields.io/badge/debugger-38.38%25-critical) | ![debugger Functions](https://img.shields.io/badge/funcs-32%2F42-blue) |
+| ![init Progress](https://img.shields.io/badge/init-48.11%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-326%2F539-blue)      |
+| ![game Progress](https://img.shields.io/badge/game-31.22%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-3697%2F5331-blue) |
+| ![debugger Progress](https://img.shields.io/badge/debugger-27.31%25-critical) | ![debugger Functions](https://img.shields.io/badge/funcs-32%2F43-blue) |
 
 The **Progress** badges are decompiled-byte percentages and the **Functions** badges are
 function counts. A function counts as decompiled when a C translation unit implements it
-and no `#pragma GLOBAL_ASM` stub for it remains. Of the 5909 functions in the three code
-sections, **4042 are decompiled, 1686 are still GLOBAL_ASM stubs, and 181 come from
+and no `#pragma GLOBAL_ASM` stub for it remains. Of the 5913 functions in the three code
+sections, **4055 are decompiled, 1674 are still GLOBAL_ASM stubs, and 181 come from
 handwritten `.s` objects** (libultra leaf routines and the like, which are not decompilation
 targets). The ROM built from this tree is byte-identical to the retail US cartridge: inner
 code bin sha1 `842e3d348e3c8ae0039e2ab367ad492f9b5266d8`, full ROM sha1
@@ -20,9 +20,18 @@ code bin sha1 `842e3d348e3c8ae0039e2ab367ad492f9b5266d8`, full ROM sha1
 Two independent tools produce these figures and are expected to agree:
 `tools/progress.py` parses the linker map (and writes the `progress.*.csv` files via
 `make -C conker progress`), while `tools/progress_check.py` reads the linked ELF's symbol
-table and the input objects instead. They currently agree to within one function --
-4041/5908 against 4042/5909, the difference being a single file-local symbol that a linker
-map does not list.
+table and the input objects instead. They currently agree to within a couple of functions --
+4056/5911 against 4055/5913, the difference being file-local symbols that a linker map does
+not list.
+
+> **The `debugger` byte percentage is not a real measurement.** A linker map gives a symbol's
+> extent, not its code size, so the LAST symbol in a section absorbs every trailing byte after
+> it. `func_16003650` is 40 instruction words (160 bytes) and the map-derived figure charges it
+> **5896**. `tools/progress_check.py`, which reads the ELF symbol table instead, shows only
+> 70.9% of the `debugger` section sits inside any function at all, against 99.7-99.8% for
+> `init` and `game` -- the rest is data the map has nowhere else to put. Treat the `debugger`
+> **Functions** badge as sound and its **Progress** badge as indicative only. The `init` and
+> `game` byte figures are unaffected.
 
 > **Note on earlier numbers.** Badges published before 2026-08-16 read high (36.28%,
 > 6126/8090). splat types more than just functions as `@function`, so the map contains

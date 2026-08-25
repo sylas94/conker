@@ -1,0 +1,103 @@
+score	tu	func	info
+0	game_13D350	func_15113218	frame=-216 n=235/235
+0	game_1B8F40	func_1518BA90	frame=-72 n=89/89
+0	init_50A0	func_100052A0	frame=-80 n=180/180
+2	game_205C90	func_151D8868	frame=-48 n=111/111
+2	game_21C4F0	func_151EF080	frame=leaf n=4/4
+2	game_83300	func_150585F0	frame=-40 n=170/170
+3	game_1B1600	func_15184FA4	frame=-216 n=300/300
+5	game_14F130	func_15121C80	frame=-80 n=276/276
+5	init_8180	func_10008CE8	frame=-64 n=126/126
+8	game_981E0	func_1506AD30	frame=-80 n=145/145
+11	game_1B1600	func_15187A98	frame=-256 n=181/181
+11	game_357F0	func_15008340	frame=-80 n=320/320
+11	game_CCD00	func_1509F850	frame=-72 n=367/367
+12	game_1C0B10	func_15193660	frame=-152 n=101/101
+12	game_B3020	func_150870D0	frame=-96 n=160/160
+13	game_AEB40	func_15084044	frame=-96 n=194/194
+16	game_3DC30	func_15010880	frame=-88 n=84/84  *** SEMANTIC RISK -- deleted a deliberate shadow: D_800D3098!,func_15010780!,func_150109D0 ***
+16	game_40490	func_15013778	frame=-200 n=125/125
+21	game_40490	func_1501474C	frame=-176 n=261/261
+21	game_DADB0	func_150AD900	frame=leaf n=13/12
+22	game_1E58B0	func_151B8908	frame=-176 n=142/142
+23	game_E7380	func_150B9ED0	frame=-344 n=291/291  *** SEMANTIC RISK -- deleted a deliberate shadow: func_150ADA20!,func_150BA35C,func_150BA37C,func_150BA424 ***
+27	game_21D420	func_151EFF94	frame=-32 n=25/23
+28	game_196DB0	func_15169A48	frame=-104 n=138/138  deleted: func_15169900,func_15169968,func_15169988
+32	game_1228D0	func_150F64DC	frame=-192 n=221/221
+32	game_E3C90	func_150B67E0	frame=-48 n=248/248
+33	game_142560	func_1511F4D0	frame=-40 n=166/166
+33	game_209B50	func_151DC6A0	frame=-128 n=135/135
+34	game_18A8F0	func_1515E544	frame=-16 n=209/209
+35	game_1944C0	func_15167E0C	frame=-32 n=195/195
+36	init_1050	func_10001194	frame=-80 n=163/163
+37	game_44A90	func_15017640	frame=-40 n=84/84
+39	game_DDB60	func_150B06B0	frame=-320 n=236/236  deleted: func_150B0A60,func_150B0C34,func_150B0C58,func_150B0CE0
+39	game_FECC0	func_150D1810	frame=-256 n=204/204
+40	game_12C1E0	func_150FF6E0	frame=-136 n=87/88
+42	game_100810	func_150D4D58	frame=-264 n=243/243
+42	game_203E20	func_151D6BFC	frame=-168 n=152/153
+43	game_1355D0	func_15108120	frame=-136 n=108/108
+43	game_1E37D0	func_151B7328	frame=-264 n=212/212
+43	game_EB340	func_150BE494	frame=-352 n=238/239  deleted: func_150BDE90,func_150BE150,func_150BE1C4,func_150BE210,func_150BE2E8,func_150BE438
+46	game_18D770	func_15160E30	frame=-256 n=257/258
+48	game_3BA70	func_1500E8C0	frame=-144 n=120/120
+49	game_40490	func_15014B60	frame=-224 n=259/259
+54	game_E7970	func_150BA55C	frame=-272 n=229/229  *** SEMANTIC RISK -- deleted a deliberate shadow: func_150ADA20!,func_150BA4C0!,func_150BA8F0,func_150BA930,func_150BAA00,func_150BAA14 ***
+57	game_203E20	func_151D69B4	frame=-224 n=146/146
+60	game_77760	func_1504A2B0	frame=leaf n=84/84
+64	game_12C1E0	func_150FF2D4	frame=-56 n=103/104
+67	game_77AD0	func_15052F9C	frame=-72 n=183/184
+71	game_19A8B0	func_1516D738	frame=-152 n=153/153
+80	game_B21B0	func_15085430	frame=-128 n=184/184  deleted: func_15085410,func_15085420,func_15085ABC
+87	game_15B5F0	func_1512E140	frame=-80 n=220/220
+97	game_1A89B0	func_1517B89C	frame=-104 n=197/196
+97	game_203340	func_151D5E90	frame=-80 n=200/200
+103	game_58F80	func_1502F01C	frame=-136 n=145/146
+107	game_34F20	func_15007B3C	frame=-56 n=425/426  deleted: func_150081E4,func_15008230,func_15008248,func_150082CC
+109	game_1188E0	func_150EB614	frame=-64 n=171/172
+112	game_126F60	func_150FAE18	frame=-288 n=220/220
+116	game_F15D0	func_150C4120	frame=-248 n=225/225
+118	game_83300	func_15060778	frame=-96 n=176/174
+124	game_139FC0	func_1510D404	frame=-64 n=128/129
+128	game_1B8F40	func_1518BD60	frame=-288 n=214/214
+129	game_20AE20	func_151E7F60	frame=-80 n=162/163  deleted: Struct151E5034,Struct151E5034,Struct151E4314,Struct151E4314,Struct151E4314,func_151DDB94,func_151DDBA0,func_151DE6D4,func_151DE7D4,func_151DE81C,func_151DE85C,func_151DE8E8,func_151E09DC,func_151E2284,func_151E30C4,func_151E327C,func_151E4264,func_151E4314,func_151E4DC4,func_151E4DD8,func_151E4E00,func_151E4E64,func_151E5034,func_151E51EC,func_151E557C,func_151E55A8,func_151E562C,func_151E5F64,func_151E5FAC,D_800E0BD3,func_151E6BFC,Struct151149AC,func_151E8214,func_151E82B8,func_151E83E8
+131	game_6D800	func_15040A78	frame=-176 n=148/148
+131	game_C8950	func_1509BBA0	frame=-56 n=167/168  deleted: func_1509B4A0,func_1509B570,func_1509B5AC,func_1509B704,Node1509,func_1509B764,func_1509B810,func_1509B8FC,func_1509B950,func_1509BA04,func_1509C228,func_1509C2A4,func_1509C3A0,func_1509C414
+135	game_11C2B0	func_150EFB80	frame=-240 n=208/210
+136	game_18A8F0	func_1515EC78	frame=-128 n=192/191
+136	game_2DDF0	func_15000940	frame=-48 n=100/96
+136	game_EF410	func_150C3230	frame=-96 n=207/209
+138	game_12C1E0	func_150FF840	frame=-288 n=204/203  *** SEMANTIC RISK -- deleted a deliberate shadow: func_150ADA20!,func_150FFB6C,func_150FFCC8 ***
+154	game_12C1E0	func_150FF474	frame=-208 n=145/144
+154	game_EE710	func_150C1260	frame=-312 n=252/256
+164	game_1A1B40	func_15174690	frame=-144 n=159/164  deleted: func_15174920
+165	game_14EE80	func_151219D0	frame=-80 n=137/140  deleted: func_15121C00,func_15121C64
+168	game_6E240	func_15040FCC	frame=-16 n=180/180
+172	game_1A11B0	func_151742EC	frame=-184 n=192/193
+176	game_1E73B0	func_151BDD8C	frame=-168 n=199/200
+176	game_B3020	func_1508BC20	frame=-136 n=188/189
+179	game_6D800	func_150403C8	frame=-88 n=217/217
+181	game_14F8F0	func_15122440	frame=-120 n=336/336
+181	game_15B200	func_1512DEA4	frame=-104 n=163/167
+194	game_119370	func_150EBEC0	frame=-272 n=325/325
+195	game_6E770	func_150428D4	frame=-128 n=219/219  *** SEMANTIC RISK -- deleted a deliberate shadow: func_150412C0!,func_15041480!,func_15042C40 ***
+199	init_11FA0	func_10012020	frame=-120 n=336/336
+206	game_18A8F0	func_1515E888	frame=-96 n=189/191
+206	game_76E50	func_150499A0	frame=-56 n=172/168
+209	game_203340	func_151D61B0	frame=-16 n=145/154  deleted: func_151D66F0
+223	game_63A20	func_15036570	frame=-96 n=208/213
+225	game_113D60	func_150E7C9C	frame=-168 n=214/212
+225	init_B1B0	func_1000CEAC	frame=-152 n=274/275
+227	game_40490	func_150130B4	frame=-400 n=406/406
+241	game_112F90	func_150E5AE0	frame=-208 n=320/316
+242	game_20AE20	func_151DF1BC	frame=-48 n=240/238
+255	game_B3020	func_1508C5B8	frame=-192 n=258/261
+272	game_64120	func_150380C0	frame=-128 n=240/234
+278	game_AEB40	func_15084558	frame=-144 n=268/274
+287	game_EB020	func_150BDB70	frame=-96 n=188/200
+288	game_155C90	func_151287E0	frame=-72 n=312/308
+322	game_12C1E0	func_150FFD84	frame=-264 n=247/255
+338	game_63A20	func_150368C4	frame=-128 n=218/235
+341	game_131A90	func_15104634	frame=-224 n=259/275  deleted: func_151045E0,func_151045F4,func_15104608,func_15104620
+357	game_1A0790	func_151733E4	frame=-96 n=307/312
+457	game_13BB20	func_1510E950	frame=-328 n=830/830

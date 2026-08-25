@@ -36,6 +36,7 @@ USAGE
         mism, info, rows = sc.score(open("cand.c").read())
 """
 
+import io
 import os
 import re
 import subprocess
@@ -53,7 +54,48 @@ CFLAGS = (
     "-I . -I include -I include/2.0L -I include/2.0L/PR -I include/libc "
     "-I src/libultra/os -I src/libultra/audio -I src/libultra/io"
 ).split()
-OPT = ["-O2", "-g3", "-mips2", "-o32"]
+OPT_DEFAULT = ["-O2", "-g3"]          # conker/Makefile: OPT_FLAGS := -O2 -g3
+MIPSBIT = ["-mips2", "-o32"]          # conker/Makefile: MIPSBIT := -mips2 -o32
+
+# Per-object OPT_FLAGS overrides, e.g.
+#   $(BUILD_DIR)/$(SRC_DIR)/game_21CAF0.c.o: OPT_FLAGS := -O1
+#   $(BUILD_DIR)/$(SRC_DIR)/libultra/audio/%.o: OPT_FLAGS := -g
+_OVERRIDE = re.compile(
+    r"^\$\(BUILD_DIR\)/\$\(SRC_DIR\)/(\S+)\.o:\s*OPT_FLAGS\s*:?=\s*(.+?)\s*$", re.M)
+
+
+def _tu_relpath(tu):
+    """TU name -> path relative to conker/src, e.g. game_21CAF0 -> game_21CAF0.c."""
+    root_src = os.path.join(CONKER, "src")
+    for root, _dirs, files in os.walk(root_src):
+        if tu + ".c" in files:
+            full = os.path.join(root, tu + ".c")
+            return os.path.relpath(full, root_src).replace(os.sep, "/")
+    return None
+
+
+def opt_flags_for(tu):
+    """-> (flags, origin).  Reads conker/Makefile so a -g / -O1 TU is scored correctly.
+
+    A TU whose object carries an OPT_FLAGS override is NOT built at the tree default,
+    and compiling it at -O2 -g3 yields a wrong score with no outward sign.
+    """
+    mk = os.path.join(CONKER, "Makefile")
+    rel = _tu_relpath(tu)
+    if rel is None or not os.path.exists(mk):
+        return OPT_DEFAULT, "default"
+    target = rel   # the regex capture excludes the trailing ".o"
+    exact = wild = None
+    for pat, flags in _OVERRIDE.findall(io.open(mk, encoding="utf-8").read()):
+        if pat == target:
+            exact = flags.split()
+        elif pat.endswith("%") and target.startswith(pat[:-1]):
+            wild = flags.split()
+    if exact:
+        return exact, "Makefile"
+    if wild:
+        return wild, "Makefile(wildcard)"
+    return OPT_DEFAULT, "default"
 
 GOLD_WORD = re.compile(r"/\* \w+ \w+ ([0-9A-F]{8}) \*/")
 
@@ -68,6 +110,7 @@ class Scorer(object):
         self.gold = [int(x, 16) for x in GOLD_WORD.findall(open(gs).read())]
         if not self.gold:
             raise SystemExit("parsed 0 words from %s -- is it a handwritten stub?" % gs)
+        self.opt, self.opt_origin = opt_flags_for(tu)
         self.work = workdir or os.path.join(
             os.path.expanduser("~"), ".conker_fastscore", "%s.%s" % (tu, func))
         if not os.path.isdir(self.work):
@@ -84,17 +127,26 @@ class Scorer(object):
         try:
             with open(pc, "w") as fo:
                 rc = subprocess.call(
-                    [sys.executable, "../tools/asm-processor/asm_processor.py",
-                     "-O2", "-g3", cf],
-                    stdout=fo, stderr=subprocess.DEVNULL)
+                    [sys.executable, "../tools/asm-processor/asm_processor.py"]
+                    + self.opt + [cf],
+                    stdout=fo, stderr=subprocess.PIPE)
             if rc != 0:
-                return None, "APFAIL"
+                return None, "APFAIL (asm-processor rejected the source)"
             if os.path.exists(ob):
                 os.remove(ob)
-            subprocess.call([CC, "-c", "-32"] + CFLAGS + OPT + ["-o", ob, pc],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Capture stderr rather than discarding it: a bare "CCFAIL" with no
+            # diagnostic has repeatedly cost people a hand re-run of the cc line to
+            # find a one-line cause (usually a local prototype clashing with
+            # functions.h). Surface the compiler's first real error instead.
+            cc = subprocess.run([CC, "-c", "-32"] + CFLAGS + self.opt + MIPSBIT
+                                + ["-o", ob, pc],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.PIPE)
             if not os.path.exists(ob):
-                return None, "CCFAIL"
+                err = cc.stderr.decode(errors="replace").strip().splitlines()
+                err = [l for l in err if "Error" in l or "error" in l] or err
+                msg = err[0][:160] if err else "no diagnostic"
+                return None, "CCFAIL: " + msg
             return ob, None
         finally:
             os.chdir(cwd)
@@ -107,8 +159,12 @@ class Scorer(object):
         # The trailing sentinel is load-bearing: the body regex is terminated by a
         # blank line, and the LAST function in .text has none.  Without it, a
         # perfectly good object reports NOFN -- a false "your source did not
+        # -z is REQUIRED: plain `objdump -d` collapses runs of zero words into "...", which
+        # silently DROPS instructions (a `mflo; nop; nop` loses 2), invents a phantom length
+        # gap, and mis-aligns every index after the first collapse. One function reported ~100
+        # phantom rows and a pad that did not exist; a genuine score-0 match re-scored as 20.
         # compile" that silently kills a whole search.  Cost this project a wave.
-        dis = subprocess.check_output([OBJDUMP, "-d", ob]).decode() + "\n\n"
+        dis = subprocess.check_output([OBJDUMP, "-dz", ob]).decode() + "\n\n"
         m = re.search(r"^([0-9a-f]+) <%s>:\n(.*?)\n\n" % re.escape(self.func),
                       dis, re.S | re.M)
         if not m:
@@ -141,6 +197,9 @@ def main(argv):
     tu, func = argv[1], argv[2]
     srcs = argv[3:] or [os.path.join(CONKER, "src", tu + ".c")]
     sc = Scorer(tu, func)
+    # Print the flags: a TU built at -g or -O1 scored as -O2 -g3 produces a confident
+    # wrong number, and that is invisible unless it is stated.
+    print("# %s: OPT_FLAGS %s (%s)" % (tu, " ".join(sc.opt), sc.opt_origin))
     for path in srcs:
         mism, info, rows = sc.score(open(path).read())
         print("%-44s mism=%-6d %s" % (os.path.basename(path), mism, info))
