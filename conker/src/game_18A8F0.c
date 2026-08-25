@@ -39,7 +39,17 @@ s32 *func_1515D480(s32 arg0) {
     return temp;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_18A8F0/func_1515D4D4.s")
+extern u8 D_800DCD27;
+
+void func_1515D4D4(s32 arg0, s32 arg1, s32 arg2, u8 arg3) {
+    if (arg3 >= D_800DCD27) {
+        ((u8 *)&D_800DCD20)[0] = arg0;
+        ((u8 *)&D_800DCD20)[1] = arg1;
+        ((u8 *)&D_800DCD20)[2] = arg2;
+        D_800DCD7C = 1;
+        D_800DCD27 = arg3;
+    }
+}
 
 struct Node1515D520 {
     struct Node1515D520 *next;
