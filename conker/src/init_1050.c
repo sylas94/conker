@@ -25,6 +25,17 @@ void func_100010F8(s32 arg0) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/init_1050/func_10001194.s")
+// NON-MATCHING, parked at mism=36 (frame 0x50 EXACT, n=163/163 EXACT) on 2026-08-21.
+// The best measured source, the four remaining diff clusters, the full
+// DO-NOT-REPEAT table and the blocker analysis all live in
+//     tools/nearmiss/func_10001194.c
+// Headlines: the decrypt loop must be `i = 0; if (n != 0) { do {...} while (i < n); }`
+// or IDO unrolls it x4; the two D_800354F8/FC ALIGN16 stores must precede the
+// `blocks = ... >> 12` statement; `count` must be declared before `blocks`.
+// Blocker: IDO spends its one callee-saved register on the 0x1ECC0 literal
+// instead of &D_8002AAE8 -- both CSE candidates save exactly 4 instructions, so
+// it is a ranking tie, not a spelling. Eight honest spellings all tie.
+// The annotated draft below is a PRIOR contributor's and is kept deliberately.
 // NON-MATCHING: start/end mostly ok, middle, not-so-much.
 // s32 *allocate_memory(s32, s32, s32, s32);
 // void func_10001194(s32 arg0) {

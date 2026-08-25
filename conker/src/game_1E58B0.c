@@ -171,6 +171,60 @@ void func_151B8668(s32 arg0, u8 arg1, s32 arg2) {
     func_15134908(&sp18, 0, arg1, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1E58B0/func_151B86F4.s")
+extern f32 D_800AA4CC;
+extern f32 D_800AA4D0;
+extern f32 D_800AA4D4;
+extern f32 D_800AA4D8;
+void func_15143794(s32, s32, f32, f32 *);
+void func_151A26EC(f32 *arg0, f32 *arg1, f32 *arg2, f32 arg3, f32 arg4, f32 arg5, s32 arg6,
+                   s32 arg7, s32 arg8, s32 arg9, s32 argA, s32 argB, s32 argC, s32 argD,
+                   s32 argE, s32 argF, s32 arg10);
+
+/* Burst spawner: func_15143794 turns two random angles into a unit direction in sp78,
+   which is then biased backwards along (arg3, arg4, arg5) by dt * a random speed.
+   sp58 is the scratch block holding the five random draws that feed func_151A26EC.
+   NOTE: the two draws that would otherwise sit INSIDE an argument list (r, and
+   sp58.unk10) are hoisted into their own statements on purpose -- a call nested in an
+   argument list makes IDO reserve 8 extra bytes of temp space and grows the frame
+   from 0x90 to 0x98. */
+void func_151B86F4(f32 arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, u8 *arg6) {
+    f32 sp84[3];
+    f32 sp78[3];
+    f32 sp6C[3];
+    struct {
+        f32 unk0;
+        u32 unk4;
+        u32 unk8;
+        f32 unkC;
+        u32 unk10;
+    } sp58;
+    f32 dt;
+    f32 r;
+
+    sp84[0] = arg0;
+    sp84[1] = arg1;
+    sp84[2] = arg2;
+    sp58.unk4 = func_150ADA20();
+    sp58.unk8 = func_150ADA20();
+    r = func_150ADA68();
+    func_15143794((s16)(sp58.unk4 & 0xFF), (s16)((sp58.unk8 % 65U) - 0x20),
+                  (r * D_800AA4CC) * D_800AA4D0, sp78);
+    r = func_150ADA68();
+    dt = D_800BE9A8;
+    r = ((r * 157.0f) + 604.0f) * D_800AA4D4;
+    sp6C[0] = 0.0f;
+    sp6C[1] = 0.0f;
+    sp6C[2] = 0.0f;
+    sp78[0] += ((-arg3) * dt) * r;
+    sp78[1] += ((-arg4) * dt) * r;
+    sp78[2] += ((-arg5) * dt) * r;
+    sp58.unk0 = func_150ADA68();
+    sp58.unkC = func_150ADA68();
+    sp58.unk4 = func_150ADA20();
+    sp58.unk10 = func_150ADA20();
+    func_151A26EC(sp84, sp6C, sp78, 1.0f, ((sp58.unk0 * 157.0f) + (-151.0f)) * D_800AA4D8,
+                  (sp58.unkC * 55.0f) + 75.0f, (sp58.unk4 % 26U) + 25,
+                  (sp58.unk10 % 101U) + 100, 10, 25, 0, -1, 0, 0, 0, arg6[0xC], arg6[1]);
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1E58B0/func_151B8908.s")

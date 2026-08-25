@@ -987,7 +987,8 @@ segments:
       - [0x23A4F0, .rodata, game/entrypoint] # jumptable 0x80095A30
       - [0x23A510, rodata] # MIGRATION-READY -> [0x23A510, .rodata, game_34F20] (jtbl_80095A50, sole symbol/referrer func_15007B3C). Apply ONLY with the C decompilation. PARKED 2026-08-16: migration+chained-assignment fix took it 2927 -> 2007 (size 1700/1704) but the residual is a constant-hoist ranking tie -- see tools/nearmiss/func_15007B3C.c.
       - [0x23A5D0, rodata]
-      - [0x23A600, rodata]
+      - [0x23A600, .rodata, game_360A0] # anonymous float literal pool of func_15008BF0
+      - [0x23A620, rodata]
       - [0x23A630, rodata]
       - [0x23A6A0, rodata]
       - [0x23A7A0, rodata]
@@ -996,6 +997,7 @@ segments:
       - [0x23ADE0, rodata]
       - [0x23AE60, rodata]
       - [0x23AF10, rodata]
+      - [0x23AF60, .rodata, game_3DF10] # anonymous float literal pool of func_15010A60 (sole referrer)
       - [0x23AF80, rodata]
       - [0x23AFD0, rodata]
       - [0x23AFF0, rodata] # D_80096530?

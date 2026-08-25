@@ -1,5 +1,10 @@
 #include <ultra64.h>
+/* functions.h types func_1513D668 as void; the golden code for func_151AF6D4 uses its
+   return value.  Same shadow-prototype idiom as game_2062D0.c. */
+#define func_1513D668 func_1513D668_void_proto
 #include "functions.h"
+#undef func_1513D668
+s32 func_1513D668(s32 arg0, s32 arg1, u8 arg2, u8 arg3, u8 arg4, u8 arg5, s16 arg6, f32 arg7, f32 arg8, s32 arg9, s32 argA, u8 argB, s32 argC, u8 argD, s32 argE);
 #include "variables.h"
 
 extern f32 D_800AA0F0[];
@@ -34,7 +39,9 @@ typedef struct {
 } AFC08Struct;
 
 typedef struct {
-    char pad_0[0x1D4];
+    char pad_0[0x7A];
+    u16 unk7A;
+    char pad_7C[0x1D4 - 0x7C];
     s32 field_0x1D4;
 } ActorFields;
 
@@ -75,7 +82,155 @@ s32 func_151AF6C0(s32 arg0, s32 arg1) {
     return 0xC;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1DCA70/func_151AF6D4.s")
+typedef struct {
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+    s16 unk8;
+} AF6D4Col;
+
+typedef struct {
+    u8  unk0;
+    u8  unk1;
+    s16 unk2;
+    s16 unk4;
+    u8  pad6[2];
+    s32 unk8;
+    s32 unkC;
+    u8  unk10;
+    u8  unk11;
+    u8  unk12;
+    u8  unk13;
+    f32 unk14;
+    f32 unk18;
+    struct17 unk1C;
+    f32 unk28;
+    f32 unk2C;
+    f32 unk30;
+    f32 unk34;
+    f32 unk38;
+    f32 unk3C;
+    s32 unk40;
+    u8  unk44;
+    u8  unk45;
+    u8  unk46;
+    u8  unk47;
+    s32 unk48;
+    u8  unk4C;
+    u8  pad4D[3];
+    s32 unk50;
+    s16 unk54;
+    s16 unk56;
+} AF6D4Main; /* 0x58 */
+
+typedef struct {
+    f32 unk00;
+    f32 unk04;
+    f32 unk08;
+    f32 unk0C;
+    f32 unk10;
+    f32 unk14;
+    f32 unk18;
+    u8  unk1C;
+    u8  pad1D[0x7];
+} AF6D4Ground; /* 0x24 */
+
+extern f32 D_800AA108;
+extern f32 D_800AA10C;
+void func_150CCD90(f32, f32 *, f32 *, f32 *);
+void func_1514C678(f32, f32, s32, f32, s32, s32, s32, s32, s32, f32, s32, s32);
+
+void func_151AF6D4(ActorFields *arg0, s32 arg1, s32 arg2) {
+    f32 pos[3];
+    AF6D4Ground ground;
+    f32 fr;
+    f32 fg;
+    f32 fb;
+    s32 ret;
+    AFC08Sub extra;
+    AF6D4Main mn;
+    s32 rnd;
+    AF6D4Col cols[4];
+    s16 spd;
+    u8 r;
+    u8 g;
+    u8 b;
+
+    if (arg0 == 0) {
+        return;
+    }
+    if (arg0->field_0x1D4 == 0) {
+        return;
+    }
+    if (func_151AF5C0(pos, arg0, (s32)&ground, (u8)arg1) == 0) {
+        return;
+    }
+    if (D_800BE9F0 == 0x14) {
+        func_150CCD90(pos[2], &fr, &fg, &fb);
+        r = (u8)fr;
+        g = (u8)fg;
+        b = (u8)fb;
+    } else {
+        r = g = b = 0xFF;
+    }
+    cols[0].unk0 = r;
+    cols[0].unk2 = g;
+    cols[0].unk4 = b;
+    cols[0].unk6 = 0xB4;
+    cols[0].unk8 = 0;
+    cols[1].unk0 = r;
+    cols[1].unk2 = g;
+    cols[1].unk4 = b;
+    cols[1].unk6 = 0xB4;
+    cols[1].unk8 = 0;
+    cols[2].unk0 = r;
+    cols[2].unk2 = g;
+    cols[2].unk4 = b;
+    cols[2].unk6 = 0xB4;
+    cols[2].unk8 = 0;
+    cols[3].unk0 = r;
+    cols[3].unk2 = g;
+    cols[3].unk4 = b;
+    cols[3].unk6 = 0xB4;
+    cols[3].unk8 = 0;
+    mn.unk0 = 0x50;
+    mn.unk2 = 0x2502;
+    rnd = func_150ADA20();
+    mn.unk4 = (rnd % 0x3DU) + 0x58;
+    mn.unk8 = 0;
+    mn.unkC = 0;
+    mn.unk10 = 0xFF;
+    mn.unk11 = 0xFF;
+    mn.unk12 = 0xFF;
+    mn.unk13 = 0xFF;
+    mn.unk14 = mn.unk18 = ((func_150ADA68() * 21.0f) + 91.0f) * D_800AA108;
+    mn.unk1C.unk0 = pos[0];
+    mn.unk1C.unk4 = ground.unk00;
+    mn.unk1C.unk8 = pos[2];
+    mn.unk28 = 0.0f;
+    mn.unk2C = 0.0f;
+    mn.unk30 = 0.0f;
+    mn.unk34 = 1.0f;
+    mn.unk38 = 1.0f;
+    mn.unk3C = 1.0f;
+    mn.unk40 = 0x401C0001;
+    mn.unk44 = (func_150ADA20() % 0x29U) + 0x50;
+    mn.unk45 = 0xFF;
+    extra.unk0 = (mn.unk4 - (func_150ADA20() % 6U)) - 8;
+    extra.unk4 = (((func_150ADA68() * 40.0f) + 51.0f) * mn.unk14) * D_800AA10C;
+    mn.unk46 = 0;
+    mn.unk47 = 6;
+    ret = func_1513D668((s32)&mn, (s32)cols, 0, 0x16, 0, 0,
+                        (s16)((arg0->unk7A >> 8) - ((arg1 == 1) ? -0xA : 0xA)),
+                        500.0f, 500.0f, 0, (s32)&ground.unk04, 1, 8, 0xFF, 0);
+    if (ret != 0) {
+        memcpy((u8 *)ret + 0x128, &extra, 8);
+    }
+    spd = (func_150ADA20() % 0xBU) + 5;
+    func_1514C678(pos[0], pos[1], *(s32 *)&pos[2], (func_150ADA68() * 17.0f) + 29.0f,
+                  0, 0xFF, spd, 0x10, 0, 0.0f, 0, 0xFF);
+}
 
 s32 func_151AFBD4(void *arg0) {
     s32 v0 = *(s16 *)((u8 *)arg0 + 0x1C);

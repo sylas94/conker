@@ -11,4 +11,24 @@
 //     *arg6 = arg0[0][2] * arg1 + arg0[1][2] * arg2 + arg0[2][2] * arg3 + arg0[3][2];
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_21D5F0/guMtxCatF.s")
+void guMtxCatF(float m[4][4], float n[4][4], float r[4][4]) {
+    int i;
+    int j;
+    int k;
+    float temp[4][4];
+
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
+            temp[i][j] = 0.0f;
+            for (k = 0; k < 4; k++) {
+                temp[i][j] += m[i][k] * n[k][j];
+            }
+        }
+    }
+
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
+            r[i][j] = temp[i][j];
+        }
+    }
+}

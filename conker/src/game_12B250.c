@@ -16,7 +16,41 @@ void func_151D3F14(struct17 *arg0, u8 arg1, s32 arg2);
 void func_150FE0B8(struct127 *arg0, struct17 *arg1, s32 arg2, s32 arg3);
 void func_150FE288(struct127 *arg0);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_12B250/func_150FDDA0.s")
+extern f32 D_800A1F94;
+extern f32 D_800A1F98;
+void func_15145740(struct127 *arg0, struct17 *arg1, struct17 *arg2, struct17 *arg3, f32 arg4);
+void func_150FDF38(struct127 *arg0, s32 arg1, s32 arg2, struct17 *arg3, struct17 *arg4);
+s32 func_151C229C(struct17 *arg0, struct17 *arg1, struct17 *arg2, struct17 *arg3, s32 arg4, s32 arg5, f32 arg6, f32 arg7, f32 arg8, f32 arg9, f32 arg10, s32 arg11, struct127 *arg12, s32 arg13, s32 arg14, s32 arg15, s32 arg16, s32 arg17, s32 arg18, s32 arg19, s32 arg20, f32 arg21, s32 arg22, s32 arg23, s32 arg24, s32 arg25, s32 arg26);
+
+s32 func_150FDDA0(struct127 *arg0, s32 arg1, s32 arg2) {
+    s32 unused;
+    struct17 spB0;
+    struct17 spA4;
+    struct17 sp98;
+    struct17 sp8C;
+    s32 temp_v0;
+    s32 kind;
+    f32 rand1;
+    f32 rand0;
+
+    if (arg0 == 0) {
+        return 0;
+    }
+
+    func_15145740(arg0, &sp98, &spB0, 0, 0.0f);
+    func_150FDF38(arg0, ((u8 *)&arg1)[3], arg2, &spA4, &sp8C);
+
+    rand0 = func_150ADA68();
+    rand1 = func_150ADA68();
+    temp_v0 = func_150ADA20();
+    kind = (D_800BE9F0 == 0x2B) ? 0x27 : 0x1A;
+
+    return func_151C229C(&sp8C, 0, &sp8C, &sp98, 0, 0, 300.0f, D_800A1F94,
+                         rand0 * 10.0f + 25.0f,
+                         rand1 * 201.0f + D_800A1F98, 50.0f,
+                         (temp_v0 % 0x38U) + 0xC8, arg0, 1, 1, 0, 0xFF, 1, 1,
+                         0, kind, 0.0f, 0xFF, -1, 0, ((u8 *)&arg1)[3], arg2);
+}
 
 void func_150FDF38(struct127 *arg0, s32 arg1, s32 arg2, struct17 *arg3, struct17 *arg4) {
     struct17 sp44;
