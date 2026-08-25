@@ -236,6 +236,23 @@ segments:
       # - {start: 0x2D4B0, type: .bss, vram: 0x8003B260, name: init_50A0}
       # - {start: 0x2D4B0, type: bss, vram: 0x8003B270}
 
+  # func_100052A0's D_8003BC20 is a FUNCTION-SCOPE static u64 (that storage class is what
+  # makes the function match; extern/tentative both score 247). A function-scope static is a
+  # real .bss allocation with a LOCAL symbol, so it cannot be resolved by
+  # undefined_syms_auto.txt and conker.ld would /DISCARD/ it.
+  #
+  # It has to be its OWN segment, not a `.bss` subsegment of init_data: splat only emits an
+  # explicit address for the FIRST section of a segment (linker_entry.py, `if is_first`), so
+  # as a subsegment it silently inherits `.` (= 0x8002D4B0) instead of the vram asked for.
+  # A segment that is entirely bss also skips `__romPos += SIZEOF(...)` in _end_segment(),
+  # so it contributes no ROM bytes and shifts nothing downstream.
+  - name:  init_50A0_bss
+    type:  code
+    start: 0x0002D4B0
+    vram:  0x8003BC20
+    subsegments:
+      - [0x2D4B0, .bss, init_50A0]
+
   - name:  game
     type:  code
     start: 0x0002D4B0
