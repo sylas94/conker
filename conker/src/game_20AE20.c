@@ -613,7 +613,11 @@ void func_151E562C(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E564C.s")
+extern s8 D_8008FDC8;
+
+s8 func_151E564C(void) {
+    return D_8008FDC8;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E565C.s")
 

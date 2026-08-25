@@ -263,7 +263,10 @@ struct Node1515F1B0 *func_1515F1B0(s32 arg0) {
     return temp;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_18A8F0/func_1515F25C.s")
+void func_1515F25C(void **arg0, void *arg1) {
+    *(void **)((u8 *)arg1 + 0xC) = *arg0;
+    *arg0 = arg1;
+}
 
 extern void (*D_8008B090[])(s32);
 
