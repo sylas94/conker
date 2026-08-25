@@ -43,8 +43,20 @@ Try it FIRST on any small pointer-chase function.
   or it is a redeclaration CCFAIL -- took it 51 -> 21 and 11 -> 14 words in one step.
   Pointer-base spelling is a NO-OP: `p[4]=p[3]...` off `arg1` and `q[0]=q[-1]...` off `arg1+4`
   score identically both before and after the type fix. Do not sweep that again.
-  Remaining: one instruction. Callers pass `*((u8*)&arg0 + 3)`, `0x12`, `0x11`, consistent with
-  a u8 parameter; the caller is already matched, so gate any install on the full ROM sha1.
+  Remaining: ONE instruction, and it is now pinned exactly. Instructions 0-2 (`sw $a0,0x0($sp)`
+  / `andi $t6,$a0,0xFF` / `or $a0,$t6,$zero`) are byte-identical. The whole residue is that
+  golden MATERIALISES a base pointer at arg1+4 and addresses everything with NEGATIVE offsets:
+      addiu $v0,$a1,0x4 ; lbu $t8,-0x2($v0) ... sb $t7,0x0($v0) ; sb $a0,0x0($a1)
+  keeping BOTH `$v0` and `$a1` live, and storing `arg0` to `0($a1)` LAST. We fold `arg1 + 4`
+  back into `$a1`-relative positive offsets (`lbu $t7,3(a1)` ... `sb $t0,1(a1)`) and store
+  `arg0` FIRST, which is semantically identical (all four loads still precede all stores) but
+  one instruction shorter. Writing `u8 *q = (u8 *)arg1 + 4;` and indexing `q[0]`/`q[-1]`/... does
+  NOT stop the fold -- measured, same 21/n=14 as the plain `p[]` form.
+  NEXT IDEA (untried): the +4 base may not be pointer arithmetic in the source at all. If arg1
+  is a struct whose member is a 5-byte array, `&s->hist[4]` or a second named pointer may force
+  the materialisation. Do NOT reach for `volatile` -- that is a forcer.
+  Callers pass `*((u8*)&arg0 + 3)`, `0x12`, `0x11`, consistent with a u8 parameter; the caller
+  is already matched, so gate any install on the full ROM sha1, not on this function's score.
 - **func_10001420** (init_1420, 9) -- 19 at n=10/9, one over. Zero-fills 0xFE0 bytes at
   `&D_80043B40` (note variables.h declares it `s32 *`, and its `// 4064` comment == 0xFE0).
   Golden: `a0 = base + 0xFE0; do { a1 += 4; *(a1-1) = 0; } while (a1 < a0);`. Deriving `end`
