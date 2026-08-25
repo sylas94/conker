@@ -738,7 +738,9 @@ s32 func_15088A08(struct Struct15088A08 *arg0, f32 arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_150896EC.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15089BB0.s")
+void func_15089BB0(void) {
+    D_800D23B0 = NULL;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15089BC0.s")
 
