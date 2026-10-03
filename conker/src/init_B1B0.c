@@ -18,7 +18,25 @@ struct151 *func_1000B1B0(s32 arg0) {
     return NULL;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000B1FC.s")
+struct151 *func_1000B1FC(s32 arg0) {
+    s32 i;
+    struct00 *temp;
+
+    for (i = 0; i < 3; i++) {
+        if ((D_800417B0[i] != 0) && (arg0 == D_800417B0[i]->unk4)) {
+            return D_800417B0[i];
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        if (D_800417B0[i] != 0) {
+            temp = D_800417B0[i]->unk60;
+            if ((temp != 0) && (arg0 == temp->unk4)) {
+                return (struct151 *)temp;
+            }
+        }
+    }
+    return NULL;
+}
 // permuter NO ZERO best 20 (2x600s on form B, base 225 -> internal 50, no zero)
 // PERMUTER CANDIDATE (register/CSE near-miss). Two shapes reached:
 //  (A) index form `for(i=0;i<3;i++)` -> score 20: byte-perfect structure AND

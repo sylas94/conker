@@ -504,7 +504,20 @@ void func_1519E688(void) {
     func_15147D64(0, 9);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1CA420/func_1519E6BC.s")
+void func_1519E6BC(Obj1519E464 *arg0) {
+    Sub1519E464 sub;
+
+    func_1519E688();
+    if (D_800E0920 == 0) {
+        sub.unk8 = 0;
+        sub.unk0 = arg0;
+        sub.unk4 = arg0->unk3B;
+        D_800E0920 = (s32)func_151491F4(0x12C, -1, 9, 0, 4, 0xC, 0xFF, 0);
+        if (D_800E0920 != 0) {
+            memcpy((u8 *)D_800E0920 + 0x28, &sub, 0xC);
+        }
+    }
+}
 
 void func_1519E754(Arg1519E464 *arg0) {
     Sub1519E464 *sub;

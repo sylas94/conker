@@ -820,7 +820,30 @@ ObjRec *func_151438D8(s32 arg0, s32 arg1, u16 arg2, ObjRec *arg3) {
 //     if (*arg0 < arg2) { *arg0 = arg2; }
 //     if (arg3 < *arg1) { *arg1 = arg3; }
 // }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15143D18.s")
+void func_15143D18(s32 *arg0, s32 *arg1, s32 arg2, s32 arg3) {
+    s32 t;
+    s32 t2;
+
+    if (arg3 < arg2) {
+        t = arg2 ^ arg3;
+        t2 = arg3 ^ t;
+        arg3 = t2;
+        arg2 = t ^ t2;
+    }
+    if (*arg1 < *arg0) {
+        t = *arg1 ^ *arg0;
+        *arg0 = t;
+        t2 = *arg1 ^ t;
+        *arg1 = t2;
+        *arg0 = *arg0 ^ t2;
+    }
+    if (*arg0 < arg2) {
+        *arg0 = arg2;
+    }
+    if (arg3 < *arg1) {
+        *arg1 = arg3;
+    }
+}
 s32 func_15143DA8(s32 *arg0, s32 arg1, s32 arg2) {
     s32 **pp = &arg0;
     s32 t;

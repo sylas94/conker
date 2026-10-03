@@ -172,7 +172,18 @@ void func_1501C880(s32 arg0, s32 arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501CC3C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501CDC0.s")
+extern u8 *D_800C3960[][30];
+
+void func_1501CDC0(s32 arg0) {
+    s32 i;
+    s32 j;
+
+    for (i = 0; i < D_800C363A[arg0]; i++) {
+        for (j = 0; j < 16; j++) {
+            D_800C3960[arg0][i][j] = 0xFF;
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501CE54.s")
 
