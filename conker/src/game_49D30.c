@@ -222,7 +222,15 @@ void func_1501D258(s32 arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501D2C4.s")
+s32 func_1501D2C4(s32 arg0, s32 arg1) {
+    if (D_800C3670 != 0) {
+        return 1;
+    }
+    if ((D_800C3A60[arg0] & (1ULL << arg1)) != 0) {
+        return 1;
+    }
+    return 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_1501D348.s")
 
@@ -723,7 +731,13 @@ void func_15022754(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_49D30/func_150227BC.s")
+void func_150227BC(s32 arg0) {
+    s32 i;
+
+    for (i = 0; i < D_800C354A[arg0]; i++) {
+        *(u8 *)((u8 *)func_151149AC(D_800C3550[arg0][i]) + 0x6E) = 1;
+    }
+}
 
 extern void func_15022398(s32, s32);
 extern void func_150222E0(s32, s32);

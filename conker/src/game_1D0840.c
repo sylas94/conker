@@ -684,7 +684,50 @@ void func_151A4E9C(void *arg0)
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D0840/func_151A4ECC.s")
+typedef struct Tgt151A4ECC {
+    s32 unk0;
+    char pad4[0x37];
+    u8 unk3B;
+    char pad3C[0x38];
+    u8 unk74;
+    char pad75[0x15F];
+    s32 unk1D4;
+} Tgt151A4ECC;
+
+typedef struct Obj151A4ECC {
+    char pad0[0xC];
+    u8 unkC;
+    u8 unkD;
+    s16 unkE;
+    char pad10[0x18];
+    struct frame151A3504 unk28;
+} Obj151A4ECC;
+
+void func_151A4ECC(Obj151A4ECC *arg0) {
+    struct frame151A3504 *f;
+    u8 flag;
+
+    flag = 0;
+    f = &arg0->unk28;
+    if (((Tgt151A4ECC *)f->unk0)->unk0 == 0) {
+        flag = 1;
+    }
+    if (((Tgt151A4ECC *)f->unk0)->unk3B != f->unk4) {
+        flag = 1;
+    }
+    if (!flag) {
+        if (((Tgt151A4ECC *)f->unk0)->unk1D4 != 0) {
+            if ((((Tgt151A4ECC *)f->unk0)->unk74 & 0xF) != 0xF) {
+                func_151A3504(f, arg0->unkC);
+                flag = 1;
+            }
+        }
+    }
+    if (flag) {
+        arg0->unkE = -1;
+        arg0->unkD = arg0->unkD | 1;
+    }
+}
 
 void func_1516972C(struct102 *arg0);
 

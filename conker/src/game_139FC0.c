@@ -194,8 +194,8 @@ struct Entry1510D874
   s32 unk0;
   s32 unk4;
   s32 unk8;
-  s8 unkC;
-  s8 unkD;
+  u8 unkC;
+  u8 unkD;
 };
 extern struct Entry1510D874 D_800D9ED8[];
 void func_1510D874(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)

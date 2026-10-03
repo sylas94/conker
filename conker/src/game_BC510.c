@@ -36,7 +36,14 @@ typedef struct {
 // need to figure out D_800D2460
 // best 635: IDO folds constant index 2 to base=arr[0]; target keeps runtime
 // `li 2; sll; addu` base at arr[2] (de-optimized) — non-foldable, uncrackable from C.
-#pragma GLOBAL_ASM("asm/nonmatchings/game_BC510/func_1508F060.s")
+void func_1508F060(void) {
+    s32 i;
+
+    for (i = 0; i < 6; i++) {
+        D_800D2460[i][13] = 0;
+    }
+    D_800D24C0 = 0;
+}
 
 void func_1508F0A4(void) {
     func_1508F0D4();

@@ -72,7 +72,48 @@ void func_151A7610(f32 arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, u
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1D43B0/func_151A77C0.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D43B0/func_151A787C.s")
+typedef struct Obj151A787C {
+    char pad0[0x34];
+    /* 0x34 */ s16 unk34;
+    /* 0x36 */ s16 unk36;
+    /* 0x38 */ s16 unk38;
+    char pad3A[0x3F - 0x3A];
+    /* 0x3F */ u8 unk3F;
+    /* 0x40 */ u8 unk40;
+    /* 0x41 */ u8 unk41;
+    /* 0x42 */ u8 unk42;
+    char pad43[0x50 - 0x43];
+    /* 0x50 */ s16 unk50;
+    /* 0x52 */ s16 unk52;
+    /* 0x54 */ s16 unk54;
+    /* 0x56 */ s16 unk56;
+    /* 0x58 */ s16 unk58;
+    /* 0x5A */ s16 unk5A;
+} Obj151A787C;
+
+typedef struct Sub151A787C {
+    /* 0x0 */ s16 unk0;
+    /* 0x2 */ s16 unk2;
+    /* 0x4 */ s16 unk4;
+    /* 0x6 */ s16 unk6;
+    /* 0x8 */ s16 unk8;
+    /* 0xA */ s16 unkA;
+} Sub151A787C;
+
+void func_151A787C(Obj151A787C *arg0) {
+    Sub151A787C *s;
+
+    s = (Sub151A787C *)&arg0->unk50;
+    if (arg0->unk38 < arg0->unk54) {
+        arg0->unk3F = arg0->unk38 * arg0->unk56;
+    }
+    if (arg0->unk38 < s->unk8) {
+        s16 d = s->unkA * D_800BE9E4;
+        arg0->unk34 += d;
+        arg0->unk36 += d;
+    }
+    arg0->unk40 = arg0->unk41 = arg0->unk42 = arg0->unk38 * s->unk2;
+}
 
 struct S151A7908 {
     s32 unk0;

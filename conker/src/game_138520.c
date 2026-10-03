@@ -49,7 +49,17 @@ void func_1510B32C(s32 arg0, f32 arg1, f32 arg2, f32 arg3) {
     D_800D9AF0 = 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510B3B0.s")
+void func_1510B3B0(void) {
+    s32 i;
+
+    for (i = 0; i <= D_80082FA0; i++) {
+        if (D_800D9AC0[i].unk0 != -1.0f) {
+            func_1510B128(i, D_800D9AC0[i].unk4, D_800D9AC0[i].unk8, D_800D9AC0[i].unk0, 0.0f);
+            D_800D9AC0[i].unk0 = -1.0f;
+        }
+    }
+    D_800D9AF0 = 0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510B458.s")
 
@@ -102,7 +112,27 @@ Gfx *func_1510B7B4(Gfx *gfx, s32 idx) {
     return gfx;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510B958.s")
+typedef struct Rec1510B958 {
+    char pad0[0x64];
+    /* 0x64 */ f32 unk64;
+    /* 0x68 */ f32 unk68;
+    /* 0x6C */ f32 unk6C;
+    /* 0x70 */ f32 unk70;
+    /* 0x74 */ f32 unk74;
+    /* 0x78 */ f32 unk78;
+    char pad7C[0x180 - 0x7C];
+} Rec1510B958;
+
+extern f32 D_800D35E0;
+extern f32 D_800D35E4;
+
+void func_1510B958(s32 arg0) {
+    Rec1510B958 *r;
+
+    r = &((Rec1510B958 *)D_800BE628)[arg0];
+    D_800D35E0 = (((r->unk74 / r->unk6C) - 1.0f) * -1.0f) + r->unk64;
+    D_800D35E4 = (((r->unk78 / r->unk70) - 1.0f) * -1.0f) + r->unk68;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510B9D0.s")
 

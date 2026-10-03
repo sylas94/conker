@@ -503,7 +503,7 @@ s32 func_151D1074(f32 *arg0, f32 *arg1) {
     return 1;
 }
 
-s32 func_151D10E4(void *arg0, s32 arg1, s32 arg2);
+s32 func_151D10E4(void *arg0, s32 arg1, u8 arg2);
 
 s32 func_151D10A4(void *arg0, s32 arg1) {
     return func_151D10E4(arg0, arg1, 0);
