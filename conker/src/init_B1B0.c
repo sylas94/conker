@@ -37,34 +37,9 @@ struct151 *func_1000B1FC(s32 arg0) {
     }
     return NULL;
 }
-// permuter NO ZERO best 20 (2x600s on form B, base 225 -> internal 50, no zero)
-// PERMUTER CANDIDATE (register/CSE near-miss). Two shapes reached:
-//  (A) index form `for(i=0;i<3;i++)` -> score 20: byte-perfect structure AND
-//      register alloc (end pointer in v0, re-materialized per loop, matching the
-//      target), but the strength-reduced loop end emits reloc %hi/%lo(D_800417B0+0xc)
-//      instead of the target's symbol %hi/%lo(D_800417BC). i<3 never names D_800417BC.
-//  (B) do-while referencing &D_800417BC (below) -> score 245: reloc is CORRECT
-//      (D_800417BC), but IDO CSEs &D_800417BC into a3 shared across BOTH loops,
-//      whereas the target re-materializes it into v0 per loop. Shared/scoped 'end'
-//      locals scored worse (465). The v0-per-loop alloc only comes from the strength
-//      reduction (form A), which can't carry the D_800417BC symbol -> permuter needed.
-// struct151 *func_1000B1FC(s32 arg0) {
-//     s32 i; struct00 *temp;
-//     i = 0;
-//     do {
-//         if ((D_800417B0[i] != 0) && (arg0 == D_800417B0[i]->unk4)) return D_800417B0[i];
-//         i++;
-//     } while (&D_800417B0[i] < (struct151 **)&D_800417BC);
-//     i = 0;
-//     do {
-//         if (D_800417B0[i] != 0) {
-//             temp = D_800417B0[i]->unk60;
-//             if ((temp != 0) && (arg0 == temp->unk4)) return (struct151 *)temp;
-//         }
-//         i++;
-//     } while ((struct151 **)&D_800417BC != &D_800417B0[i]);
-//     return NULL;
-// }
+// func_1000B1FC: the old pipeline parked form A at 20 because its loop end relocates as
+// D_800417B0+0xC rather than the alias D_800417BC. Same address, same bytes: the ROM gate
+// passes, so that 20 was a relocation-NAME artifact of the scorer, not a codegen difference.
 
 void func_1000B294(s32 *arg0) {
     struct151 *temp_v0;

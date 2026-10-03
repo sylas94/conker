@@ -63,7 +63,35 @@ typedef struct {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_12DAB0/func_15101090.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_12DAB0/func_15101148.s")
+typedef struct {
+    u8 pad0[0x24];
+    struct102 *unk24;
+    struct102 *unk28;
+    struct102 *unk2C;
+    struct102 *unk30;
+    struct102 *unk34;
+} Block15101148;
+
+void func_15101148(u8 *arg0) {
+    Block15101148 *temp = (Block15101148 *)(arg0 + 0x110);
+
+    if (temp->unk28 != NULL) {
+        func_1516979C(temp->unk28);
+    }
+    if (temp->unk2C != NULL) {
+        func_1516979C(temp->unk2C);
+    }
+    if (temp->unk24 != NULL) {
+        func_1516979C(temp->unk24);
+    }
+    if (temp->unk30 != NULL) {
+        func_1516979C(temp->unk30);
+    }
+    if (temp->unk34 != NULL) {
+        func_1516979C(temp->unk34);
+    }
+    func_1513CAA0((struct210 *)arg0);
+}
 
 void func_151011E8(Field124Owner *arg0) {
     Field124ChildBlock *temp = (Field124ChildBlock *)(arg0->field_0x124 + 0x110);

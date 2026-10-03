@@ -767,7 +767,34 @@ void func_1508B1D4(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508B20C.s")
+typedef struct {
+    f32 radiusSq;
+    s16 x;
+    s16 y;
+    s16 z;
+    s16 pad;
+} Entry1508B20C;
+
+typedef struct {
+    u8 pad0[0x1745];
+    s8 count;
+    u8 pad1746[2];
+    Entry1508B20C entries[8];
+} Mgr1508B20C;
+
+#define MGR ((Mgr1508B20C *)D_800D23B0)
+
+void func_1508B20C(f32 arg0, f32 arg1, f32 arg2, f32 arg3) {
+    s32 n;
+
+    if (MGR != NULL && MGR->count < 8) {
+        n = MGR->count++;
+        MGR->entries[n].x = arg0;
+        MGR->entries[n].y = arg1;
+        MGR->entries[n].z = arg2;
+        MGR->entries[n].radiusSq = arg3 * arg3;
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508B2A8.s")
 
