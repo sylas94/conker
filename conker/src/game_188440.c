@@ -26,7 +26,27 @@ void func_1515B62C(struct102 *arg0, s16 *arg1, u8 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_188440/func_1515B674.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_188440/func_1515B994.s")
+typedef struct Obj1515B994 {
+    char pad0[0x14];
+    /* 0x14 */ f32 unk14;
+    char pad18[4];
+    /* 0x1C */ f32 unk1C;
+    char pad20[0x74 - 0x20];
+    /* 0x74 */ f32 unk74;
+    /* 0x78 */ f32 unk78;
+    /* 0x7C */ f32 unk7C;
+    /* 0x80 */ f32 unk80;
+} Obj1515B994;
+
+s32 func_1515B994(Obj1515B994 *arg0) {
+    f32 old;
+
+    old = arg0->unk78;
+    arg0->unk14 += (old * D_800BE9A4) + ((0.5f * arg0->unk74) * D_800BE9A4);
+    arg0->unk78 += arg0->unk74 * D_800BE9A4;
+    arg0->unk1C = arg0->unk7C + ((arg0->unk80 * (arg0->unk78 + old)) * 0.5f);
+    return 1;
+}
 
 void func_1515BA10(s32 arg0) {
 }

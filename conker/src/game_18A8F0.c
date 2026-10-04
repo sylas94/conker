@@ -85,7 +85,50 @@ s32 func_1515D5AC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s3
     return func_1515D5F8(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_18A8F0/func_1515D5F8.s")
+struct Obj1515D5F8 {
+    u8 pad0[4];
+    u8 unk4;
+    u8 unk5;
+    u8 unk6;
+    u8 unk7;
+    u8 unk8;
+    u8 unk9;
+    u8 unkA;
+    u8 unkB;
+    u8 padC[2];
+    s16 unkE;
+    s16 unk10;
+    s16 unk12;
+    u8 pad14[0x2C - 0x14];
+    u8 unk2C;
+    u8 unk2D;
+    u8 unk2E;
+    u8 unk2F;
+};
+
+s32 func_1515D5F8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8, u8 arg9) {
+    struct Obj1515D5F8 *obj = (struct Obj1515D5F8 *)func_1515D520();
+
+    if (obj != NULL) {
+        obj->unk4 = 0;
+        obj->unk5 = arg4;
+        obj->unk6 = arg5;
+        obj->unk7 = arg6;
+        obj->unk8 = arg7;
+        obj->unk9 = arg8;
+        obj->unkB = arg9;
+        obj->unkA = 0;
+        obj->unkE = arg0;
+        obj->unk10 = arg1;
+        obj->unk12 = arg2;
+        obj->unk2F = arg3;
+        obj->unk2C = 0x7F;
+        obj->unk2D = 0;
+        obj->unk2E = 0;
+    }
+    return (s32)obj;
+}
+
 
 struct Node1515D69C {
     struct Node1515D69C *next;

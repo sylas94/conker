@@ -370,7 +370,28 @@ s32 func_151A483C(struct Obj151A483C *arg0, u8 arg1) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D0840/func_151A4900.s")
+s32 func_151A4900(struct Obj151A483C *arg0, u8 arg1) {
+    s16 temp_v1;
+    struct Sub151A483C *temp_v0;
+
+    temp_v0 = &arg0->unkA8;
+    temp_v1 = arg0->unk1A;
+    if (temp_v1 < temp_v0->unk4) {
+        arg0->unk2B = (u32)temp_v1 * (u32)temp_v0->unk6;
+    }
+    if (temp_v1 < temp_v0->unk8) {
+        {
+            f32 temp_f0 = (f32)(temp_v0->unkA * D_800BE9E4);
+
+            arg0->unk38 = arg0->unk38 + temp_f0;
+            arg0->unk3C = arg0->unk3C + temp_f0;
+        }
+        temp_v1 = arg0->unk1A;
+    }
+    arg0->unk2C = (u32)temp_v1 * (u32)temp_v0->unk2;
+    return 1;
+}
+
 
 extern f32 D_800A8D64;
 

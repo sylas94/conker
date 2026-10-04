@@ -1,0 +1,81 @@
+typedef struct {
+    Vec151B6320 unk0;
+    f32 unkC;
+    u8 unk10;
+    u8 pad11[3];
+} Seg151B7998;
+
+typedef struct {
+    u8 pad0[0x25];
+    u8 unk25;
+    u8 pad26[0x2C - 0x26];
+    s8 unk2C;
+    s8 unk2D;
+    s8 unk2E;
+    u8 pad2F[0x94 - 0x2F];
+    Seg151B7998 *unk94;
+} Obj151B7998;
+
+s32 func_151B7998(Obj151B7998 *arg0) {
+    Seg151B7998 *seg = arg0->unk94;
+    f32 total;
+    f32 scale;
+    s32 i;
+    s32 prev;
+    f32 t;
+    f32 acc;
+
+    if (arg0->unk2C >= 2) {
+        total = 0;
+        i = arg0->unk2E - 1;
+        if (i < 0) {
+            i = arg0->unk25 - 1;
+        }
+        while (i != arg0->unk2D) {
+            prev = i;
+            i--;
+            if (i < 0) {
+                i = arg0->unk25 - 1;
+            }
+            total += (seg + prev)->unkC;
+            if (total > 1198.0f) {
+                if ((seg + prev)->unkC != 0.0f) {
+                    f32 dx;
+                    f32 dy;
+                    f32 dz;
+
+                    t = (total - 1198.0f) / (seg + prev)->unkC;
+                    dx = (seg + i)->unk0.unk0 - (seg + prev)->unk0.unk0;
+                    dy = (seg + i)->unk0.unk4 - (seg + prev)->unk0.unk4;
+                    dz = (seg + i)->unk0.unk8 - (seg + prev)->unk0.unk8;
+                    (seg + i)->unk0.unk0 -= dx * t;
+                    (seg + i)->unk0.unk4 -= dy * t;
+                    (seg + i)->unk0.unk8 -= dz * t;
+                    (seg + prev)->unkC *= 1.0f - t;
+                }
+                total = 1198.0f;
+                while (i != arg0->unk2D) {
+                    arg0->unk2D++;
+                    if (arg0->unk2D == arg0->unk25) {
+                        arg0->unk2D = 0;
+                    }
+                    arg0->unk2C--;
+                }
+            }
+        }
+        scale = (total != 0.0f) ? 1.0f / total : 0;
+    }
+    if (arg0->unk2C >= 2) {
+        acc = total;
+        prev = arg0->unk2E;
+        do {
+            prev--;
+            if (prev < 0) {
+                prev = arg0->unk25 - 1;
+            }
+            (seg + prev)->unk10 = acc * (255.0f * scale);
+            acc -= (seg + prev)->unkC;
+        } while (prev != arg0->unk2D);
+    }
+    return 1;
+}

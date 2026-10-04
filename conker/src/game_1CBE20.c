@@ -124,7 +124,54 @@ void func_1519EA78(struct Src1519EA78 *arg0, u16 arg1, f32 arg2, u8 arg3, s32 ar
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1CBE20/func_1519EB8C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1CBE20/func_1519ED24.s")
+struct Src1519ED24 {
+    /* 0x00 */ f32 unk00;
+    /* 0x04 */ f32 unk04;
+    /* 0x08 */ f32 unk08;
+    /* 0x0C */ f32 unk0C;
+    /* 0x10 */ f32 unk10;
+    /* 0x14 */ f32 unk14;
+    /* 0x18 */ f32 unk18;
+    /* 0x1C */ f32 unk1C;
+};
+
+struct Obj1519ED24 {
+    char pad0[0x18];
+    /* 0x18 */ f32 unk18;
+    /* 0x1C */ f32 unk1C;
+    /* 0x20 */ f32 unk20;
+    /* 0x24 */ f32 unk24;
+    /* 0x28 */ f32 unk28;
+    char pad2C[0x38 - 0x2C];
+    /* 0x38 */ f32 unk38;
+    /* 0x3C */ f32 unk3C;
+    /* 0x40 */ f32 unk40;
+    char pad44[0x170 - 0x44];
+    /* 0x170 */ struct Src1519ED24 *unk170;
+};
+
+extern f32 D_800A8CD8;
+
+/* scale is read once into a local; src lives in a nested block (a -g3 scheduling barrier),
+ * which is what lets the scale load win the cycle-0 tie against the arg0->unk170 load. */
+s32 func_1519ED24(struct Obj1519ED24 *arg0) {
+    f32 scale;
+
+    scale = D_800A8CD8;
+    {
+        struct Src1519ED24 *src = arg0->unk170;
+
+        arg0->unk18 = src->unk18 * scale;
+        arg0->unk1C = src->unk1C * scale;
+        arg0->unk20 = src->unk0C;
+        arg0->unk24 = src->unk10;
+        arg0->unk28 = src->unk14;
+        arg0->unk38 = src->unk00;
+        arg0->unk3C = src->unk04;
+        arg0->unk40 = src->unk08;
+        return 1;
+    }
+}
 
 typedef struct {
     /* 0x00 */ u8  unk0;

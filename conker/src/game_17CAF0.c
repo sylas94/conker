@@ -1924,7 +1924,38 @@ void func_15154C90(Struct15154C90 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_17CAF0/func_15154D80.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_17CAF0/func_1515548C.s")
+struct Arg1515548C {
+    u8 pad0[8];
+    f32 unk8;
+    f32 unkC;
+    u8 pad10[4];
+    u16 unk14;
+    u8 pad16[0x42];
+};
+
+extern s32 func_151555AC(struct Arg1515548C *, f32 *);
+extern u8 *func_15167A68(s32, s32, s32, s32, u8, s32);
+
+u8 *func_1515548C(struct Arg1515548C *arg0, u8 arg1, s32 arg2, s32 arg3, s32 arg4, u8 arg5, s32 arg6) {
+    u8 *ret;
+    f32 pos[2];
+
+    if ((arg2 != 0) && (arg3 > 0)) {
+        pos[0] = arg0->unk8;
+        pos[1] = arg0->unkC;
+        if (func_151555AC(arg0, pos) != 0) {
+            return 0;
+        }
+    }
+    ret = func_15167A68((arg0->unk14 & 0x20) ? 0x57 : 0x5D, arg6, arg4 + 0x70, 1, arg5, 1);
+    if (ret == 0) {
+        return 0;
+    }
+    memcpy(ret + 0x10, arg0, 0x58);
+    ret[0x68] = 0;
+    ret[0x68] |= arg1;
+    return ret;
+}
 
 struct Local15155564 { u8 pad[0x2A]; u8 unk2A; };
 extern void (*D_8008AD04[])(struct Local15155564 *, s32, u8);

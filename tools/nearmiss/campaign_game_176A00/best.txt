@@ -1,0 +1,1 @@
+best.c (=final.c): 6 pragmas closed (AB5C B034 B364 B8E4 BF9C C678), all C funcs masked-identical vs expected, .rodata 0x120 byte-equal to ROM 0x24A240-0x24A360, all LO16 rodata relocs at golden offsets. Remaining pragmas: A594, A6A0, BE20, C858.

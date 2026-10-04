@@ -5,7 +5,43 @@
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1B8F40/func_1518BA90.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1B8F40/func_1518BBF4.s")
+extern u8 D_800DCE50[];
+
+typedef struct Node1518BBF4 {
+    u8 pad0[0x8];
+    struct Node1518BBF4 *unk8;
+    u8 padC[0x18];
+    struct Node1518BBF4 *unk24;
+    u8 unk28;
+    u8 pad29[0x12];
+    u8 unk3B;
+} Node1518BBF4;
+
+void func_1518BBF4(Node1518BBF4 *arg0) {
+    s32 i;
+    Node1518BBF4 *node;
+
+    if (arg0 != NULL) {
+        for (i = 0; i != 2; i++) {
+            D_800DD190++;
+            node = ((Node1518BBF4 *(*)[104])D_800DCE50)[i][31];
+            while (node != NULL) {
+                ((Node1518BBF4 **)D_800DD198)[D_800DD190] = node->unk8;
+                node->unk24 = arg0;
+                if (arg0 != NULL || node->unk28 == arg0->unk3B) {
+                    func_1516972C((struct102 *)node);
+                }
+                node = ((Node1518BBF4 **)D_800DD198)[D_800DD190];
+            }
+            {
+                extern s8 D_800DD190;
+
+                D_800DD190--;
+            }
+        }
+    }
+}
+
 
 s32 func_15167A68(s32, s32, s32, s32, s32, s32);
 

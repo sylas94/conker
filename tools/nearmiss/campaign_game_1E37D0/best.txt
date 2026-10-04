@@ -1,0 +1,15 @@
+game_1E37D0 / rodata block 24EF20 (0x30 bytes)
+
+best.c      = 6420, 7144, 7328 in C (mism 0 each); every other pragma unchanged. Not shippable alone (its literals need the migration, which needs all 7 constants).
+final_lr.c  = best.c + 65D4/7998 pragmas pointed at .late_rodata copies (lr_65D4.s, lr_7998.s -> to be placed at conker/nonmatchings_lr/game_1E37D0/).
+fl.c        = same as final_lr.c with absolute paths (the one actually built + verified: fl.full.o)
+
+  func_151B6420  C   mism 0  leaf   n=109/109
+  func_151B7144  C   mism 0  0x98   n=121/121
+  func_151B7328  C   mism 0  0x100  n=212/212
+  func_151B65D4  asm (+.late_rodata D_800AA474/478)  near-miss C: nm_func_151B65D4.txt  n=210/213 (missing golden's spill of the st->unk14 reload)
+  func_151B7998  asm (+.late_rodata D_800AA484)       near-miss C: nm_func_151B7998.txt  n=168/168, FP colouring only
+  func_151B70B4  asm (bonus)  near-miss C: nm_func_151B70B4.txt n=35/36 (golden leaves one jr delay slot unfilled)
+
+fl.full.o: .rodata 0x30, 2**4, byte-identical to 24EF20.rodata.s incl. 8-byte zero tail; all 17 funcs masked-.text == expected .o;
+LO16 into .rodata: +0x00 (tbl, 7328), +0x10 (6420), +0x1C (7144), +0x20 (7328); D_800AA474@0x14, D_800AA478@0x18, D_800AA484@0x24 global.

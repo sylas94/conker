@@ -585,7 +585,21 @@ s32 func_15159184(Struct15159184 *arg0, u8 arg1) {
     return ret;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_15159230.s")
+
+s32 func_15159230(Struct15158BD0_src *arg0, f32 *arg1, u8 arg2) {
+    s32 ret;
+
+    if ((arg1[0] != (&arg0->unk14)[0]) || (arg1[1] != (&arg0->unk14)[1]) || (arg1[2] != (&arg0->unk14)[2])) {
+        if ((arg2 == 1) || (arg2 == 2)) {
+            ret = 2;
+        } else {
+            ret = 1;
+        }
+    } else {
+        ret = 0;
+    }
+    return ret;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_151592B8.s")
 

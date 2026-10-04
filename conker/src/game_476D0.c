@@ -119,31 +119,23 @@ void func_1501A220(s32 arg0, s32 arg1) {
 //     func_1510B070(arg1);
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_476D0/func_1501A39C.s")
-// PERMUTER CANDIDATE: reconstruction below scores 30 — byte-identical EXCEPT two adjacent,
-// independent increments (`addiu v1,v1,4` D_800BE9C8-walk vs `addiu v0,v0,8` g) are emitted in
-// the opposite order. A for-loop `i<2` schedules them correctly but derives the loop terminal as
-// `D_800BE9D8+0x8` (wrong reloc; target references symbol D_800BE9E0). Only a do-while with an
-// explicit `!= &D_800BE9E0` bound yields the D_800BE9E0 reloc with no guard, but that form
-// schedules the D_800BE9C8 induction increment last. The two constraints conflict from C source.
-// permuter NO ZERO, best 30
-// extern Gfx *D_800BE9C8[];
-// extern Gfx D_8002C930[];
-// void func_1501A39C(void) {
-//     Gfx *g;
-//     s32 i = 0;
-//     do {
-//         g = D_800BE9C8[i];
-//         gSPSegment(g++, 0, 0);
-//         gSPSegment(g++, 0, 0);
-//         gSPDisplayList(g++, D_8002C930);
-//         gDPSetDepthImage(g++, D_800BE9C4);
-//         gSPViewport(g++, (Vp *)((u8 *)D_800BE628 + i * 0x10 + 0x40));
-//         i++;
-//         D_800BE9D8[i - 1] = (s32)g;
-//     } while (&D_800BE9E0 != &D_800BE9D8[i]);
-// }
+extern Gfx *D_800BE9C8[];
+extern Gfx D_8002C930[];
 
+void func_1501A39C(void) {
+    Gfx *g;
+    s32 i;
+
+    for (i = 0; i < 2; i++) {
+        g = D_800BE9C8[i];
+        gSPSegment(g++, 0, 0);
+        gSPSegment(g++, 0, 0);
+        gSPDisplayList(g++, D_8002C930);
+        gDPSetDepthImage(g++, D_800BE9C4);
+        gSPViewport(g++, (Vp *)((u8 *)D_800BE628 + i * 0x10 + 0x40));
+        D_800BE9D8[i] = (s32)g;
+    }
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_476D0/func_1501A490.s")
 // PERMUTER CANDIDATE: reconstruction below is semantically correct (build OK, most instrs match,
 // a1/a2/a3 homing reproduced) but scores 1734 — IDO keeps the Gfx pointer in a temp + stack spill

@@ -78,7 +78,38 @@ f32 func_1510F648(f32 arg0, f32 arg1, f32 arg2) {
     return ret;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510F720.s")
+#define ABS_1510F720(x) ((x) < 0 ? -(x) : (x))
+
+s32 func_1510F720(s32 x, s32 y, s32 r, unkfunc_1510FE30 **out) {
+    unkfunc_1510FE30 *node;
+    s32 count;
+    s32 off;
+
+    node = D_800DBE48;
+    count = 0;
+    while (node != NULL) {
+        if (ABS_1510F720(node->unk8 - x) < r + node->unk6
+            && ABS_1510F720(node->unkA - y) < r + node->unk6) {
+            if (node->unkC != 0) {
+                off = node->unkC;
+            } else {
+                *out++ = node;
+                count++;
+                off = node->unk4;
+            }
+        } else {
+            off = node->unk4;
+        }
+        if (off != 0) {
+            node = (unkfunc_1510FE30 *)((u8 *)node + off);
+        } else {
+            node = NULL;
+        }
+    }
+    return count;
+}
+#undef ABS_1510F720
+
 
 extern void func_150A49F4(void);
 

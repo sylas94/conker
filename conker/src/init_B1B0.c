@@ -1,9 +1,12 @@
 #include <ultra64.h>
 
+#define func_1000DF68 func_1000DF68_s16_decl_in_functions_h
 #include "functions.h"
+#undef func_1000DF68
 #include "variables.h"
 
 void func_1000DEC4(void);
+void func_1000DF68(s32 arg0, s32 arg1, s32 arg2);
 
 struct151 *func_1000B1B0(s32 arg0) {
     s32 i;
@@ -806,7 +809,38 @@ void func_1000DEC4(void)
   while (var_s0 != ((struct137 *) D_80041E58));
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000DF68.s")
+void func_1000DF68(s32 arg0, s32 arg1, s32 arg2) {
+    struct151 *p;
+
+    p = func_1000B1FC(arg0);
+    if (p != NULL) {
+        p->unk4E = arg1;
+        if (arg2 == 1) {
+            p->unk4C = arg1;
+            if (p->unk0 >= 0) {
+                func_1000CC54(p->unk0);
+            }
+        }
+        if (arg2 >= 2) {
+            s32 rate;
+
+            rate = p->unk4C - arg1;
+            if (rate < 0) {
+                rate = -rate;
+            }
+            rate /= arg2;
+            if (rate <= 0) {
+                rate = 2;
+            } else if (rate >= 0x8000) {
+                rate = 0x7FFF;
+            }
+            p->unk50 = rate;
+        } else {
+            p->unk50 = 0x200;
+        }
+    }
+}
+
 
 void func_1000E054(s32 arg0, s32 arg1) {
     struct151 *sp1C;

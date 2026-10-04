@@ -1,5 +1,8 @@
 #include <ultra64.h>
+/* functions.h declares arg3/arg5 as s32; golden reads them as u8 from their home slots. */
+#define func_151D5714 func_151D5714_hdr
 #include "functions.h"
+#undef func_151D5714
 #include "variables.h"
 
 extern void (*D_8008FC70[])(void *, s16, void *);
@@ -76,7 +79,24 @@ void func_151D3E04(s32 *arg0, f32 *arg1, void *arg2, u8 arg3, f32 arg4) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_200930/func_151D3E6C.s")
+extern void func_1505D1C4(f32, f32, f32, s32, s32, u16, s32, s32);
+
+void func_151D3E6C(struct127 *arg0, f32 *arg1, f32 *arg2, s32 arg3) {
+    f32 x = (arg2[0] + arg1[0]) * 0.5f;
+    f32 y = (arg2[1] + arg1[1]) * 0.5f;
+    f32 z = (arg2[2] + arg1[2]) * 0.5f;
+
+    {
+        u16 angle;
+
+        if (arg0->unk31C != NULL) {
+            angle = arg0->unk76 - arg0->unk31C->unk12;
+        } else {
+            angle = arg0->unk76;
+        }
+        func_1505D1C4(x, y, z, arg3, arg0 - D_800CC2D0, angle, 0, 0);
+    }
+}
 
 void func_151D3F14(f32 *arg0, u8 arg1, s32 arg2) {
     Header header;
@@ -509,7 +529,33 @@ void func_151D5648(void *arg0, u8 arg1, s32 arg2) {
                   (f32)(u32)((temp_a % 0x38U) + 0xC8), 0.0f, arg1, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_200930/func_151D5714.s")
+extern s32 func_15145EA4(s32 *arg0, s32 *arg1, s32 arg2, s32 arg3);
+
+void func_151D5714(struct127 *arg0, f32 *arg1, f32 *arg2, u8 arg3, f32 arg4, u8 arg5, s32 arg6) {
+    struct17 a;
+    struct17 b;
+    s32 mtx;
+    s32 srcs[2];
+    s32 dsts[2];
+
+    if (arg0->unk1D4 != NULL) {
+        if ((arg0->unk74 & 0xF) != 0xF) {
+            mtx = (s32)arg0->unk1D4 + (arg3 << 6);
+            srcs[0] = (s32)arg1;
+            srcs[1] = (s32)arg2;
+            dsts[0] = (s32)&a;
+            dsts[1] = (s32)&b;
+            func_15145EA4(srcs, dsts, mtx, 2);
+            b.unk0 = b.unk0 - a.unk0;
+            b.unk4 = b.unk4 - a.unk4;
+            b.unk8 = b.unk8 - a.unk8;
+            {
+                void func_151D4408(struct17 *, struct17 *, void *, struct127 *, f32, u8, s32);
+                func_151D4408(&a, &b, (void *)mtx, arg0, arg4, arg5, arg6);
+            }
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_200930/func_151D57F8.s")
 

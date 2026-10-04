@@ -143,7 +143,20 @@ extern s32 func_150448D0(s32, s32, s32, s32, s32, s32, s32, s32, s32);
 #define LOW_U8(arg) (*(u8 *)((u8 *)&(arg) + 3))
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516D400.s")
+void func_1516D400(void) {
+    s32 i;
+    s32 v;
+
+    for (i = 0; i < 4; i++) {
+        if ((*(u8 (*)[4])&D_800DD2A0)[i] < 0xFF) {
+            v = (*(u8 (*)[4])&D_800DD2A0)[i] + D_800BE9A0;
+            if (v > 0xFF) {
+                v = 0xFF;
+            }
+            (*(u8 (*)[4])&D_800DD2A0)[i] = v;
+        }
+    }
+}
 
 void func_1516D4E8(
     s32 arg0, s32 arg1, s32 arg2, s32 arg3,

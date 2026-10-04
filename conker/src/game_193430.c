@@ -46,7 +46,9 @@ typedef struct {
     s16 field_0x9A;
     s16 field_0x9C;
     s16 field_0x9E;
-    u8 pad_0xA0[0x8];
+    u8 field_0xA0;
+    u8 field_0xA1;
+    u8 pad_0xA2[0x6];
 } EffectType4Object;
 
 void func_15165F80(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8) {
@@ -112,7 +114,41 @@ void func_15165F80(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_193430/func_15166118.s")
+typedef struct {
+    Vtx v[4];
+} VtxQuad15166118;
+
+void func_15166118(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8, s32 arg9) {
+    s32 i;
+    EffectType4Object *temp_v0;
+
+    temp_v0 = func_15167A68(4, arg9, 0xA8, 1, (u8)arg8, 1);
+    if (temp_v0 != NULL) {
+        temp_v0->field_0x95 = 2;
+        for (i = 0; i < 2; i++) {
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[0].v.tc[0] = 0x2000;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[0].v.tc[1] = 0x2000;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[1].v.tc[0] = 0x2800;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[1].v.tc[1] = 0x2000;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[2].v.tc[0] = 0x2800;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[2].v.tc[1] = 0x2800;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[3].v.tc[0] = 0x2000;
+            ((VtxQuad15166118 *)((u8 *)temp_v0 + 0x10))[i].v[3].v.tc[1] = 0x2800;
+        }
+
+        temp_v0->field_0x9E = 1;
+        temp_v0->field_0x92 = arg6;
+        temp_v0->field_0x93 = arg6;
+        temp_v0->field_0x98 = arg2;
+        temp_v0->field_0x9A = arg3;
+        temp_v0->field_0x9C = arg4;
+        temp_v0->field_0x96 = arg5;
+        temp_v0->field_0x94 = arg7;
+        temp_v0->field_0xA0 = arg0;
+        temp_v0->field_0xA1 = arg1;
+        func_1517E05C(arg2, arg3, arg4);
+    }
+}
 
 void func_15166204(EffectType4Object *arg0) {
     s32 temp_v0;

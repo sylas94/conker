@@ -118,7 +118,23 @@ s32 func_15085DF8(f32 arg0, f32 arg1, f32 arg2, s8 arg3, s8 arg4) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15086364.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15086BD0.s")
+f32 func_15086BD0(s32 arg0, s32 arg1) {
+    f32 dx;
+    f32 dy;
+    f32 dz;
+
+    if (arg0 == 0xFF || arg1 == 0xFF) {
+        return 0.0f;
+    }
+    dx = D_800D2350[arg0].unk0 - D_800D2350[arg1].unk0;
+    dy = D_800D2350[arg0].unk2 - D_800D2350[arg1].unk2;
+    dz = D_800D2350[arg0].unk4 - D_800D2350[arg1].unk4;
+    return sqrtf(dx * dx + dy * dy + dz * dz);
+}
+
+static void func_15086C68(void) {
+}
+
 
 extern void func_150A3194(s32, s32, s32, s32, s32);
 
@@ -499,7 +515,26 @@ fail:
     return -1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_150885EC.s")
+struct Struct150885EC {
+    char pad0[0x30];
+    s8 unk30;
+    s8 unk31;
+    char pad32[0x84 - 0x32];
+};
+
+void func_150885EC(s32 arg0, s32 arg1) {
+    s32 unk31;
+    s32 unk30;
+
+    if (D_800872A0 != 0) {
+        unk31 = ((struct Struct150885EC *)D_800872A0)[arg1].unk31;
+        unk30 = ((struct Struct150885EC *)D_800872A0)[arg1].unk30;
+        bcopy(D_800872A0 + arg0 * 0x84, D_800872A0 + arg1 * 0x84, 0x84);
+        ((struct Struct150885EC *)D_800872A0)[arg1].unk31 = unk31;
+        ((struct Struct150885EC *)D_800872A0)[arg1].unk30 = unk30;
+    }
+}
+
 
 extern s32 D_800D2394;
 extern s8 D_800D2398;

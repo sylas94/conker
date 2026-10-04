@@ -21,7 +21,7 @@
  *      t1 = arg0->unk1  -> s3          t2 = D_800BE9C0  (u8 global)
  *      t3 = t2 * t1                    s5 = (t2 ^ 1) * t1
  *      t0 = 0xA0 (160)                 v1 = 0 (the search index)   a1 = 0
- *      blez D_800DBEE8[0] -> skip the search loop entirely
+ *      blez D_800DBEE8[a1] -> skip the search loop entirely
  * NOTE `a1` is set to 0 and NEVER incremented, yet `sll $t6,$a1,1` is recomputed INSIDE the
  * loop -- so the source indexes D_800DBEE8 with something the compiler knows is 0, not with
  * the loop counter. Reproducing that (rather than hoisting D_800DBEE8[0]) is likely to matter.
@@ -74,15 +74,69 @@
  *   search loop. Our `D_800DBEE8[0]` lets IDO hoist the whole thing to one load, so we lose
  *   the address materialisation, the per-iteration index, and the reload.
  *
- * NEXT STEP (do this before touching anything else -- the first divergence cascades):
- * give the index a real variable that IDO cannot fold to a constant, so the subscript is
- * recomputed and the bound re-read each iteration. `a1` is zeroed with `or $a1,$zero,$zero`
- * and never incremented, so in the source it IS a variable holding 0 -- most likely a player/
- * slot index that this call site passes as 0, not a literal. Candidates to try, in order:
- * a second (unused-looking) parameter, a local initialised from another global, and a local
- * the compiler cannot see through. Do NOT just write `D_800DBEE8[0]`.
+ * ---------------------------------------------------------------- CONFIRMED, 161 -> 96
+ * The index-variable diagnosis is RIGHT and is now applied in the C below:
+ *      D_800DBEE8[0]       (literal)   mism=161   n=94/101   (SEVEN SHORT -- bound hoisted)
+ *      D_800DBEE8[idx]   (s32 local) mism=96    n=102/101  (ONE OVER)   <-- parked
+ *      ...idx as u8 / s16                identical, 96 -- the TYPE does not matter, only that
+ *                                        it is a variable IDO will not fold
+ *      u16 *tbl = D_800DBEE8; tbl[0]     101, n=100/101 -- keeps the address live but still
+ *                                        hoists the bound; the SUBSCRIPT is what matters
+ * A plain local initialised to 0 is enough; no opaque source is needed. That recovers the
+ * prologue `lui/addiu a3,%hi/%lo(D_800DBEE8)`, the per-iteration `sll/addu`, and the reload.
  *
- * Treat the DECODE above as the reliable part; the C below is one measurement, not a result.
+ * ---------------------------------------------------------------- THEN 96 -> 93, LENGTH EXACT
+ * Second divergence, also confirmed: golden multiplies with $t1 (the freshly loaded
+ * arg0->unk1) and only copies into $s3 AFTERWARDS, where we copied into a named `n` first and
+ * multiplied with the copy. Measured, all frame -0x30:
+ *      A  `n = arg0->unk1;` then `g * n`, `(g^1) * n`, loop `j < n` ...... 97   n=102/101
+ *      B  keep `n`, but multiply with arg0->unk1 directly ................ 121  n=105/101
+ *      D  same as B with `n` assigned after the products ................. 121  n=105/101
+ *      C  NO `n` LOCAL AT ALL -- arg0->unk1 everywhere ................... 93   n=101/101
+ * C reached exact length (101/101) at 93 -- but see below, DROPPING `n` WAS THE WRONG READ.
+ *
+ * ---------------------------------------------------------------- THEN 93 -> 78, AND WHY
+ * Counting the prologue stores settled it: **GOLDEN SAVES SIX callee-saved registers**
+ * (s0 0x14, s1 0x18, s2 0x1C, s3 0x20, s4 0x24, s5 0x28, + ra 0x2C). Variant C saves only
+ * FIVE -- dropping `n` cost us `$s3 = arg0->unk1`, and C bought its exact length by spending
+ * that slot elsewhere. So `n` is REAL; the earlier A variant was worse for a different reason.
+ *
+ * The discriminator is THE TAIL, not the products. Measured, all with `n = arg0->unk1` and the
+ * products computed from `n`:
+ *      tail `if (n != arg0->unk2)`            ..... 108  n=99/101   (two SHORT)
+ *      tail `if (arg0->unk1 != arg0->unk2)`   .....  78  n=101/101  <-- PARKED
+ *      `n` declared s32 instead of u8         ..... 117  n=103/101, frame 0x38 (WRONG)
+ *      loop `j != n` instead of `j < n`       .....  78  (identical -- byte-neutral)
+ * Golden RELOADS `lbu $t1,0x1($s2)` at the bottom of the copy loop for that final compare, so
+ * the tail must re-read arg0->unk1 rather than reuse `n`. `n` MUST be u8: as s32 the frame
+ * grows to 0x38.
+ *
+ * PROGRESSION: 161 (7 short) -> 96 (1 over) -> 93 (exact, but 5 saved regs) -> **78 (exact
+ * length, exact frame, and the right SIX saved registers)**.
+ *
+ * ---------------------------------------------------------------- NEXT
+ * 78 rows of pure register assignment. Work front-to-back; the first divergence cascades.
+ * The mapping is now one consistent rotation, not a structural problem:
+ *      golden:  s2=arg0   s3=n   s4=found base   s5=lim   s1=k   s0=j+1   (g stays in $t2)
+ *      ours:    s3=arg0   s5=n   ...             ...      s1=?   ...      g SPILLED to $s2
+ * The clearest single defect is that WE PUT `g` (D_800BE9C0) IN A SAVED REGISTER and golden
+ * keeps it in $t2. Nothing between its read and its last use (`D_80089250[g]`) contains a
+ * call, so a temp ought to suffice.
+ *
+ * BUT THE OBVIOUS FIX IS REFUTED -- reading the global directly does NOT demote it, it costs
+ * an instruction (all frame -0x30):
+ *      `u8 g` local used at all three sites ................... 78   n=101/101  <-- PARKED
+ *      `g` for the products, D_800BE9C0 direct at the index ... 78   (identical)
+ *      D_800BE9C0 direct at ALL three sites .................. 95   n=102/101
+ *      `g` only at the index, direct in the products .......... 97   n=102/101
+ * So the `g` local is load-bearing and its promotion to a saved register is NOT driven by how
+ * many times the source names the global. Do not re-run that sweep. The next thing to try is
+ * the OTHER end -- what forces arg0->unk1 out of $s3 -- e.g. declaration order of n/g/k/lim,
+ * or giving the found-base `src` and `k` their live ranges in golden's order. This is now an
+ * ordinary GRA-rotation residue; if it resists, the permuter is a reasonable next call here
+ * because the length AND frame are both already exact (that is its good case).
+ *
+ * Treat the DECODE above as the reliable part; the C below is measured but NOT reduced.
  */
 
 typedef struct Elem89240 {
@@ -101,6 +155,7 @@ extern Tbl89250  *D_80089250[];
 void func_15188F84(Node1518894C *arg0) {
     Elem89240 *p;
     u8 *src;
+    s32 idx;
     s32 i;
     s32 j;
     s32 k;
@@ -108,12 +163,13 @@ void func_15188F84(Node1518894C *arg0) {
     u8 n;
     u8 g;
 
-    n = arg0->unk1;
     g = D_800BE9C0;
+    n = arg0->unk1;
     lim = (g ^ 1) * n;
     k = g * n;
+    idx = 0;
     i = 0;
-    if (D_800DBEE8[0] > 0) {
+    if (D_800DBEE8[idx] > 0) {
         p = D_80089240;
         do {
             if (arg0->unk10 == (s32)&D_800DBEF4[p->unk0]) {
@@ -121,15 +177,15 @@ void func_15188F84(Node1518894C *arg0) {
             }
             i++;
             p++;
-        } while (i < D_800DBEE8[0]);
+        } while (i < D_800DBEE8[idx]);
     }
-    if (i == D_800DBEE8[0]) {
+    if (i == D_800DBEE8[idx]) {
         arg0->unk2 = 0;
         return;
     }
     src = (u8 *)D_80089250[g]->unk0 + (D_80089240[i].unk0 << 6);
     for (j = 0; j < n; j++) {
-        if (arg0->unk1 == (j + 1)) {
+        if (n == (j + 1)) {
             bcopy(src, (u8 *)arg0->unk8 + (k << 6), 0x40);
         } else {
             bcopy((u8 *)arg0->unk8 + ((j + lim + 1) << 6),

@@ -120,7 +120,26 @@ void func_150C84F4(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_F5800/func_150C851C.s")
+void func_150CDB6C(s32);
+
+void func_150C851C(s32 arg0) {
+    s32 i;
+    s32 val;
+    s32 lo;
+    s32 range;
+
+    if (D_800BE4E0 != 0) {
+        func_150CDB6C(arg0);
+        range = ((arg0 * 50) >> 8) + 50;
+        lo = (arg0 * 300) >> 8;
+        for (i = 0; i < 10; i++) {
+            val = lo;
+            val += (u32)func_150ADA20() % range;
+            ((Struct150C8350 *)D_800BE4E0)[i].unk8 = val;
+        }
+    }
+}
+
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_F5800/func_150C8600.s")
 

@@ -33,32 +33,26 @@ extern Rec150A0264 D_800D3010[];
 #pragma GLOBAL_ASM removed only when it reaches 0. */
 #pragma GLOBAL_ASM("asm/nonmatchings/game_CD5A0/func_150A00F0.s")
 
-/* NEAR MISS, mism=54 n=51/50 (ONE OVER). Per-frame tick over the same 10-record table:
-       extern u16 D_80088510[];   extern u16 D_8008851C[];
-       Rec150A0264 *r, *end;
-       end = &D_800D3010[10];
-       for (r = D_800D3010; r != end; r++) {
-           if ((r->unk0_b0 != 0) && (r->unk0_b1 == 1)) {
-               r->unk8 = r->unk8 + D_800BE9E4;
-               if (r->unk8 >= D_80088510[r->unk0_b2]) {
-                   r->unk8 = r->unk8 - D_80088510[r->unk0_b2];
-                   r->unk4 = r->unk4 + 1;
-                   if (D_8008851C[r->unk0_b2] != 0) {
-                       r->unk4 = r->unk4 % D_8008851C[r->unk0_b2];
-                   }
-               }
-           }
-       }
-   LADDER: 79 -> 76 (unk4/unk8 typed UNSIGNED: golden is `sltu` and `divu`; as s32 we emitted
-   `slt` plus `div` AND its three-instruction signed-overflow guard) -> 57 (the increment and
-   the modulo are TWO statements with an explicit `!= 0` guard -- golden's `sw t5,0x4(v1)` sits
-   in the `beq` delay slot, so unk4 += 1 happens on BOTH paths) -> 54 (hoist the end pointer;
-   `r != &D_800D3010[10]` in the condition recomputes base+120 every iteration).
-   REFUTED: an `idx` local for r->unk0_b2 (117, worse); a separate `extern D_800D3088[]` as the
-   end marker (89 -- IDO then cannot prove the loop runs once and adds an entry test).
-   REMAINING +1: we emit `lui base / addiu +120` for the end pointer where golden folds it to
-   `%hi/%lo(D_800D3010+120)` (rendered as D_800D3088). Get that fold and this should close. */
-#pragma GLOBAL_ASM("asm/nonmatchings/game_CD5A0/func_150A019C.s")
+extern u16 D_80088510[];
+extern u16 D_8008851C[];
+
+void func_150A019C(void) {
+    s32 i;
+
+    for (i = 0; i < 10; i++) {
+        if ((D_800D3010[i].unk0_b0 != 0) && (D_800D3010[i].unk0_b1 == 1)) {
+            D_800D3010[i].unk8 = D_800D3010[i].unk8 + D_800BE9E4;
+            if (D_800D3010[i].unk8 >= D_80088510[D_800D3010[i].unk0_b2]) {
+                D_800D3010[i].unk8 = D_800D3010[i].unk8 - D_80088510[D_800D3010[i].unk0_b2];
+                D_800D3010[i].unk4 = D_800D3010[i].unk4 + 1;
+                if (D_8008851C[D_800D3010[i].unk0_b2] != 0) {
+                    D_800D3010[i].unk4 = D_800D3010[i].unk4 % D_8008851C[D_800D3010[i].unk0_b2];
+                }
+            }
+        }
+    }
+}
+
 
 s32 func_150A0264(s32 arg0, Src150A0264 *arg1) {
     Rec150A0264 *r = &D_800D3010[arg0];

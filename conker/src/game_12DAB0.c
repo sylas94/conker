@@ -61,8 +61,6 @@ typedef struct {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_12DAB0/func_15100600.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_12DAB0/func_15101090.s")
-
 typedef struct {
     u8 pad0[0x24];
     struct102 *unk24;
@@ -71,6 +69,32 @@ typedef struct {
     struct102 *unk30;
     struct102 *unk34;
 } Block15101148;
+
+void func_15101090(u8 *arg0) {
+    Block15101148 *temp = (Block15101148 *)(arg0 + 0x110);
+
+    if (*(u16 *)(arg0 + 0x1A0)) {
+        func_100111C8(*(s16 *)(arg0 + 0x1A0));
+    }
+    if (temp->unk28 != NULL) {
+        func_1516972C(temp->unk28);
+    }
+    if (temp->unk2C != NULL) {
+        func_1516972C(temp->unk2C);
+    }
+    if (temp->unk24 != NULL) {
+        func_1516972C(temp->unk24);
+    }
+    if (temp->unk30 != NULL) {
+        func_1516972C(temp->unk30);
+    }
+    if (temp->unk34 != NULL) {
+        func_1516972C(temp->unk34);
+    }
+    func_1513CA6C((struct210 *)arg0);
+}
+
+
 
 void func_15101148(u8 *arg0) {
     Block15101148 *temp = (Block15101148 *)(arg0 + 0x110);

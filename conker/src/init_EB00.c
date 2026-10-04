@@ -1,7 +1,9 @@
 #include <ultra64.h>
 #define func_1000F85C func_1000F85C_hdr
+#define func_1000EDA0 func_1000EDA0_hdr
 #include "functions.h"
 #undef func_1000F85C
+#undef func_1000EDA0
 #include "variables.h"
 
 s32 func_10010E78(s32 arg0, s32 arg1, u16 arg2, s16 arg3, u8 arg4,
@@ -151,31 +153,30 @@ s32 func_1000ECCC(struct_init_EB00_1000ECCC *arg0, s32 arg1, s32 arg2, s32 arg3,
 //     return 0;
 // }
 
-// PERMUTER CANDIDATE / JUSTREG (best 65). Byte-perfect instruction stream; the
-// hoisted `and (temp_v1 & 0xFFFF0000)` at 0x304 colors to t0 (mine) vs t9 (target),
-// shifting every downstream temp by one. Sibling of matched func_1000ECCC; differs
-// only by the unguarded func_10010630 call, which perturbs the global coloring.
-// Tried OR/AND operand swaps (65/70). Needs permuter to shift the temp rotation.
-// s32 func_1000EDA0(struct_init_EB00_1000ECCC *arg0, s32 arg1, s32 arg2, s32 arg3,
-//                   s32 arg4, s32 arg5, u16 *arg6) {
-//     s16 temp_a1; s16 temp_t4; s32 temp_v1;
-//     temp_v1 = arg0->unk18.w;
-//     temp_a1 = temp_v1;
-//     if (*arg6 != 0) {
-//         arg0->unk18.w = (*arg6 << 16) | (temp_v1 & 0xFFFF);
-//         arg0->unk0 = 0; *arg6 = 0; temp_v1 = arg0->unk18.w;
-//     }
-//     temp_a1 -= D_800BE9E4;
-//     temp_t4 = temp_v1 >> 16;
-//     if (temp_a1 <= 0) {
-//         *arg6 = temp_t4; arg0->unk0 = temp_t4;
-//         func_10010630(*arg6, arg0->unk1C, arg0->unkC, arg0->unkA, arg0->unk8);
-//         return 1;
-//     }
-//     arg0->unk18.w = (temp_v1 & 0xFFFF0000) | temp_a1;
-//     return 0;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000EDA0.s")
+s32 func_1000EDA0(struct_init_EB00_1000ECCC *arg0, s32 arg1, s32 arg2, s32 arg3,
+                  s32 arg4, s32 arg5, u16 *arg6) {
+    s16 temp_a1;
+    s32 temp_v1;
+
+    temp_v1 = arg0->unk18.w;
+    temp_a1 = temp_v1;
+    if (*arg6 != 0) {
+        arg0->unk18.w = (*arg6 << 16) | (temp_v1 & 0xFFFF);
+        arg0->unk0 = 0;
+        *arg6 = 0;
+        temp_v1 = arg0->unk18.w;
+    }
+    temp_a1 -= D_800BE9E4;
+    if (temp_a1 <= 0) {
+        *arg6 = temp_v1 >> 16;
+        arg0->unk0 = *arg6;
+        func_10010630(*arg6, arg0->unk1C, arg0->unkC, arg0->unkA, arg0->unk8);
+        return 1;
+    }
+    arg0->unk18.w = (temp_v1 & 0xFFFF0000) | temp_a1;
+    return 0;
+}
+
 
 // PERMUTER CANDIDATE (best 1650). Body is byte-correct (float trunc block, all casts
 // match: unk1C & 0xFF -> lw+andi, (u32)unk184 -> srl). Blocked by the return-placement /

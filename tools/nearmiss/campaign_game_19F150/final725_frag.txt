@@ -1,0 +1,102 @@
+extern s32 func_1510E388(void *, void *, f32 *, f32 *);
+
+static const s16 D_800A6FD0[8] = { 0x800, 0, 0, 0, 0, 0x800, 0x800, 0x800 };
+static const s16 D_800A6FE0[8] = { 0x400, 0, 0, 0, 0, 0x400, 0x400, 0x400 };
+static const s16 D_800A6FF0[8] = { 0x200, 0, 0, 0, 0, 0x200, 0x200, 0x200 };
+
+s32 func_151725FC(Vtx *arg0, s32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, s32 arg6, u8 arg7) {
+    s32 i;
+    const s16 *tbl;
+    f32 cx;
+    f32 cy;
+    f32 s;
+    f32 len1;
+    f32 len2;
+    f32 v[2][3];
+    f32 lenSq;
+    f32 lenSq2;
+    f32 b;
+    f32 a;
+    f32 minSq;
+    f32 d;
+    f32 c;
+    f32 x;
+    f32 z;
+    f32 y;
+    s32 n;
+    f32 size;
+    f32 ang;
+
+    n = arg6 / 16;
+    if (n == 0) {
+        n = 1;
+    }
+    if (func_1510E388((void *)arg1, NULL, &a, &b) == 0) {
+        return 0;
+    }
+    x = -n;
+    v[0][2] = x;
+    v[0][0] = 0.0f;
+    v[0][1] = a * v[0][0] + b * v[0][2];
+    d = (b + b) * (-v[0][1] - v[0][1]) + ((-v[0][2] - v[0][2]) + (-v[0][2] - v[0][2]));
+    if (d == 0.0f) {
+        d = 0.001f;
+    }
+    v[1][0] = -n;
+    v[1][1] = ((a * v[1][0] + a * v[1][0]) * (-v[0][2] - v[0][2])) / d;
+    if (b == 0.0f) {
+        z = 0.0f;
+    } else {
+        z = (v[1][1] - a * v[1][0]) / b;
+    }
+    lenSq = v[0][0] * v[0][0] + v[0][1] * v[0][1] + v[0][2] * v[0][2];
+    if (lenSq > 100000000.0f) {
+        lenSq = 100000000.0f;
+    }
+    minSq = n * n;
+    if (lenSq < minSq) {
+        lenSq = minSq;
+    }
+    len1 = sqrtf(lenSq);
+    v[1][2] = z;
+    lenSq2 = v[1][0] * v[1][0] + v[1][1] * v[1][1] + z * z;
+    if (lenSq2 > 100000000.0f) {
+        lenSq2 = 100000000.0f;
+    }
+    if (lenSq2 < minSq) {
+        lenSq2 = minSq;
+    }
+    len2 = sqrtf(lenSq2);
+    size = arg6;
+    for (i = 0; i < 3; i++) {
+        v[0][i] = v[0][i] * size / len1;
+        v[1][i] = v[1][i] * size / len2;
+        arg0[0].v.ob[i] = v[0][i];
+        arg0[1].v.ob[i] = v[1][i];
+        arg0[2].v.ob[i] = -v[0][i];
+        arg0[3].v.ob[i] = -v[1][i];
+    }
+    ang = (arg5 - 225.0f) * 0.01745329238f;
+    c = cosf(ang);
+    s = sinf(ang);
+    if (arg7 == 0x10) {
+        cx = cy = 256.0f;
+        tbl = D_800A6FF0;
+    } else if (arg7 == 0x20) {
+        cx = cy = 512.0f;
+        tbl = D_800A6FE0;
+    } else {
+        cx = cy = 1024.0f;
+        tbl = D_800A6FD0;
+    }
+    for (i = 0; i < 4; i++) {
+        arg0[i].v.tc[0] = ((tbl[i * 2] - cx) * c - (tbl[i * 2 + 1] - cy) * s) + cx + 8192.0f;
+        arg0[i].v.tc[1] = ((tbl[i * 2 + 1] - cy) * c + (tbl[i * 2] - cx) * s) + cy + 8192.0f;
+    }
+    for (i = 0; i < 4; i++) {
+        arg0[i].v.ob[0] = arg0[i].v.ob[0] + arg2;
+        arg0[i].v.ob[1] = arg0[i].v.ob[1] + arg3;
+        arg0[i].v.ob[2] = arg0[i].v.ob[2] + arg4;
+    }
+    return 1;
+}

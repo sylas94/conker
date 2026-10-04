@@ -1,0 +1,124 @@
+typedef struct {
+    s32 unk0;
+    u8 pad4[0x14 - 0x4];
+    Vec151B6320 unk14;
+    u8 pad20[0x3B - 0x20];
+    u8 unk3B;
+    f32 unk3C;
+} Target151B65D4;
+
+typedef struct {
+    Target151B65D4 *unk0;
+    u8 unk4;
+    u8 pad5[3];
+    Vec151B6320 unk8;
+    f32 unk14;
+    f32 unk18;
+    f32 unk1C;
+    f32 unk20;
+    f32 unk24;
+} State151B65D4;
+
+typedef struct {
+    u8 pad0[0x10];
+    Vec151B6320 unk10;
+    u8 pad1C[0x1E - 0x1C];
+    u16 unk1E;
+    u8 pad20[0x25 - 0x20];
+    u8 unk25;
+    u8 pad26[0x2C - 0x26];
+    s8 unk2C;
+    s8 unk2D;
+    s8 unk2E;
+    u8 pad2F;
+    u8 unk30;
+    u8 pad31[0x94 - 0x31];
+    Trail151B6420 *unk94;
+    State151B65D4 *unk98;
+} Obj151B65D4;
+
+extern f32 func_15143E64(Vec151B6320 *);
+
+s32 func_151B65D4(Obj151B65D4 *arg0) {
+    State151B65D4 *st = arg0->unk98;
+    Trail151B6420 *trail = arg0->unk94;
+    Target151B65D4 *tgt = st->unk0;
+/*DECL*/
+    Vec151B6320 delta; //FIX
+    f32 len;
+    f32 inv;
+    f32 fade;
+    f32 dfade;
+    Vec151B6320 pos;
+    f32 dx;
+    f32 dy;
+    f32 dz;
+    f32 ang;
+    f32 dang;
+    f32 w;
+    Trail151B6420 *e;
+/*ENDDECL*/
+
+    if ((tgt->unk0 == 0) || (tgt->unk3B != st->unk4) || (tgt->unk3C < 15.0f)) {
+        arg0->unk30 = 0;
+        arg0->unk1E |= 8;
+        return 1;
+    }
+    arg0->unk10.unk0 = tgt->unk14.unk0;
+    arg0->unk10.unk4 = tgt->unk14.unk4;
+    arg0->unk10.unk8 = tgt->unk14.unk8;
+    delta.unk0 = arg0->unk10.unk0 - st->unk8.unk0;
+    delta.unk4 = arg0->unk10.unk4 - st->unk8.unk4;
+    delta.unk8 = arg0->unk10.unk8 - st->unk8.unk8;
+    len = func_15143E64(&delta);
+    st->unk14 += len * 0.003722f * D_800BE9A4;
+    st->unk1C += len * 4.40954781f;
+    inv = st->unk14;
+    if (inv > 1.0f) {
+        inv = 1.0f / inv;
+        pos = st->unk8;
+        fade = st->unk18 + D_800BE9A4;
+        ang = st->unk20;
+        w = st->unk24;
+        dfade = -(fade * inv);
+        dx = delta.unk0 * inv;
+        dy = delta.unk4 * inv;
+        dz = delta.unk8 * inv;
+        dang = (st->unk1C - st->unk20) * inv;
+        do {
+            e = &trail[arg0->unk2E];
+            e->unk0 = pos;
+            e->unk10 = 155;
+            e->unk14 = ang;
+            e->unkC = 13.0f - fade;
+            fade += dfade;
+            while (e->unk14 > 16384.0f) {
+                e->unk14 -= 32768.0f;
+            }
+            e->unk18 = w;
+            arg0->unk2E++;
+            if (arg0->unk2E == arg0->unk25) {
+                arg0->unk2E = 0;
+            }
+            arg0->unk2C++;
+            if (arg0->unk2D == arg0->unk2E) {
+                arg0->unk2D++;
+                if (arg0->unk2D == arg0->unk25) {
+                    arg0->unk2D = 0;
+                }
+                arg0->unk2C--;
+            }
+            pos.unk0 += dx;
+            pos.unk4 += dy;
+            pos.unk8 += dz;
+            ang += dang;
+            w += len * inv;
+            st->unk14 -= 1.0f;
+        } while (st->unk14 > 1.0f);
+        st->unk8 = pos;
+        st->unk20 = ang;
+        st->unk24 = w;
+        st->unk18 = fade;
+    }
+    return 1;
+}

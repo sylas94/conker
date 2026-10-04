@@ -1,12 +1,12 @@
 # Conker's Bad Fur Day Decompilation
 
-![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-32.42%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4055%2F5913-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
+![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-36.45%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4242%2F5908-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
 
 | Progress                                                                                                                                           | Functions                                                |
 |----------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| ![init Progress](https://img.shields.io/badge/init-48.11%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-326%2F539-blue)      |
-| ![game Progress](https://img.shields.io/badge/game-31.22%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-3697%2F5331-blue) |
-| ![debugger Progress](https://img.shields.io/badge/debugger-27.31%25-critical) | ![debugger Functions](https://img.shields.io/badge/funcs-32%2F43-blue) |
+| ![init Progress](https://img.shields.io/badge/init-56.54%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-336%2F536-blue)      |
+| ![game Progress](https://img.shields.io/badge/game-34.81%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-3872%2F5330-blue) |
+| ![debugger Progress](https://img.shields.io/badge/debugger-40.75%25-critical) | ![debugger Functions](https://img.shields.io/badge/funcs-34%2F42-blue) |
 
 The **Progress** badges are decompiled-byte percentages and the **Functions** badges are
 function counts. A function counts as decompiled when a C translation unit implements it

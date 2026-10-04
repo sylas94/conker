@@ -216,4 +216,18 @@ void func_1510D874(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_139FC0/func_1510D8C0.s")
+Gfx *func_1510D8C0(Gfx *gfx, s32 arg1) {
+    s32 i;
+
+    for (i = 0; i < D_800D9ED0; i++) {
+        if (arg1 == D_800D9ED8[i].unk0) {
+            struct Entry1510D874 *e = &D_800D9ED8[i];
+
+            gSPSegment(gfx++, e->unkC, e->unk4);
+            if (e->unk8 != 0) {
+                gSPSegment(gfx++, e->unkD, e->unk8);
+            }
+        }
+    }
+    return gfx;
+}

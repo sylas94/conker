@@ -1,0 +1,8 @@
+best.c (= all3.c): game_1E73B0 whole-TU copy for block 24F370.
+ - func_151BEEE0 0, func_151BF340 0, func_151BF81C 0 (owners, C)
+ - func_151BECB8 0 (bonus non-owner, C)
+ - func_151BE850 kept GLOBAL_ASM (fallback); its rodata defined as
+   const u8 D_800AA8B0[3] (before the pragma) and const f32 D_800AA8DC[1] (after func_151BF340)
+ - .rodata 0x80 == conker.us.bin[0x24F370:0x24F3F0], all LO16 relocs at golden offsets,
+   all other functions masked-identical to expected/build/src/game_1E73B0.c.o
+best_allC_be850_62.c: everything C incl. func_151BE850 at 62 differing words (be850_nearmiss.c)

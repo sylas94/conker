@@ -61,9 +61,47 @@ void func_1503D484(struct Elem1503D484 *arg0, s32 arg1) {
     D_800C5A90[arg1] = arg0 - p;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6A3D0/func_1503D510.s")
+extern u8 D_80098888[];
+extern u8 *D_80084410[];
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6A3D0/func_1503D5F0.s")
+void func_1503D510(s32 arg0) {
+    s32 i;
+    s32 j;
+    s32 k;
+
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < D_80098888[i]; j++) {
+            if (D_80084410[i][j] == arg0) {
+                for (k = 0; k < D_80098888[i]; k++) {
+                    D_800D1588[D_80084410[i][k]] = D_800D1588[arg0];
+                    ((u16 *)D_800C5A90)[D_80084410[i][k]] = ((u16 *)D_800C5A90)[arg0];
+                }
+                return;
+            }
+        }
+    }
+}
+
+
+extern u8 D_80098888[];
+extern u8 *D_80084410[];
+
+/* Looks arg0 up in the 5 rows of D_80084410 (row lengths in D_80098888) and returns the
+ * first entry of the row that contains it, or arg0 itself when no row does.
+ * Same search as func_15084D00 (game_B21B0). */
+s32 func_1503D5F0(s32 arg0) {
+    s32 i;
+    s32 j;
+
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < D_80098888[i]; j++) {
+            if (D_80084410[i][j] == arg0) {
+                return D_80084410[i][0];
+            }
+        }
+    }
+    return arg0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_6A3D0/func_1503D660.s")
 
@@ -134,7 +172,36 @@ s32 func_1503D804(s32 arg0) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6A3D0/func_1503D984.s")
+extern Gfx **D_800C4488[];
+extern s16 D_800C5918[];
+
+/* sums primitive weights over the display list up to G_ENDDL: G_TRI1 1, G_TRI2 2, ops 0x10-0x1F 4 */
+void func_1503D984(s32 arg0) {
+    s32 count = 0;
+    s32 i;
+    s32 j;
+    Gfx *dl;
+    s8 op;
+
+    for (i = 0; i < 1; i++) {
+        dl = D_800C4488[arg0][i];
+        j = 0;
+        op = dl[j].words.w0 >> 24;
+        while (op != (s8)G_ENDDL) {
+            if (op == G_TRI1) {
+                count += 1;
+            } else if (op == G_TRI2) {
+                count += 2;
+            } else if ((op >> 4) == 1) {
+                count += 4;
+            }
+            j++;
+            op = dl[j].words.w0 >> 24;
+        }
+    }
+    D_800C5918[arg0] = count;
+}
+
 
 s32 func_1503DA3C(s32 arg0, s32 arg1) {
     u8 *v0 = (u8 *)(&D_800D19A0)[arg0];
@@ -186,4 +253,18 @@ s32 func_1503DC3C(s32 arg0) {
     return ret;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6A3D0/func_1503DD1C.s")
+/* Real definition (game_139FC0) takes s32; golden's `or a0,a1` copy in the jal delay slot
+   is reproduced by the callee being declared with an unsigned parameter here. */
+extern void func_1510D7AC(u32);
+
+void func_1503DD1C(s32 arg0) {
+    s32 i;
+
+    for (i = 0; i < D_800C5628[arg0]; i++) {
+        struct E1503DC3C *e = &D_800C5338[arg0][i];
+
+        if ((e->unk0 != (s32)0x80000000) && (e->unk4 != e->unk0)) {
+            func_1510D7AC(e->unk4);
+        }
+    }
+}

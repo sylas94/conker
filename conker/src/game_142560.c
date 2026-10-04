@@ -628,7 +628,60 @@ void func_151193AC(struct Obj151193AC_0 *arg0, struct Obj151193AC_1 *arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_151193F4.s")
+struct Obj151193F4 {
+    u8 pad0[0x12];
+    s16 unk12;
+    u8 pad14[0x28];
+    s32 unk3C;
+    u8 pad40[0x33];
+    u8 unk73;
+    u8 pad74[0x8];
+    s32 unk7C;
+    u32 unk80;
+    s32 unk84;
+};
+
+void func_151193F4(struct Obj151193F4 *arg0) {
+    s32 speed;
+    s32 target;
+    s32 diff;
+    s32 scale;
+    s32 base;
+    u32 mul;
+
+    if (arg0->unk84 == 0) {
+        arg0->unk84 = arg0->unk12 | 0x80000000;
+    }
+    speed = arg0->unk7C;
+    if (speed != 0) {
+        mul = arg0->unk80;
+        base = (s16)(arg0->unk84 & 0xFFFF);
+        scale = (u16)(arg0->unk3C >> 16);
+        target = (s32)(scale * mul) / 256 + base;
+        arg0->unk73 &= ~3;
+        if (target != arg0->unk12) {
+            diff = arg0->unk12 - target;
+            if (diff < 0) {
+                if (-diff < speed) {
+                    arg0->unk12 = target;
+                } else {
+                    arg0->unk12 = arg0->unk12 + speed;
+                }
+            } else {
+                if (diff < speed) {
+                    arg0->unk12 = target;
+                } else {
+                    arg0->unk12 = arg0->unk12 - speed;
+                }
+            }
+            /* state bits = 0 (moving): the original keeps this RMW, golden has lbu/sb here */
+            arg0->unk73 |= 0;
+        } else {
+            arg0->unk73 |= 3;
+        }
+    }
+}
+
 
 struct Obj151194D4Node {
     s16 unk0;
@@ -919,7 +972,40 @@ void func_1511BE5C(struct Obj1511BE5C *arg0) {
 void func_1511C540(void) {
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511C548.s")
+struct Obj1511C548 {
+    f32 unk0;
+    f32 unk4;
+    f32 unk8;
+    u8 padC[0x74];
+    f32 unk80;
+    f32 unk84;
+};
+
+extern f32 D_800A31EC;
+extern f32 D_800A31F0;
+
+void func_1511C548(struct Obj1511C548 *arg0) {
+    f32 z;
+    f32 x;
+
+    x = sinf(arg0->unk80);
+    z = sinf(arg0->unk84);
+    arg0->unk0 = x * 16.0f;
+    arg0->unk8 = z * 16.0f;
+    arg0->unk80 += D_800A31EC * D_800BE9A4;
+    arg0->unk84 += D_800A31F0 * D_800BE9A4;
+    arg0->unk80 = func_15144B68(arg0->unk80);
+    {
+        extern f32 func_15144B68(f32);
+
+        arg0->unk84 = func_15144B68(arg0->unk84);
+    }
+    if (arg0->unk8 == 0.0f && arg0->unk84 == 0.0f) {
+        arg0->unk0 = 7.5f;
+        arg0->unk8 = 8.0f;
+    }
+}
+
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511C638.s")
 
@@ -1129,7 +1215,44 @@ void func_1511F31C(struct Struct1511F31CArg *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511F3E8.s")
+struct Obj1511F3E8 {
+    u8 pad0[0x3C];
+    s32 unk3C;
+    u8 pad40[0x2E];
+    u8 unk6E;
+    u8 pad6F[0xD];
+    s32 unk7C;
+    s32 unk80;
+    s32 unk84;
+    u8 pad88[2];
+    u8 unk8A;
+};
+
+void func_1511F3E8(struct Obj1511F3E8 *arg0) {
+    s32 ticks;
+
+    if (arg0->unk7C == 0) {
+        ticks = arg0->unk3C;
+        arg0->unk80 = ((ticks >> 16) & 0xFFFF) * 60;
+        arg0->unk7C = 1;
+    }
+    ticks = arg0->unk3C;
+    ticks = (ticks & 0xFFFF) * 60;
+    if (arg0->unk80 != 0) {
+        if (D_800BE9E4 < arg0->unk80) {
+            arg0->unk80 -= D_800BE9E4;
+        } else {
+            arg0->unk80 = 0;
+            arg0->unk84 = ticks;
+        }
+    } else if (D_800BE9E4 < arg0->unk84) {
+        arg0->unk84 -= D_800BE9E4;
+        arg0->unk8A = (arg0->unk84 * 255) / ticks;
+    } else {
+        arg0->unk6E = 1;
+    }
+}
+
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511F4D0.s")
 

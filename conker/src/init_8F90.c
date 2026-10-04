@@ -1,7 +1,11 @@
 #include <ultra64.h>
 
+#define func_10009BE4 func_10009BE4_hdr
 #include "functions.h"
+#undef func_10009BE4
 #include "variables.h"
+
+void func_10009BE4(struct54 *arg0);
 
 
 #pragma GLOBAL_ASM("asm/nonmatchings/init_8F90/func_10008F90.s")
@@ -414,45 +418,42 @@ void func_10009B90(struct54 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_8F90/func_10009BE4.s")
-// void func_10009BE4(struct00 *arg0) {
-//     struct00 *temp_a1;
-//     struct00 *temp_v0;
-//     struct00 *temp_v1;
-//
-//     if (((s32)arg0 & 1) != 0) {
-//         D_8003C8E0 = 0x0F000004;
-//         func_150AD770(); // 0x80040000
-//         return;
-//     }
-//     arg0->unkC = (s32) arg0->unk8;
-//     if ((s32)arg0 == D_800406A0.unk4) {
-//         D_800406A4 = (struct54 *) arg0->unk0;
-//     }
-//     temp_v0 = arg0->unk0;
-//     if (temp_v0 != 0) {
-//         temp_v0->unk4 = (struct54 *) arg0->unk4;
-//     }
-//     temp_v0 = arg0->unk4;
-//     if (temp_v0 != 0) {
-//         temp_v0 = (struct54 *) arg0->unk0;
-//     }
-//     temp_v1 = D_800406A0.unk10;
-//     if (temp_v1 != 0) {
-//         arg0->unk4 = temp_v1;
-//         arg0->unk0 = (struct54 *) &temp_v1;
-//         temp_a1 = &temp_v1;
-//         if (temp_a1 != 0) {
-//             temp_a1->unk4 = arg0;
-//         }
-//         temp_v1 = arg0;
-//         return;
-//     }
-//     D_800406B0 = arg0;
-//     arg0->unk0 = NULL;
-//     arg0->unk4 = NULL;
-//     // return temp_v0;
-// }
+void func_10009BE4(struct54 *arg0) {
+    if ((s32)arg0 & 1) {
+        D_8003C8E0 = 0x0F000004;
+        func_150AD770();
+    } else {
+        struct54 *p;
+
+        p = (struct54 *)arg0->unkC;
+        p->unk0 = (struct54 *)arg0->unk8;
+        if (arg0 == (struct54 *)D_800406A0.unk4) {
+            D_800406A4 = arg0->unk0;
+        }
+        p = arg0->unk0;
+        if (p != NULL) {
+            p->unk4 = arg0->unk4;
+        }
+        p = arg0->unk4;
+        if (p != NULL) {
+            p->unk0 = arg0->unk0;
+        }
+        if (D_800406A0.unk10 != NULL) {
+            struct54 *q = D_800406A0.unk10;
+
+            arg0->unk0 = q->unk0;
+            arg0->unk4 = q;
+            if (q->unk0 != NULL) {
+                q->unk0->unk4 = arg0;
+            }
+            q->unk0 = arg0;
+        } else {
+            D_800406B0 = arg0;
+            arg0->unk0 = NULL;
+            arg0->unk4 = NULL;
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/init_8F90/func_10009CBC.s")
 
@@ -468,4 +469,44 @@ s32 func_10009FFC(void) {
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/init_8F90/func_1000A03C.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/init_8F90/func_1000A348.s")
+void func_1000A348(void) {
+    struct54 *cur;
+    struct54 *next;
+    struct54 *p;
+
+    cur = (struct54 *)D_800406A0.unk4;
+    while (cur != NULL) {
+        next = cur->unk0;
+        if ((cur->unk14 == 0) && (cur->unk16 == 0)) {
+            p = (struct54 *)cur->unkC;
+            p->unk0 = (struct54 *)cur->unk8;
+            cur->unkC = 0;
+            if (cur == (struct54 *)D_800406A0.unk4) {
+                D_800406A0.unk4 = (s32)next;
+            }
+            p = cur->unk0;
+            if (p != NULL) {
+                p->unk4 = cur->unk4;
+            }
+            p = cur->unk4;
+            if (p != NULL) {
+                p->unk0 = cur->unk0;
+            }
+            if (D_800406A0.unk10 != NULL) {
+                struct54 *q = D_800406A0.unk10;
+
+                cur->unk0 = q->unk0;
+                cur->unk4 = q;
+                if (q->unk0 != NULL) {
+                    q->unk0->unk4 = cur;
+                }
+                q->unk0 = cur;
+            } else {
+                D_800406A0.unk10 = cur;
+                cur->unk0 = NULL;
+                cur->unk4 = NULL;
+            }
+        }
+        cur = next;
+    }
+}

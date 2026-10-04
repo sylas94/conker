@@ -89,7 +89,7 @@ void func_15094EA0(s32 arg0) {
 }
 
 extern Gfx D_800873D0[];
-extern s32 D_800D2CA0;
+extern u8 * D_800D2CA0;
 
 Gfx *func_15094F40(Gfx *arg0) {
     gSPDisplayList(arg0++, D_800873D0);
@@ -122,17 +122,17 @@ typedef struct {
 } struct15095060_arg2;
 
 extern void func_15095060(struct15095060_arg0 *, s32, struct15095060_arg2 *);
-extern void func_150950D4(s32, s32 *, s32, s32, s32, s32, s32, s32, s32, s32);
+extern Gfx *func_150950D4(Gfx *, struct15095060_d *, s32, s32, s32, s32, s32, s32, s32, s32);
 extern struct15095060_d D_800D2C90;
 
 void func_15094F70(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8) {
     func_15095060((struct15095060_arg0 *)arg1, arg2, (struct15095060_arg2 *)arg3);
-    func_150950D4(arg0, (s32 *)&D_800D2C90, arg4, arg5, 0, arg6, arg7, 0x100, 0x100, arg8);
+    func_150950D4((Gfx *)arg0, &D_800D2C90, arg4, arg5, 0, arg6, arg7, 0x100, 0x100, arg8);
 }
 
 void func_15094FE8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10) {
     func_15095060((struct15095060_arg0 *)arg1, arg2, (struct15095060_arg2 *)arg3);
-    func_150950D4(arg0, (s32 *)&D_800D2C90, arg4, arg5, 0, arg6, arg7, arg8, arg9, arg10);
+    func_150950D4((Gfx *)arg0, &D_800D2C90, arg4, arg5, 0, arg6, arg7, arg8, arg9, arg10);
 }
 
 void func_15095060(struct15095060_arg0 *arg0, s32 arg1, struct15095060_arg2 *arg2) {
@@ -156,7 +156,84 @@ void func_15095060(struct15095060_arg0 *arg0, s32 arg1, struct15095060_arg2 *arg
     D_800D2C90.unkA = arg0->unk4;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_C1D70/func_150950D4.s")
+extern s32 func_1510D0EC(s32, s32, s32, s32);
+extern u8 D_8009DEB0[];
+extern u8 D_8009DEB4[];
+extern u8 D_8009DEB8[];
+extern u8 D_8009DEBC[];
+extern s32 D_800D2C9C;
+
+Gfx *func_150950D4(Gfx *gfx, struct15095060_d *tex, s32 tmem, s32 tile, s32 frame, s32 sfrac, s32 cm, s32 s, s32 t, s32 arg9) {
+    s32 width;
+    s32 size;
+    s32 masks;
+    s32 maskt;
+    s32 i;
+    s32 fmt;
+
+    if (tex->unkA == 0) {
+        frame = 0;
+    }
+    size = D_8009DEB0[tex->unk9] + tex->unk4 * tex->unk6;
+    if (tex->unk8 == 5) {
+        size += (tex->unk4 * tex->unk6) / 4;
+    }
+    size >>= D_8009DEB4[tex->unk9];
+    D_800D2CA0 = (u8 *)tex->unk0;
+    if ((u32)D_800D2CA0 < 0x10000000) {
+        D_800D2CA0 = (u8 *)func_1510D0EC((s32)D_800D2CA0, 0, arg9, 0);
+    }
+    if (D_800D2CA0 != (u8 *)0x80000000) {
+        D_800D2CA0 += (size + size) * frame;
+    }
+    if (tex->unk9 == 0) {
+        width = tex->unk4 >> 1;
+    } else {
+        width = tex->unk4;
+    }
+    masks = 1;
+    for (i = 2; i < tex->unk4; i <<= 1) {
+        masks++;
+    }
+    maskt = 1;
+    for (i = 2; i < tex->unk6; i <<= 1) {
+        maskt++;
+    }
+    if (tex->unk8 != 5) {
+        fmt = tex->unk8;
+    } else {
+        fmt = 0;
+    }
+    gDPPipeSync(gfx++);
+    gDPSetTextureImage(gfx++, fmt, D_8009DEBC[tex->unk9], 1, D_800D2CA0);
+    gDPSetTile(gfx++, fmt, D_8009DEBC[tex->unk9], 0, tmem, G_TX_LOADTILE, 0, 0, 0, 0, 0, 0, 0);
+    gDPLoadBlock(gfx++, G_TX_LOADTILE, 0, 0, size - 1, 0);
+    gDPSetTile(gfx++, fmt, tex->unk9, (D_8009DEB8[tex->unk9] * width + 7) >> 3, tmem, tile, 0, cm, maskt, 0, cm, masks, 0);
+    gDPSetTileSize(gfx++, tile, (s << 2) + sfrac, t << 2, ((tex->unk4 + s - 1) << 2) + sfrac, (tex->unk6 + t - 1) << 2);
+    if (tex->unk8 == 5) {
+        gDPSetTile(gfx++, G_IM_FMT_I, G_IM_SIZ_4b, (D_8009DEB8[G_IM_SIZ_4b] * (width >> 1) + 7) >> 3, tmem + (width * tex->unk6) / 4, tile + 1, 0, cm, maskt, 0, cm, masks, 0);
+        gDPSetTileSize(gfx++, tile + 1, (s << 2) + sfrac, t, ((tex->unk4 + s - 1) << 2) + sfrac, (tex->unk6 + t - 1) << 2);
+    }
+    if (tex->unk8 == 2) {
+        s32 bits;
+        s32 count;
+
+        if (tex->unk9 == 0) {
+            bits = 4;
+            count = 15;
+        } else {
+            bits = 8;
+            count = 255;
+        }
+        gDPSetTextureImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, D_800D2CA0 + (tex->unk4 * tex->unk6 * bits) / 8);
+        gDPLoadSync(gfx++);
+        gDPLoadTLUTCmd(gfx++, 6, count);
+        D_800D2C9C = 0x8000;
+    } else {
+        D_800D2C9C = 0;
+    }
+    return gfx;
+}
 
 s32 func_1509563C(f32 arg0, f32 arg1, f32 arg2, f32 *arg3, f32 *arg4, f32 *arg5, f32 *arg6, f32 arg7) {
     f32 temp_f14;

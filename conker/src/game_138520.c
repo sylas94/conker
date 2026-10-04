@@ -61,9 +61,51 @@ void func_1510B3B0(void) {
     D_800D9AF0 = 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510B458.s")
+void func_1510B5F8(s32 arg0, u16 *perspNorm, f32 fovy, f32 aspect, f32 near, f32 far, f32 scale);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_138520/func_1510B51C.s")
+typedef struct {
+    u8 pad0[0x74];
+    f32 aspect;
+    f32 fovy;
+    u8 pad7C[8];
+    f32 scale;
+    u8 pad88[0x30];
+    u16 perspNorm;
+    u8 padBA[0x180 - 0xBA];
+} Cam1510B458;
+
+#define CAM_1510B458 ((Cam1510B458 *)D_800BE628)
+
+void func_1510B458(s32 arg0, f32 near, f32 far) {
+    if (near == 0.0f) {
+        near = D_800D9B20;
+    }
+    if (far == 0.0f) {
+        far = D_800D9B1C;
+    }
+    func_1510B5F8(arg0, (u16 *)(D_800BE628 + arg0 * 0x180 + 0xB8), CAM_1510B458[arg0].fovy, CAM_1510B458[arg0].aspect, near, far, CAM_1510B458[arg0].scale);
+    D_800D9AF8[arg0].unk0 = near;
+    D_800D9AF8[arg0].unk4 = far;
+    D_800D9B18 = 1;
+}
+#undef CAM_1510B458
+
+
+#define CAM_1510B51C ((Cam1510B458 *)D_800BE628)
+
+void func_1510B51C(void) {
+    s32 i;
+
+    for (i = 0; i <= D_80082FA0; i++) {
+        if (D_800D9AF8[i].unk0 != -1.0f) {
+            func_1510B5F8(i, (u16 *)(D_800BE628 + i * 0x180 + 0xB8), CAM_1510B51C[i].fovy, CAM_1510B51C[i].aspect, D_800D9AF8[i].unk0, D_800D9AF8[i].unk4, CAM_1510B51C[i].scale);
+            D_800D9AF8[i].unk0 = -1.0f;
+        }
+    }
+    D_800D9B18 = 0;
+}
+#undef CAM_1510B51C
+
 
 void func_1510B5F8(s32 arg0, u16 *perspNorm, f32 fovy, f32 aspect, f32 near, f32 far, f32 scale) {
     guPerspectiveF((f32 (*)[4])((u8 *)D_800BE628 + arg0 * 0x180 + 0xBC), perspNorm, fovy, aspect, near, far, scale);

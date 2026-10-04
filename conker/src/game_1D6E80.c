@@ -446,9 +446,83 @@ s32 func_151AA5A4(struct_AA48C_effect *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1D6E80/func_151AA6D8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D6E80/func_151AAA4C.s")
+typedef struct Sub151AAA4C {
+    char pad0[0x8];
+    /* 0x88 */ u32 unk8;
+    /* 0x8C */ u32 unkC;
+    /* 0x90 */ f32 unk10;
+    /* 0x94 */ f32 unk14;
+} Sub151AAA4C;
+typedef struct Obj151AAA4C {
+    char pad0[0x80];
+    Sub151AAA4C unk80;
+} Obj151AAA4C;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D6E80/func_151AAABC.s")
+
+f32 func_151AAA4C(Obj151AAA4C *arg0) {
+    Sub151AAA4C *s;
+    f32 r;
+
+    s = &arg0->unk80;
+    r = (func_151423D8((s->unk8 >> 16) - 0x40) * s->unk14) + s->unk10;
+    s->unk8 += s->unkC * D_800BE9E4;
+    return r;
+}
+
+typedef struct Flag151AAABC {
+    char pad0[0x4];
+    /* 0x4 */ u8 unk4;
+} Flag151AAABC;
+
+typedef struct EffA151AAABC {
+    char pad0[0x80];
+    /* 0x80 */ Flag151AAABC unk80;
+} EffA151AAABC;
+
+typedef struct EffB151AAABC {
+    char pad0[0x58];
+    /* 0x58 */ Flag151AAABC unk58;
+} EffB151AAABC;
+
+typedef struct Sub151AAABC {
+    char pad0[0x14];
+    /* 0x14 */ EffA151AAABC *unk14;
+    char pad18[0x4];
+    /* 0x1C */ EffB151AAABC *unk1C;
+} Sub151AAABC;
+
+typedef struct Obj151AAABC {
+    char pad0[0x18];
+    /* 0x18 */ void *unk18;
+    char pad1C[0x58 - 0x1C];
+    /* 0x58 */ Sub151AAABC unk58;
+} Obj151AAABC;
+
+void *func_151AB2C4(struct_151AB2C4_arg *, s32);
+
+void func_151AAABC(Obj151AAABC *arg0) {
+    void *v;
+    Sub151AAABC *p;
+
+    v = arg0->unk18;
+    p = &arg0->unk58;
+    if (p->unk14 != NULL) {
+        Flag151AAABC *q;
+
+        q = &p->unk14->unk80;
+        q->unk4 = 1;
+    } else {
+        p->unk14 = func_151AA48C(v, (s32)arg0);
+    }
+    if (p->unk1C != NULL) {
+        Flag151AAABC *r;
+
+        r = &p->unk1C->unk58;
+        r->unk4 = 1;
+    } else {
+        p->unk1C = func_151AB2C4(v, (s32)arg0);
+    }
+}
 
 void func_151352EC(struct102 *arg0);
 

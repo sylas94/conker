@@ -411,7 +411,22 @@ void func_1519E1F4(struct s_1519CFA0 *arg0, s32 arg1, u8 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1CA420/func_1519E304.s")
+extern void func_15143134(void *, void *, s32);
+
+s32 func_1519E304(void *arg0, void *arg1, f32 x, f32 y, f32 z, f32 t) {
+    f32 pos[3];
+
+    if (*(s32 *)((u8 *)((Payload1519D030 *)arg0)->unk0 + 0x1D4) == 0) {
+        return 0;
+    }
+    func_15143134(&((Payload1519D030 *)arg0)->unk8, pos,
+                  *(s32 *)((u8 *)((Payload1519D030 *)arg0)->unk0 + 0x1D4) + (((Payload1519D030 *)arg0)->unk5 << 6));
+    ((f32 *)arg1)[0] = (pos[0] - x) * t + x;
+    ((f32 *)arg1)[1] = (pos[1] - y) * t + y;
+    ((f32 *)arg1)[2] = (pos[2] - z) * t + z;
+    return 1;
+}
+
 
 void func_1519E3BC(void *arg0, s16 arg1, u8 arg2, s32 arg3) {
     func_1519E688();

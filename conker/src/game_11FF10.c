@@ -136,7 +136,7 @@ f32 func_150F34A0(s32 arg0, f32 arg1) {
     f32 var_f2;
 
     if (arg1 < -5.0f) {
-        var_f2 = (arg1 * D_800A1980) + D_800A1984;
+        var_f2 = (arg1 * -0.01f) + 0.7f;
     } else {
         var_f2 = 0.75f;
     }
@@ -144,7 +144,336 @@ f32 func_150F34A0(s32 arg0, f32 arg1) {
     return var_f2;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11FF10/func_150F34F4.s")
+typedef struct {
+    /* 0x0 */ u16 buttons;
+    /* 0x2 */ s8 stick_x;
+    /* 0x3 */ s8 stick_y;
+} ContPad;
+
+extern u8 D_800CC26D;
+extern u8 D_800CBDD3;
+void func_150585F0(struct127 *arg0, f32 arg1);
+void func_15052590(struct127 *arg0);
+u8 func_150599C8(struct127 *arg0, u8 arg1, u16 arg2);
+f32 func_1505A3A8(f32 arg0, void *arg1, f32 arg2, f32 arg3, u8 arg4);
+void func_15073FA0(void);
+
+#define PAD ((ContPad *)D_800CC284)
+
+void func_150F34F4(struct127 *arg0) {
+    u16 angle;
+    f32 mag;
+    f32 accel;
+    f32 temp;
+    f32 pitch;
+    f32 speed;
+    f32 animSpeed;
+    s32 anim;
+    s32 count;
+    f32 floorLevel;
+    s32 buttons;
+    s32 i;
+    f32 dist;
+    f32 minDist;
+    struct127 *obj;
+    s32 idx;
+
+    floorLevel = 0.0f;
+    arg0->unkAB = 1;
+    arg0->unk80 = 1;
+    arg0->unk222 = 0;
+    D_800CC288 = D_800BE710[0];
+    D_800CC284 = *(s32 *)D_800BE728[0];
+    if ((D_800C3E78 <= D_80082FA0) && ((&D_800DDE3C)[D_800C3E78] != 0) && ((&D_800DDDC8)[D_800C3E78] > 0.75f) && (D_800E0B94 != 2)) {
+        PAD->stick_x = 0;
+        PAD->stick_y = 0;
+        PAD->buttons = 0;
+        D_800CC288 = 0;
+    }
+    arg0->unkF8 |= 0x40;
+    arg0->unk1CC = arg0->y_position;
+    if (arg0->unk103 != 0) {
+        arg0->unk103--;
+    }
+    if (arg0->stunned != 0) {
+        func_150585F0(arg0, 0.25f);
+        func_15059140(arg0);
+        arg0->unk40 = ((s16)arg0->unk7A + 0x4000) * 0.0054931640625f;
+        if (arg0->unk13C != 0) {
+            struct127 *rider;
+
+            idx = arg0->unk13C - 100;
+            rider = &D_800CC2D0[idx];
+            rider->unk13D = 0;
+            rider->xz_velocity = arg0->xz_velocity;
+            rider->unk232 = 0x21;
+            rider->unk218 = 0;
+            rider->stunned = 0;
+            rider->unkF8 &= ~0x400;
+            arg0->unk13C = 0;
+        }
+        return;
+    }
+    if (arg0->unk102 == 0) {
+        arg0->in_water = 0;
+        angle = func_1505A630(PAD->stick_x, PAD->stick_y, 0);
+        mag = func_1505A5CC((struct49 *)D_800CC284);
+        if (PAD->buttons & 0x10) {
+            mag = 0.0f;
+        }
+        angle += D_800CC280;
+        arg0->unk78 = arg0->unk7A;
+        if (mag > 1.0f) {
+            arg0->unk78 = angle;
+        }
+        arg0->unk44 = mag * 0.35f;
+        arg0->unk232 = 7;
+        arg0->unk218 = 0;
+        if ((D_800CC288 & 0xC000) || (arg0->unk28 > 100.0f)) {
+            arg0->unk232 = 8;
+            arg0->unk102 = 1;
+        }
+        func_15052590(arg0);
+        if (D_800CC26D != 0) {
+            if (arg0->unk28 > 30.0f) {
+                D_800D1580 = 0xFF010074;
+                func_1506E8D8();
+                func_1505959C(&D_800CC2D0[D_800CC26D - 100], D_800C3E78);
+                arg0->unk13C = D_800CC26D;
+                arg0->unk102 = 1;
+            }
+            arg0->y_velocity = 23.0f;
+        }
+        if (arg0->y_position < arg0->unk118) {
+            arg0->unk102 = 1;
+            arg0->unk86 = 1;
+            arg0->y_velocity = -6.0f;
+        }
+        return;
+    }
+    speed = arg0->xz_velocity;
+    if (speed > 60.0f) {
+        speed = 60.0f;
+    }
+    pitch = PAD->stick_y * 1.25f;
+    buttons = PAD->buttons & 0x10;
+    if (buttons) {
+        pitch = 0.0f;
+    }
+    if (arg0->unk13C != 0) {
+        if (!buttons) {
+            arg0->y_position -= 16.0f * D_800D1550[0];
+        }
+    } else {
+        minDist = 1000.0f;
+        for (i = 0; i < 25; i++) {
+            if ((D_800CC2D0[i].interaction_state != 0) && (D_800CC2D0[i].health != 0) &&
+                (D_800CC2D0[i].unk28 == 0.0f) && (D_800CC2D0[i].unk232 != 0x21) &&
+                ((D_800CC2D0[i].id == 0x9C) || (D_800CC2D0[i].id == 0x9D))) {
+                dist = func_1505A6F8(D_800D154C, &D_800CC2D0[i]);
+                if (dist < minDist) {
+                    arg0->unk222 = i;
+                    minDist = dist;
+                }
+            }
+        }
+    }
+    if (pitch < -90.0f) {
+        pitch = -90.0f;
+    }
+    if (pitch > 90.0f) {
+        pitch = 90.0f;
+    }
+    if (arg0->y_position > 2100.0f) {
+        if (arg0->y_velocity > -30.0f) {
+            arg0->y_velocity -= 1.5f;
+        }
+        pitch = 40.0f;
+    }
+    temp = PAD->stick_x;
+    arg0->unkC4 += (temp - arg0->unkC4) * (0.2f * D_800D1550[0]);
+    arg0->unk76 -= (s16)(arg0->unkC4 * D_800D1550[0] * 0.04f * ((100.0f - speed) * 0.015f) * 220.0f);
+    arg0->unk7E = 0x19;
+    func_150599C8(arg0, 8, arg0->unk76);
+    arg0->target_speed = 0.0f;
+    speed = 0.0f;
+    accel = 1.3f;
+    if (arg0->y_position < arg0->unk118) {
+        if (arg0->unk86 == 0) {
+            arg0->unk86 = 1;
+            arg0->xz_velocity = 0.0f;
+            arg0->y_velocity = -6.0f;
+        }
+    } else if (arg0->unk86 != 0) {
+        arg0->unk86 = 0;
+        arg0->y_velocity = 9.0f;
+    }
+    if (!(PAD->buttons & 0x10)) {
+        if (PAD->buttons & 0x8000) {
+            arg0->target_speed = -22.0f;
+            speed = 1.0f;
+            accel = 1.8f;
+        }
+        if (PAD->buttons & 0x4000) {
+            arg0->target_speed = 30.0f;
+            if (arg0->y_velocity < 0.0f) {
+                arg0->target_speed -= arg0->y_velocity * 0.6f;
+            }
+            speed = 1.5f;
+            accel = 0.3f;
+        }
+    }
+    func_1505A3A8(arg0->target_speed, arg0, speed, accel, 1);
+    arg0->unk40 = ((s16)arg0->unk7A + 0x4000) * 0.0054931640625f;
+    arg0->gravity = pitch * 0.000125f * (200.0f - arg0->xz_velocity);
+    if (arg0->unk13C == 0) {
+        if (arg0->y_velocity > 26.0f) {
+            arg0->y_velocity = 26.0f;
+        }
+        if (arg0->y_velocity < -34.0f) {
+            arg0->y_velocity = -34.0f;
+        }
+    }
+    temp = fabsf(pitch * 0.5f);
+    if (arg0->unk86 != 0) {
+        temp = temp * 0.4f;
+        arg0->gravity *= 0.6f;
+    }
+    if (arg0->gravity == 0.0f) {
+        if (fabsf(arg0->y_velocity) < 1.5f) {
+            arg0->y_velocity = 0.0f;
+        } else if (arg0->y_velocity > 0.0f) {
+            arg0->gravity = 1.6f;
+        } else {
+            arg0->gravity = -1.6f;
+        }
+    } else if ((arg0->y_velocity > temp * 1.2f) && (arg0->gravity < 0.0f)) {
+        arg0->gravity = 0.0f;
+    } else if ((arg0->y_velocity < -temp * 1.5f) && (arg0->gravity > 0.0f)) {
+        arg0->gravity = 0.0f;
+    }
+    arg0->in_water = 10;
+    if (PAD->buttons & 0x10) {
+        arg0->unkB8 += (PAD->stick_y - arg0->unkB8) * 0.2f;
+        arg0->y_velocity = 0.0f;
+        arg0->gravity = 0.0f;
+    } else {
+        arg0->unkB8 = (arg0->y_velocity - floorLevel) * -2.0f;
+        if (arg0->unkB8 > 40.0f) {
+            arg0->unkB8 = 40.0f;
+        } else if (arg0->unkB8 < -55.0f) {
+            arg0->unkB8 = -55.0f;
+        }
+    }
+    speed = arg0->y_velocity;
+    D_800CBDD3 = 1;
+    func_15059140(arg0);
+    D_800CBDD3 = 0;
+    if ((arg0->unk13C != 0) && (arg0->unk28 < 50.0f)) {
+        floorLevel = 50.0f;
+    }
+    if (!(PAD->buttons & 0x10)) {
+        if ((D_800CC26D != 0) && (arg0->unk13C == 0) && (D_800CC2D0[D_800CC26D - 100].unk28 == 0.0f)) {
+            arg0->y_position = D_800CC2D0[D_800CC26D - 100].y_position + 70.0f;
+            arg0->y_velocity = 20.0f;
+            func_1505959C(&D_800CC2D0[D_800CC26D - 100], D_800C3E78);
+            arg0->unk13C = D_800CC26D;
+            D_800D1580 = 0xFF010074;
+            func_1506E8D8();
+        }
+        if (arg0->unk13C != 0) {
+            if (arg0->unk25C & 2) {
+                struct127 *rider;
+
+                arg0->unk25C &= ~2;
+                idx = arg0->unk13C - 100;
+                rider = &D_800CC2D0[idx];
+                rider->unk13D = 0;
+                rider->xz_velocity = arg0->xz_velocity;
+                rider->unk232 = 0x21;
+                rider->unk218 = 0;
+                rider->stunned = 0;
+                rider->unkF8 &= ~0x400;
+                arg0->unk13C = 0;
+                arg0->y_velocity = 0.0f;
+                D_800D1580 = 0x76;
+                func_1506E8D8();
+            }
+        } else if ((D_800CC288 & 0x2000) && (arg0->unk103 == 0)) {
+            count = 0;
+            if (D_800BE9F0 == 0x3C) {
+                obj = &D_800CC2D0[1]; do {
+                    if ((obj->interaction_state != 0) && (obj->id == 0x25)) {
+                        count++;
+                    }
+                    obj++;
+                } while (obj != (struct127 *)&D_800D121C);
+                if (count < 5) {
+                    D_800D1580 = 6;
+                    arg0->unk103 = 4;
+                    func_15073FA0();
+                }
+            }
+        }
+    }
+    if (arg0->unk28 <= floorLevel) {
+        arg0->xz_velocity *= 0.6f;
+        if ((PAD->buttons & 0x4000) || (arg0->unk86 != 0) || (arg0->unk13C != 0)) {
+            if (arg0->unk13C != 0) {
+                if (arg0->y_velocity < -10.0f) {
+                    D_800D1580 = 0xFF0100A7;
+                    func_1506E5FC();
+                    D_800D1580 = 0xFF060372;
+                    func_1506E8D8();
+                }
+            } else if (arg0->y_position < 0.0f) {
+                D_800D1580 = 0xFF010072;
+                func_1506E8D8();
+            }
+            if (arg0->unk13C == 0) {
+                arg0->y_velocity = 20.0f;
+            } else if (arg0->unk86 == 0) {
+                arg0->y_velocity = 38.0f;
+            }
+            pitch = -80.0f;
+        } else {
+            arg0->y_velocity = speed * -1.0f;
+            arg0->unk102 = 0;
+            arg0->unk28 = 0.1f;
+            arg0->unkB8 = 0.0f;
+        }
+    }
+    if (!(PAD->buttons & 0x10)) {
+        arg0->unkB8 += 20.0f;
+    } else {
+        arg0->y_velocity = arg0->unkB8 * -0.35f;
+    }
+    if (arg0->unk86 != 0) {
+        arg0->unk83 = 0;
+        if ((fabsf(pitch) > 8.0f) || (arg0->target_speed > 7.0f)) {
+            animSpeed = 1.0f;
+        } else {
+            animSpeed = 0.5f;
+        }
+    } else {
+        animSpeed = func_150F34A0((s32)arg0, pitch);
+    }
+    anim = 0xF;
+    if ((arg0->unkB8 > 40.0f) && (pitch > 20.0f)) {
+        anim = 0x11;
+    }
+    if ((arg0->xz_velocity < 20.0f) && (arg0->target_speed <= 0.0f) && (pitch == 0.0f)) {
+        anim = 0x18;
+    }
+    if (arg0->xz_velocity < 0) {
+        anim = 0x1F;
+    }
+    if (arg0->unk13C != 0) {
+        anim = 0x17;
+        animSpeed += 0.2f;
+    }
+    func_1505E650(arg0, anim, animSpeed, 9.0f, 0.0f, 0.0f, 0);
+}
 
 void func_150F43F0(struct108 *arg0) {
     if (arg0->unk23E == 0x3B) {

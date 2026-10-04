@@ -569,7 +569,29 @@ void func_151E51EC(void) {
     D_8003C8E0 = 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E530C.s")
+void func_151E530C(void) {
+    s32 v;
+    struct Struct151E5034 *p;
+
+    if (D_800E0B94 != 2) {
+        if (*(u8 *)&D_800E0B96 != 0) {
+            v = *(u8 *)&D_800E0B96 - D_800BE9E4 * (u8)D_8008FD74;
+            if (v < 0) {
+                v = 0;
+            }
+            *(u8 *)&D_800E0B96 = v;
+        }
+        p = D_8008FDD4;
+        if (p != NULL && p->unk2B == 0 && p->unkC > 0.0f && p->unk8 > 0.5f) {
+            v = (p->unk8 - 0.5f) * 524.0f;
+            if (v >= 0x100) {
+                v = 0xFF;
+            }
+            *(u8 *)&D_800E0B96 = v;
+        }
+    }
+}
+
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_20AE20/func_151E53E8.s")
 
