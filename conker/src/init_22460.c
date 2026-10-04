@@ -1,41 +1,66 @@
+/* init_22460 -- Rare's rework of n_alResamplePull.  Built with OPT_FLAGS := -g
+ * (see conker/Makefile); scoring this TU with the default -O2 -g3 is noise.
+ *
+ * The trailing GLOBAL_ASM block is NOT code.  conker.us.yaml gives this TU the
+ * range 0x22460..0x226F0 (0x290) while the function is 0x244; the remaining
+ * 76 bytes are inter-TU padding that used to reach .text only as a side effect
+ * of #pragma GLOBAL_ASM splicing the whole .s.  IDO's own 16-byte .text align
+ * gives back 12 of them, so 0x40 must be stated explicitly or every object
+ * downstream of here slides and the ROM breaks.
+ */
 #include "n_synthInternals.h"
 
+extern f64 D_8002C840;
+extern f32 D_8002C848;
 
-// modified n_alResamplePull
-#pragma GLOBAL_ASM("asm/nonmatchings/init_22460/func_10022460.s")
-// NON-MATCHING: same issues as the other functions in this range
-// struct21 *func_10022460(struct42 *arg0, struct119 *arg1, struct21 *arg2) {
-//     struct21 *sp34;
-//     s16 sp32;
-//     s32 sp2C;
-//     s32 sp28;
-//     f32 sp24;
-//     struct21 *sp20;
-//     struct21 *sp1C;
-//
-//     sp34 = arg2;
-//     sp32 = 368; // 0x170;
-//     if (arg0->unk50 != 0) {
-//         sp34 = func_100214F0(arg0, &sp32, 0xB8, arg2);
-//         sp20 = sp34 = &sp34->unk8;
-//         sp20->unk0 = (sp32 & 0xFFFFFF) | 0xA000000;
-//         sp20->unk4 = ((((s32 )arg1 & 0xFFFF) << 16) | 368);
-//     } else {
-//         if (D_8002C840 < (f64) arg0->unk4C) {
-//             arg0->unk4C = D_8002C848;
-//         }
-//         arg0->unk4C = (s32) (arg0->unk4C * 32768.0f);
-//         arg0->unk4C /= 32768.0f;
-//         sp24 = arg0->unk54 + (arg0->unk4C * 184.0f);
-//         sp2C = sp24;
-//         arg0->unk54 = (sp24 - sp2C);
-//         sp34 = func_100214F0(arg0, &sp32, sp2C, arg2);
-//         sp28 = arg0->unk4C * 32768.0f;
-//
-//         sp1C = sp34 = &sp34->unk8;
-//         sp1C->unk0 = ((osVirtualToPhysical(arg0->unk48) & 0xFFFFFF) | 0x5000000);
-//         sp1C->unk4 = (((arg0->unk58 & 3) << 30) | ((sp28 & 0xFFFF) << 14) | ((sp32 & 0xFFF) * 4));
-//         arg0->unk58 = 0;
-//     }
-//     return sp34;
-// }
+Acmd *func_100214F0(N_PVoice *, s16 *, s32, Acmd *);
+
+Acmd *func_10022460(N_PVoice *f, s16 *outp, Acmd *p) {
+    Acmd *ptr;
+    s16 inp;
+    s32 inCount;
+    s32 incr;
+    f32 finCount;
+
+    ptr = p;
+    inp = N_AL_TEMP_1;
+    if (f->rs_upitch != 0) {
+        ptr = func_100214F0(f, &inp, SAMPLES, p);
+        aDMEMMove(ptr++, inp, *outp, N_AL_DIVIDED);
+    } else {
+        if (f->rs_ratio > D_8002C840) {
+            f->rs_ratio = D_8002C848;
+        }
+        f->rs_ratio = (s32) (f->rs_ratio * 32768.0f);
+        f->rs_ratio = f->rs_ratio / 32768.0f;
+        finCount = f->rs_delta + f->rs_ratio * 184.0f;
+        inCount = finCount;
+        f->rs_delta = finCount - inCount;
+        ptr = func_100214F0(f, &inp, inCount, p);
+        incr = f->rs_ratio * 32768.0f;
+        n_aResample(ptr++, osVirtualToPhysical(f->rs_state), f->rs_first, incr, inp, 0);
+        f->rs_first = 0;
+    }
+    return ptr;
+}
+
+/* 0x40 of inter-TU padding at 0x100226B0..0x100226F0 -- see header. */
+GLOBAL_ASM(
+glabel pad_100226B0
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+)

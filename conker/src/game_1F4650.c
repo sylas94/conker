@@ -661,7 +661,38 @@ s32 func_151CBBE0(void *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1F4650/func_151CBC60.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1F4650/func_151CC1D4.s")
+extern f32 D_800AAEC0;
+
+f32 func_151CC1D4(void *arg0) {
+    typedef struct {
+        u8 *unk0;
+        u8 pad4[0x8];
+        u8 unkC;
+        u8 padD[0xB];
+        f32 unk18;
+        f32 unk1C;
+        u8 pad20[0x34];
+        s8 unk54;
+    } Struct151CC1D4;
+    Struct151CC1D4 *base;
+    f32 v;
+
+    base = (Struct151CC1D4 *)((s32)arg0 + 0x70);
+    if (base->unkC & 4) {
+        f32 t = D_800C3958[base->unk54].unk28 * D_800AAEC0;
+
+        v = base->unk18 + (base->unk1C - base->unk18) * t;
+    } else {
+        v = (*(f32 *)(base->unk0 + 0x1A0) + *(f32 *)(base->unk0 + 0x19C)) * 0.5f;
+    }
+    if (v < base->unk18) {
+        v = base->unk18;
+    } else if (base->unk1C < v) {
+        v = base->unk1C;
+    }
+    return v;
+}
+
 
 extern void func_1515572C(s32, s32);
 

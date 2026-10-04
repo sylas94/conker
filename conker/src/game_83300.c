@@ -1370,19 +1370,48 @@ struct127 *func_1505EEB0(s32 state, s32 *arg1) {
 //     return tmp;
 // }
 
-// PERMUTER/HARD CANDIDATE best 745 (natural loop) â€” needs split symbols D_800CC40F (elem0 unk13F)
-// and D_800CC5FC (loop base = elem1) which only a hand-peel emits, but hand-peel (best 1205) breaks
-// IDO's counter-merge/folded-read peel structure. EFD0 (unk127/D_800CC3F7) & F0AC (id/D_800CC2D4) identical shape.
-// struct127 *func_1505EEF4(s32 arg0) {
-//     struct127 *ptr; s32 i;
-//     for (ptr = D_800CC2D0, i = 0; i < 25; i++, ptr++) {
-//         if ((ptr->interaction_state != 0) && (ptr->unk13F == arg0)) return ptr;
-//     }
-//     return NULL;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505EEF4.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505EFD0.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505F0AC.s")
+struct127 *func_1505EEF4(s32 arg0) {
+    struct127 *ptr;
+    s32 i;
+
+    ptr = D_800CC2D0;
+    for (i = 0; i < 25; i++) {
+        if ((ptr->interaction_state != 0) && (ptr->unk13F == arg0)) {
+            return ptr;
+        }
+        ptr++;
+    }
+    return NULL;
+}
+
+struct127 *func_1505EFD0(s32 arg0) {
+    struct127 *ptr;
+    s32 i;
+
+    ptr = D_800CC2D0;
+    for (i = 0; i < 25; i++) {
+        if ((ptr->interaction_state != 0) && (ptr->unk127 == arg0)) {
+            return ptr;
+        }
+        ptr++;
+    }
+    return NULL;
+}
+
+struct127 *func_1505F0AC(s32 arg0) {
+    struct127 *ptr;
+    s32 i;
+
+    ptr = D_800CC2D0;
+    for (i = 0; i < 25; i++) {
+        if ((ptr->interaction_state != 0) && (ptr->id == arg0)) {
+            return ptr;
+        }
+        ptr++;
+    }
+    return NULL;
+}
+
 // PERMUTER CANDIDATE best 835 (body byte-identical; blocker is the D_8009962C load position
 // vs the struct-clear loop, coupled to an f0<->f2 swap for 1.0f vs D_8009962C. decl-init keeps
 // correct f0/f2 regs but hoists the load above the loop + reorders the li/D_80099630 block.)
@@ -1676,19 +1705,17 @@ s32 func_1506196C(u8 *arg0, s32 arg1) {
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150619A8.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15061B4C.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150623F4.s")
-// PERMUTER CANDIDATE best 1662 (JUSTREG: instructions match, saved-register numbering off;
-// target allocates arg0->s1,arg1->s2,base->s3 but IDO gives base->s1)
-// void func_150626EC(struct127 *arg0, s32 arg1) {
-//     struct127 *ptr;
-//     for (ptr = D_800CC2D0; ptr != (struct127 *) &D_800D121C; ptr++) {
-//         if ((ptr->interaction_state != 0) &&
-//             (((arg0 - D_800CC2D0) + 1) == ptr->unk65) &&
-//             (ptr->unk127 == 0xFF)) {
-//             func_15060F28(ptr, arg1);
-//         }
-//     }
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_150626EC.s")
+void func_150626EC(struct127 *arg0, s32 arg1) {
+    s32 i;
+
+    for (i = 0; i < 25; i++) {
+        if ((D_800CC2D0[i].interaction_state != 0) &&
+            (((arg0 - D_800CC2D0) + 1) == D_800CC2D0[i].unk65) &&
+            (D_800CC2D0[i].unk127 == 0xFF)) {
+            func_15060F28(&D_800CC2D0[i], arg1);
+        }
+    }
+}
 
 void func_150627D4(struct127 *arg0) {
     arg0->unk2FB = 0;

@@ -920,15 +920,29 @@ void func_15138BC0(struct102 *arg0, u8 arg1, s32 arg2) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_161520/func_1513A48C.s")
 
-// PERMUTER CANDIDATE (best 310): whole prologue/call/homing byte-identical (file IS -O2 -g3,
-// not -g). Tail returns a0 and reads a0->0x1D4 into a dead `if`; only matches with two
-// `return a0` (keeps the read) -> IDO adds move v0,v1 + a merge branch vs target's direct v0.
+// NEAR-MISS, best 22 at frame=-24 EXACT, n=17/19 (was 310 -- see below for what moved it).
+// File IS -O2 -g3, not -g. Tail returns a0 and reads a0->0x1D4 into a DEAD `if` whose body is
+// empty: golden branches to the epilogue and also falls through to it, so both paths coincide.
+//
+// WHAT MOVED IT 310 -> 22: use ONE trailing `return a0;` with an EMPTY if body, not two
+// `return a0` statements. Two returns make IDO materialise a merge (`move v0,v1` + branch)
+// where golden loads `lw $v0,0x18($sp)` once and uses it BOTH as the 0x1D4 base and as the
+// return value. Measured, same TU: empty-if + single return 22; if(==0){return a0;} + return
+// a0  36; if(!=0){return a0;} + return a0  36; void return type 34 (n=16 -- drops the value).
+//
 // extern void func_1513A5E0(void *arg0, u8 arg1, s32 arg2);
 // void *func_1513A594(void *a0, void *a1, s32 a2, u8 a3, s32 arg4) {
 //     func_1513A5E0(a1, a3, arg4);
-//     if (*(s32 *)((u8 *)a0 + 0x1D4) != 0) { return a0; }
+//     if (*(s32 *)((u8 *)a0 + 0x1D4) != 0) {
+//     }
 //     return a0;
 // }
+//
+// REMAINING: two instructions short. `a2` is unreferenced by the body, and golden still homes
+// it (`sw $a2,0x20($sp)`) along with a0/a1/a3 -- check whether our build is skipping the home
+// for the unused parameter, which would account for the gap. NOTE arg3 is u8 and arg0..arg2
+// are NOT: the `andi $a3,0xFF` prologue marks that ONE parameter (see func_1515D4D4, which
+// shipped on exactly this per-parameter distinction).
 #pragma GLOBAL_ASM("asm/nonmatchings/game_161520/func_1513A594.s")
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_161520/func_1513A5E0.s")

@@ -33,7 +33,20 @@ Gfx *func_150412C0(Gfx *gfx) {
     return gfx;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6E770/func_150413FC.s")
+s32 func_15041480(u8 arg0);
+Gfx *func_15041508(Gfx *gfx, s32 arg1, s32 arg2, s32 arg3);
+
+
+Gfx *func_150413FC(Gfx *gfx, s32 arg1, s32 arg2, u8 *arg3) {
+    s32 i;
+
+    i = 0;
+    while (arg3[i] != 0) {
+        gfx = func_15041508(gfx, arg1 + i * 8, arg2, func_15041480(arg3[i]));
+        i++;
+    }
+    return gfx;
+}
 
 s32 func_15041480(u8 arg0) {
     s32 i;

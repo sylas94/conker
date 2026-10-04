@@ -183,7 +183,40 @@ s32 func_1502C3BC(s32 arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502C408.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502C608.s")
+typedef struct {
+    u8 pad0[0x7];
+    u8 unk7;
+    u8 pad8[0x58];
+    s16 unk60;
+    s16 unk62;
+} Actor1502C608;
+
+extern u8 *D_8008CA4C[];
+
+#define ACTOR_1502C608 ((Actor1502C608 *)&D_800CC2D0[arg0])
+
+void func_1502C608(s32 arg0) {
+    s32 period;
+    s16 pos;
+    s16 speed;
+
+    if (D_800BEAC0 == 0) {
+        pos = ACTOR_1502C608->unk60;
+        speed = ACTOR_1502C608->unk62;
+        if (ACTOR_1502C608->unk7 != 0) {
+            period = D_8008CA4C[func_1502C3BC(arg0)][4] << 8;
+            pos += speed;
+            if (pos >= period) {
+                pos -= period;
+            } else if (pos < 0) {
+                pos += period;
+            }
+            ACTOR_1502C608->unk60 = pos;
+        }
+    }
+}
+#undef ACTOR_1502C608
+
 
 extern f32 D_80096DE0;
 extern f32 D_80096DE4;
@@ -449,7 +482,30 @@ void func_1502EA98(ActorInteractionFields *arg0, s32 arg1, s32 arg2, s32 arg3, s
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502EC34.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502EE8C.s")
+/* The two u8 slots at actor record +0x6A (struct127 still calls this word pad68). */
+typedef struct Act1502EE8C {
+    char pad0[0x6A];
+    /* 0x6A */ u8 unk6A[2];
+    char pad6C[0x32C - 0x6C];
+} Act1502EE8C;
+
+s32 func_1502EE8C(s32 arg0, s32 arg1) {
+    s32 v;
+    s32 r;
+
+    v = ((Act1502EE8C *)D_800CC2D0)[arg0].unk6A[arg1];
+    if (v >= 2) {
+        if (v >= 4) {
+            r = 2;
+        } else {
+            r = v - 2;
+        }
+    } else {
+        r = v;
+    }
+    return r;
+}
+
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502EEF4.s")
 

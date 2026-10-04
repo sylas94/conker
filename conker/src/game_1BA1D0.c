@@ -847,7 +847,11 @@ void func_15190400(struct102 *arg0, void *arg1, u8 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1BA1D0/func_15190454.s")
+void func_15190454(void *arg0) {
+    s32 *t = *(s32 **)((u8 *)arg0 + 0x40);
+
+    t[0x21] = 0;
+}
 
 extern void func_15190454(void *);
 extern void func_151617C4(void *);

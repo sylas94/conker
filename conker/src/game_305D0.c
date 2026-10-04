@@ -206,8 +206,98 @@ s32 func_150034B4(void) {
 //     func_10004074(temp_s4);
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_305D0/func_15003668.s")
-// NON-MATCHING: score 125, instruction-for-instruction identical; the only
+typedef struct {
+    s32 unk0;
+    s32 unk4;
+} SegmentEntry;
+
+typedef struct {
+    u8  pad0[0x1C];
+    s32 unk1C;
+    u8  pad20[0x2F];
+    u8  unk4F;
+    u8  pad50[0x6];
+    s16 unk56;
+    s16 unk58;
+    u8  pad5A[0x46];
+} SceneObject;
+
+extern void func_15001460(s32 arg0);
+extern void func_15002754(void);
+extern s32 func_15002878(void);
+extern void func_1510F800(s32 arg0);
+
+void func_15003668(s32 arg0) {
+    s32 start;
+    s32 size;
+    s32 i;
+
+    D_800DBE62 = (u8)0;
+    func_15001970();
+    D_800D2C68 = (u8)0;
+
+    func_150026C4(0);
+    func_15002724(D_800B0E00[0]);
+    func_15002754();
+    func_15001460(D_800B0E00[0]);
+    func_150026E8(0);
+
+    func_150026C4(1);
+    func_15002724(D_800B0E00[3]);
+    func_15002754();
+    func_15001460(D_800B0E00[3]);
+    func_150026E8(1);
+
+    func_150026C4(2);
+    for (i = 0; i < D_800DBEF0; i++) {
+        if ((((SceneObject *)D_800DBEF4)[i].unk4F & 0x60) != 0x20) {
+            func_15002724(((SceneObject *)D_800DBEF4)[i].unk1C);
+        }
+    }
+    func_15002754();
+
+    D_800D2C68 = (u8)1;
+    D_800D2C2C = 0;
+    for (i = 0; i < D_800DBEF0; i++) {
+        if ((((SceneObject *)D_800DBEF4)[i].unk4F & 0x60) != 0x20) {
+            start = D_800DBE38;
+            ((SceneObject *)D_800DBEF4)[i].unk58 = D_800DBE38;
+            func_15001460(((SceneObject *)D_800DBEF4)[i].unk1C);
+            ((SceneObject *)D_800DBEF4)[i].unk56 = D_800DBE38 - start;
+        } else {
+            ((SceneObject *)D_800DBEF4)[i].unk58 = 0;
+            ((SceneObject *)D_800DBEF4)[i].unk56 = 0;
+        }
+    }
+    func_150026E8(2);
+
+    D_800D2C68 = (u8)0;
+    ((SegmentEntry *)&D_800D3300)->unk0 = 0;
+    ((SegmentEntry *)&D_800D3300)->unk4 = D_800DBE3C << 8;
+    func_1510F800(0);
+
+    size = (func_15002878() + 7) & ~7;
+    D_800D3668 = D_8003809C;
+    D_800D366C = D_800D3668 + size;
+    func_1510F800(2);
+}
+
+// MATCHED 2026-08-21.  The residual described below was a 3-way rotation of the
+// callee-saved registers holding {i, &D_800DBEF4, start}.  IDO ranks webs by
+// reference count (defs+uses) and hands out $s1,$s2,... in that order; golden's
+// ranking is off(10) > i(8) > base(7) > start(3).  Writing
+//     start = D_800DBE38;  obj->unk58 = start;
+// gives `start` THREE references, which lifts it above i and base and takes $s1.
+// Spelling the store as `obj->unk58 = D_800DBE38;` leaves `start` with two
+// references (one def, one use in the subtraction); IDO CSEs the two loads of
+// D_800DBE38 into the single `lw $s3, 0($s4)` golden emits, the instruction
+// stream is unchanged, and `start` drops to $s3.  Everything else in the note
+// below (declaration order, block scoping, merging locals, `register`, the
+// unused parameter, the line-join lever) was re-measured this wave and is inert
+// -- all of it plateaus at 20 mismatching words.
+
+// SUPERSEDED (kept for the record) -- score 125, instruction-for-instruction
+// identical; the only
 // residual is a 3-way rotation of the callee-saved registers holding the loop
 // counter (target s1 / IDO s2), the hoisted &D_800DBEF4 base (target s2 / IDO
 // s3) and `start` (target s3 / IDO s1). Declaration order, block scoping,

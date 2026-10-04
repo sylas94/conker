@@ -116,8 +116,8 @@ void func_150408B4(s32 arg0) {
 void func_150408C0(s32 arg0) {
 }
 
-void func_150408CC(struct148 *arg0) {
-    func_1504072C(arg0->unk4);
+s32 func_150408CC(struct148 *arg0) {
+    return func_1504072C(arg0->unk4);
 }
 
 void func_150408F0(s32 arg0) {

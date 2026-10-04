@@ -294,4 +294,30 @@ s32 func_1507E114(s32 arg0) {
     func_15084D70(0, (u8)D_800BE3E0, 1, sp54, sp48, &sp43, &sp42, &sp44, &sp3C, 1, &sp5C);
     return sp5C + 1;
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_A9D90/func_1507E1D0.s")
+void func_15143134(void *, f32 *, s32);
+
+void func_1507E1D0(struct127 *arg0, f32 *arg1, f32 *arg2, f32 *arg3) {
+    if (arg0->unk1D4 != NULL) {
+        s32 base;
+        f32 in[3];
+        f32 out[3];
+
+        in[0] = 0.0f;
+        in[1] = arg0->y_scale * 30.0f;
+        in[2] = 0.0f;
+        base = (s32)arg0->unk1D4;
+        if (arg0->interaction_state == 1) {
+            base += 0x300;
+        } else if (arg0->interaction_state == 0x1E) {
+            base += 0xC0;
+        }
+        func_15143134(in, out, base);
+        *arg1 = out[0];
+        *arg2 = out[1];
+        *arg3 = out[2];
+    } else {
+        *arg1 = arg0->x_position;
+        *arg2 = arg0->y_position;
+        *arg3 = arg0->z_position;
+    }
+}

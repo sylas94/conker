@@ -1,8 +1,147 @@
 #include "n_synthInternals.h"
 #include <R4300.h>
 
-// struct21 *func_100214F0(struct42 *arg0, void *arg1, s32 arg2, void *struct21);
-#pragma GLOBAL_ASM("asm/nonmatchings/init_214F0/func_100214F0.s")
+#define ADPCMFBYTES 9
+#define LFSAMPLES 4
+
+void func_10007DA0(void);
+extern s32 D_8003C8E0;
+Acmd *func_10021E4C(Acmd *p, N_PVoice *f, s32 nframes, s32 nbytes, s16 dmemOut, s16 dmemIn, s32 flags);
+
+/* n_alAdpcmPull, with Rare's no-wavetable silence path and a debug trap on a
+ * codebook outside the first 8MB of RDRAM. */
+Acmd *func_100214F0(N_PVoice *f, s16 *outp, s32 outCount, Acmd *p) {
+    Acmd *ptr = p;
+    s16 inp;
+    s32 tsam;
+    s32 nframes;
+    s32 nbytes;
+    s32 overFlow;
+    s32 startZero;
+    s32 nOver;
+    s32 nSam;
+    s32 op;
+    s32 nLeft;
+    s32 bEnd;
+    s32 decoded = 0;
+    s32 looped = 0;
+    N_PVoice *e = f;
+
+    if (outCount == 0) {
+        return ptr;
+    }
+
+    inp = N_AL_DECODER_IN;
+    if (e->dc_table == NULL) {
+        aClearBuffer(ptr++, *outp, outCount << 1);
+        return ptr;
+    }
+
+    if (K0_TO_PHYS(e->dc_table->waveInfo.adpcmWave.book->book) > 0x800000) {
+        D_8003C8E0 = 0xF000003;
+        func_10007DA0();
+    }
+
+    n_aLoadADPCM(ptr++, e->dc_bookSize, K0_TO_PHYS(e->dc_table->waveInfo.adpcmWave.book->book));
+
+    looped = (outCount + e->dc_sample > e->dc_loop.end) && (e->dc_loop.count != 0);
+    if (looped) {
+        nSam = e->dc_loop.end - e->dc_sample;
+    } else {
+        nSam = outCount;
+    }
+
+    if (e->dc_lastsam) {
+        nLeft = ADPCMFSIZE - e->dc_lastsam;
+    } else {
+        nLeft = 0;
+    }
+    tsam = nSam - nLeft;
+    if (tsam < 0) {
+        tsam = 0;
+    }
+
+    nframes = (tsam + ADPCMFSIZE - 1) >> LFSAMPLES;
+    nbytes = nframes * ADPCMFBYTES;
+
+    if (looped) {
+        ptr = func_10021E4C(ptr, e, tsam, nbytes, *outp, inp, e->dc_first);
+
+        if (e->dc_lastsam) {
+            *outp += (e->dc_lastsam << 1);
+        } else {
+            *outp += (ADPCMFSIZE << 1);
+        }
+
+        e->dc_lastsam = e->dc_loop.start & 0xF;
+        e->dc_memin = (s32)e->dc_table->base + ADPCMFBYTES * ((s32)(e->dc_loop.start >> LFSAMPLES) + 1);
+        e->dc_sample = e->dc_loop.start;
+
+        bEnd = *outp;
+        while (outCount > nSam) {
+            outCount -= nSam;
+            op = (bEnd + ((nframes + 1) << (LFSAMPLES + 1)) + 16) & ~0x1F;
+            bEnd += nSam << 1;
+
+            if (e->dc_loop.count != -1 && e->dc_loop.count != 0) {
+                e->dc_loop.count--;
+            }
+
+            nSam = MIN(outCount, e->dc_loop.end - e->dc_loop.start);
+            tsam = nSam - ADPCMFSIZE + e->dc_lastsam;
+            if (tsam < 0) {
+                tsam = 0;
+            }
+            nframes = (tsam + ADPCMFSIZE - 1) >> LFSAMPLES;
+            nbytes = nframes * ADPCMFBYTES;
+            ptr = func_10021E4C(ptr, e, tsam, nbytes, op, inp, e->dc_first | A_LOOP);
+            aDMEMMove(ptr++, op + (e->dc_lastsam << 1), bEnd, nSam << 1);
+        }
+
+        e->dc_lastsam = (outCount + e->dc_lastsam) & 0xF;
+        e->dc_sample += outCount;
+        e->dc_memin += ADPCMFBYTES * nframes;
+        return ptr;
+    }
+
+    nSam = nframes << LFSAMPLES;
+    overFlow = e->dc_memin + nbytes - ((s32)e->dc_table->base + e->dc_table->len);
+    if (overFlow < 0) {
+        overFlow = 0;
+    }
+    nOver = (overFlow / ADPCMFBYTES) << LFSAMPLES;
+    if (nOver > nSam + nLeft) {
+        nOver = nSam + nLeft;
+    }
+    nbytes -= overFlow;
+
+    if ((nOver - (nOver & 0xF)) < outCount) {
+        decoded = 1;
+        ptr = func_10021E4C(ptr, e, nSam - nOver, nbytes, *outp, inp, e->dc_first);
+        if (e->dc_lastsam) {
+            *outp += (e->dc_lastsam << 1);
+        } else {
+            *outp += (ADPCMFSIZE << 1);
+        }
+        e->dc_lastsam = (outCount + e->dc_lastsam) & 0xF;
+        e->dc_sample += outCount;
+        e->dc_memin += ADPCMFBYTES * nframes;
+    } else {
+        e->dc_lastsam = 0;
+        e->dc_memin += ADPCMFBYTES * nframes;
+    }
+
+    if (nOver) {
+        e->dc_lastsam = 0;
+        if (decoded) {
+            startZero = (nLeft + nSam - nOver) << 1;
+        } else {
+            startZero = 0;
+        }
+        aClearBuffer(ptr++, startZero + *outp, nOver << 1);
+    }
+    return ptr;
+}
 
 /* The ALLoadFilter (ADPCM decoder) stage of an N_PVoice: libultra's
  * _decoderSetParam / _decodeChunk, reworked by Rare.

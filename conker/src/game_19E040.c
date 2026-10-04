@@ -58,7 +58,39 @@ void func_15171600(struct127 *arg0, s32 arg1, s32 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_19E040/func_151717FC.s")
+typedef struct {
+    u8 pad0[0x10];
+    s16 x;
+    s16 y;
+    s16 z;
+} Pos151717FC;
+
+void func_151700D8(f32 *, f32, f32, s32, f32, s32, s32, s32, s32, s32);
+
+void func_151717FC(struct127 *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, s32 arg6, s32 arg7,
+                   s32 arg8, s32 arg9, f32 argA, s32 argB, s32 argC) {
+    f32 verts[4][3];
+    f32 cx;
+    f32 cy;
+    f32 cz;
+
+    cx = ((Pos151717FC *)arg0)->x + arg3;
+    cy = ((Pos151717FC *)arg0)->y + arg4;
+    cz = ((Pos151717FC *)arg0)->z + arg5;
+    verts[0][0] = arg1 + cx;
+    verts[0][1] = cy;
+    verts[0][2] = arg2 + cz;
+    verts[1][0] = cx - arg1;
+    verts[1][1] = cy;
+    verts[1][2] = arg2 + cz;
+    verts[2][0] = cx - arg1;
+    verts[2][1] = cy;
+    verts[2][2] = cz - arg2;
+    verts[3][0] = arg1 + cx;
+    verts[3][1] = cy;
+    verts[3][2] = cz - arg2;
+    func_151700D8((f32 *)verts, cx, cz, arg7, argA, arg6, arg8, arg9, (u8)argB, argC);
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_19E040/func_151718F0.s")
 

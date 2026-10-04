@@ -2209,8 +2209,46 @@ void func_1507BAF8(void) {
 void func_1507BB20(void) {
 }
 
-// scary loops
-#pragma GLOBAL_ASM("asm/nonmatchings/game_A28B0/func_1507BB28.s")
+typedef struct {
+    s32 unk0;
+    u8 unk4;
+} Entry1507BB28;
+
+extern Entry1507BB28 D_80086A88[];
+extern u8 D_8009A120[];
+
+int func_1507BB28(s32 arg0, s32 arg1) {
+    s32 p;
+    Entry1507BB28 *tbl;
+    s32 i;
+
+    p = D_800D1588[D_800D154C->id];
+    if (p == 0) {
+        return (s32)D_8009A120;
+    }
+    tbl = *(Entry1507BB28 **)(p - 0x10);
+    if (tbl == NULL) {
+        return (s32)D_8009A120;
+    }
+    i = 0;
+    while (arg1 != tbl[i].unk4) {
+        if (tbl[i].unk0 == 0) {
+            Entry1507BB28 *def = D_80086A88;
+            i = 0;
+            while (arg1 != def[i].unk4) {
+                if (def[i].unk0 == 0) {
+                    /* end of the default table without a match: the original game hangs here */
+                    while (1) {
+                    }
+                }
+                i++;
+            }
+            return def[i].unk0;
+        }
+        i++;
+    }
+    return tbl[i].unk0;
+}
 
 void func_1507BC14(struct127 *arg0) {
 

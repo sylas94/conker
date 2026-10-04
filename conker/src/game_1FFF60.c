@@ -248,7 +248,27 @@ void func_1514EDF0(struct224 *, s32);
 void func_1516972C(struct102 *arg0);
 void func_151D3130(struct224 *arg0);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1FFF60/func_151D3130.s")
+void func_151D3130(struct224 *arg0) {
+    struct224 *obj;
+    void (*fn)(struct224 *);
+
+    fn = D_8008FC5C[*((u8 *)arg0 + 0x1D)];
+    if (fn != 0) {
+        fn(arg0);
+    }
+    obj = (struct224 *)arg0->unk24;
+    while (obj != 0) {
+        struct224 *next = (struct224 *)obj->unk40;
+
+        if (*(s8 *)((u8 *)obj + 0x2A) != -1) {
+            D_8008FC48[*(s8 *)((u8 *)obj + 0x2A)](obj, (Func151D2C40Data *)&obj->unk34);
+        }
+        *(s32 *)((u8 *)obj + 0x2C) = 0;
+        func_1516972C((struct102 *)obj);
+        obj = next;
+    }
+    func_1514EDF0(arg0, arg0->unk10);
+}
 
 void func_151D31F4(struct102 *arg0) {
     func_151D3130(arg0);
@@ -260,7 +280,30 @@ void func_151D3220(struct102 *arg0) {
     func_15169824(arg0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1FFF60/func_151D324C.s")
+void func_151D324C(struct224 *arg0, struct223 *arg1, u8 arg2) {
+    void (*fn)(struct224 *, struct223 *, u8);
+
+    if (arg2 == 0) {
+        extern void func_151D33FC();
+
+        func_151D33FC();
+    } else if (arg2 == 0x2D) {
+        s32 b0;
+
+        if ((b0 = arg1->unk0) == arg0->unk10) {
+            arg0->unk10 = arg1->unk4.w;
+            arg0->unk14 = arg1->unk9;
+        } else if (arg0->unk10 == arg1->unk4.w) {
+            arg0->unk10 = b0;
+            arg0->unk14 = arg1->unk8;
+        }
+    }
+    fn = D_8008FC64[*((u8 *)arg0 + 0x1D)];
+    if (fn != 0) {
+        fn(arg0, arg1, arg2);
+    }
+}
+
 
 void func_151D3308(struct224 *arg0) {
     struct224 *temp_v0;

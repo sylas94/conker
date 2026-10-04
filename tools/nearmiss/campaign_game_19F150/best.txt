@@ -1,0 +1,6 @@
+game_19F150 / block 24BA90 -- NOT deliverable
+func_151720C4 (owner, jtbl): mism 0 (f20c4_MATCH.txt, in best.c)
+func_151725FC (owner): best mism 142 (fb 10), n=329/329, frame ok -- residue in first block (v01^2 hoist / FP regs, extra 1e8 pool entry)
+func_15172B20 (already C): with literals spills temp_f12 to 0x38 instead of 0x3C (2 diffs)
+func_15171D4C (non-owner): best mism 67 (best_15171D4C_frag.txt, needs Obj15171CA0 with Vtx vtx[4])
+rodata with best.c: 0x190 bytes, equal through 0x17F, off by one 1e8 entry from 725FC

@@ -22,6 +22,70 @@ from gone.
 One file per function, named `<func>.c`. `backlog.tsv` carries the size, owning TU, and the
 original snapshot filename.
 
+## The scores ARE known now — read `ranked.tsv` first
+
+`backlog.tsv` is sorted by SIZE, which ranks how much work a function was to write, not how
+close it is to matching. Nothing recorded scores, so the parks that were nearly finished were
+invisible and effort went to functions scoring in the hundreds. Regenerate the real ranking
+with:
+
+    python3 tools/nearmiss/_triage.py --out tools/nearmiss/ranked.tsv
+
+First full run (2026-08-23), 207 parks: **86 score, 99 do not even splice, 22 are already
+decompiled.** Seventeen score 25 or below. Three score 0 and **none of them ships as-is**:
+
+| func | why it does not ship |
+|---|---|
+| `func_15113218` | its 0 is a **known fake** — the frame is padded with five dead `probe` locals, which the project bans. Its own park says so. |
+| `func_1518BA90` | real, but needs `jtbl_800A7410`; blocked on the rodata block migration until `func_1518BD60` also reaches 0. |
+| `func_100052A0` | real (mism=0, n=180/180) but **will not link**: the match needs a function-scope `static u64`, a real `.bss` allocation with a local symbol, and `conker.ld` discards it. |
+
+A scorer reporting 0 is necessary, never sufficient. Two of those three prove it.
+
+## Repairing stale parks — and why the scores need reading carefully
+
+99 parks would not splice at all. `_autofix.py` splices, compiles, deletes exactly the
+duplicate the TU has since gained, and retries, leaving the parks themselves untouched:
+
+    python3 tools/nearmiss/_autofix.py --out tools/nearmiss/repaired.tsv
+
+Result: measurable parks **86 → 102**. Sixteen newly unlocked — but **only 11 of those are
+trustworthy**. Five deleted a *deliberate shadow* and are flagged `SEMANTIC RISK`.
+
+A park that works around a wrong `variables.h` declaration brackets its own with
+`#define` / `#undef`. That looks exactly like a duplicate, and deleting it produces a
+**better score for a different program**. The worked example is `func_15010880`:
+`variables.h` says `struct178 D_800D3098[73]`, the symbol really holds a pointer, and the park
+re-declares it `extern struct178 *D_800D3098;` on purpose. Without the shadow,
+`&D_800D3098[72]` silently becomes an address computation instead of a pointer load — golden's
+`lw $v0, %lo(D_800D3098)($v0)` is precisely the instruction that vanishes. The park's honest
+score is 210; the broken version reads **16 with an exact instruction count**.
+
+Nothing warns you: it compiles, it scores, and it scores far better. So `_autofix.py` reports
+every identifier it removed, and marks a `#define`/`#undef` bracket with `!`. Removing sibling
+*function definitions* the TU already has is the safe case — that is what the 11 clean ones did.
+Best clean new score is 28, so this unlocked measurement, not matches.
+
+## Tools
+
+| tool | what it does |
+|---|---|
+| `_triage.py` | scores every park, writes `ranked.tsv` |
+| `_splice.py` | park → full TU, ready for any scorer. **Splices by default**; only an explicit `STANDALONE TU` marker suppresses it |
+| `_dump.py` | side-by-side ours vs golden, X-marking differing words |
+| `_sweep.py` | scores a JSON list of `[label, full_tu_source]` variants |
+| `_whyfail.py` | groups non-splicing parks by their real compiler error |
+| `_autofix.py` | repairs the splice of stale parks and reports what they actually score |
+| `../structdiff.py` | splits a residue into structural rows vs a register permutation |
+
+Build variants by editing the text `_splice.py` returns. Hand-cutting a park from its
+function definition drops the typedefs it declares above — then even the control fails to
+compile, which reads as "every variant is broken" rather than "the harness is wrong".
+
+Always put an unmodified control in the same sweep. Several conclusions in these parks were
+measured against a baseline that had since moved, and a refutation measured against the wrong
+baseline is not a refutation.
+
 ## Read this before using one
 
 **These are UNVERIFIED.** Specifically:

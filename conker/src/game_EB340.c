@@ -21,7 +21,132 @@ void func_150BDE90(void *arg0, u8 arg1, s32 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_EB340/func_150BDF0C.s")
+extern f32 D_800A0000;
+extern f32 D_800A0004;
+
+/* The 8-byte payload func_150BDE90 memcpys to +0x28 of the object it creates:
+ * unk0 = the owner object, unk4 = the respawn countdown this function ticks. */
+typedef struct {
+    /* 0x00 */ void *unk0;
+    /* 0x04 */ s16  unk4;
+    /* 0x06 */ s16  unk6;
+} EB340Spawn;
+
+typedef struct {
+    /* 0x00 */ u8  pad0[0xC];
+    /* 0x0C */ u8  unkC;
+    /* 0x0D */ u8  pad0D[0x1B];
+    /* 0x28 */ EB340Spawn unk28;
+} EB340Obj;
+
+/* Same 0x58-byte particle-emitter descriptor as struct_150CF680 in game_FC5F0.c
+ * and struct_151CAB78_sp90 in game_1F4650.c; func_1515548C memcpys 0x58 of it. */
+typedef struct {
+    /* 0x00 */ f32 unk0;
+    /* 0x04 */ f32 unk4;
+    /* 0x08 */ f32 unk8;
+    /* 0x0C */ f32 unkC;
+    /* 0x10 */ u8  unk10;
+    /* 0x11 */ u8  pad11;
+    /* 0x12 */ s16 unk12;
+    /* 0x14 */ s16 unk14;
+    /* 0x16 */ s16 unk16;
+    /* 0x18 */ s16 unk18;
+    /* 0x1A */ u8  unk1A;
+    /* 0x1B */ u8  unk1B;
+    /* 0x1C */ u8  unk1C;
+    /* 0x1D */ u8  unk1D;
+    /* 0x1E */ u8  unk1E;
+    /* 0x1F */ u8  unk1F;
+    /* 0x20 */ u8  unk20;
+    /* 0x21 */ u8  unk21;
+    /* 0x22 */ u8  unk22;
+    /* 0x23 */ u8  unk23;
+    /* 0x24 */ s32 unk24;
+    /* 0x28 */ s32 unk28;
+    /* 0x2C */ s32 unk2C;
+    /* 0x30 */ s32 unk30;
+    /* 0x34 */ s32 unk34;
+    /* 0x38 */ s32 unk38;
+    /* 0x3C */ s32 unk3C;
+    /* 0x40 */ u8  unk40;
+    /* 0x41 */ u8  unk41;
+    /* 0x42 */ u8  pad42[2];
+    /* 0x44 */ u8  unk44;
+    /* 0x45 */ u8  pad45[3];
+    /* 0x48 */ f32 unk48;
+    /* 0x4C */ f32 unk4C;
+    /* 0x50 */ f32 unk50;
+    /* 0x54 */ f32 unk54;
+} EB340Emitter;
+
+/* Copied to +0x70 of the emitter object func_1515548C returns. */
+typedef struct {
+    /* 0x00 */ void *unk0;
+    /* 0x04 */ u8   pad4[0x8];
+    /* 0x0C */ u8   unkC;
+    /* 0x0D */ u8   unkD;
+    /* 0x0E */ u8   padE[0x2];
+    /* 0x10 */ f32  unk10;
+    /* 0x14 */ u8   pad14[0x44];
+} EB340Payload;
+
+extern void *func_1515548C(EB340Emitter *, s32, s32, s32, s32, u8, s32);
+
+void func_150BDF0C(EB340Obj *arg0) {
+    EB340Spawn *p;
+    EB340Emitter sp94;
+    void *temp;
+    EB340Payload sp38;
+
+    arg0->unk28.unk4 -= D_800BE9E4;
+    p = &arg0->unk28;
+    if (arg0->unk28.unk4 < 0) {
+        sp94.unk0 = (func_150ADA68() * 270.0f) + -135.0f;
+        sp94.unk4 = -120.0f;
+        sp94.unk8 = (func_150ADA68() * 10.0f) + 3.0f;
+        sp94.unkC = (func_150ADA68() * 17.0f) + 9.0f;
+        sp94.unk10 = 0xAB;
+        sp94.unk12 = 0x3E8;
+        sp94.unk14 = 0x31;
+        sp94.unk16 = 1;
+        sp94.unk18 = 0xFF;
+        sp94.unk1A = 7;
+        sp94.unk1B = 0xFF;
+        sp94.unk1C = 0xFF;
+        sp94.unk1D = 0xFF;
+        sp94.unk1E = (func_150ADA20() % 0x9CU) + 0x64;
+        sp94.unk1F = 0xFF;
+        sp94.unk20 = 0xFF;
+        sp94.unk21 = 0xFF;
+        sp94.unk22 = 0xFF;
+        sp94.unk23 = 0xFF;
+        sp94.unk24 = 0;
+        sp94.unk28 = 0x200004;
+        sp94.unk2C = 0x1F0601;
+        sp94.unk30 = 3;
+        sp94.unk34 = 0x22;
+        sp94.unk38 = 0x80;
+        sp94.unk3C = 0x20;
+        sp94.unk40 = 0;
+        sp94.unk41 = 7;
+        sp94.unk44 = *((u8 *)p->unk0 + 0x23D);
+        sp94.unk48 = 1.0f;
+        sp94.unk4C = 1.0f;
+        sp94.unk50 = 0.0f;
+        sp94.unk54 = 0.0f;
+        sp38.unk0 = p->unk0;
+        sp38.unkD = 0;
+        sp38.unkC = 0;
+        sp38.unk10 = (func_150ADA68() * D_800A0000) + D_800A0004;
+        temp = func_1515548C(&sp94, 0xA, 0, 0, 0x58, arg0->unkC, 0);
+        if (temp != NULL) {
+            memcpy((u8 *)temp + 0x70, &sp38, 0x58);
+        }
+        p->unk4 = (func_150ADA20() % 0x97U) + 0x19;
+    }
+}
+
 
 void func_1516972C(struct102 *arg0);
 

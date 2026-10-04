@@ -151,6 +151,39 @@ $(BUILD_DIR)/$(SRC_DIR)/libultra/os/getthreadpri.c.o: OPT_FLAGS := -O1
 $(BUILD_DIR)/$(SRC_DIR)/libultra/gu/guNormalize.c.o: OPT_FLAGS := -O2
 
 $(BUILD_DIR)/$(SRC_DIR)/init_3920.c.o: OPT_FLAGS := -O2
+
+# ---------------------------------------------------------------------------
+# The game links its OWN PRIVATE COPY of libultra at 0x151Dxxxx-0x151Fxxxx,
+# separate from the boot-segment copy at 0x10025xxx. Those TUs were built at
+# plain -O1, NOT the tree default -O2 -g3. `register` is load-bearing at -O1
+# and inert at -O2. See memory: conker-private-libultra-copies.
+#
+# NOTE (restored 2026-08-24): these five overrides were lost to an accidental
+# `git checkout -- Makefile` and re-added the same day. The flag VALUES are
+# verified by the ROM sha1 gate; the surrounding prose is a reconstruction and
+# may differ in wording from the original comments.
+# ---------------------------------------------------------------------------
+
+# osPiReadIo. `register s32 status` is what makes it match, and only at -O1.
+$(BUILD_DIR)/$(SRC_DIR)/game_21C4F0.c.o: OPT_FLAGS := -O1
+
+# osContInit + __osContGetInitData + __osPackRequestData, all three byte-perfect
+# at -O1. Same private-libultra region as game_21CAF0 / game_21CAC0.
+$(BUILD_DIR)/$(SRC_DIR)/game_21C540.c.o: OPT_FLAGS := -O1
+
+# osViSetSpecialFeatures out of the private libultra copy Rare linked in.
+# Verbatim SDK source scores 0 at -O1 and 328 at the -O2 -g3 tree default.
+$(BUILD_DIR)/$(SRC_DIR)/game_21CAF0.c.o: OPT_FLAGS := -O1
+
+$(BUILD_DIR)/$(SRC_DIR)/game_21D420.c.o: OPT_FLAGS := -O2
+
+# guMtxCatF: 0 at plain -O2, 3 at the tree default. guMtxXFMF in the same TU is
+# still a pragma, stuck at 49 -- see tools/nearmiss/guMtxXFMF.c.
+$(BUILD_DIR)/$(SRC_DIR)/game_21D5F0.c.o: OPT_FLAGS := -O2
+
+# NOTE: game_21CAC0 (func_151EF610) wants -O1 addressing with -O2 register
+# allocation; no single flag reproduces both, so it stays a pragma with no
+# override. See the park comment at the top of src/game_21CAC0.c.
 # NOTE: game_DAE50 RNG (func_150ADA20/ADA68) needs -mips3 for native u64 dsll32/dsrl, BUT a
 # -mips3 object CANNOT be linked into this 32-bit ROM ("linking 32-bit with 64-bit code" ld
 # error). So the RNG is not C-matchable here without converting the whole ROM to -mips3. Stays

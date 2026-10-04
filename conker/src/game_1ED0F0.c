@@ -323,7 +323,35 @@ s32 func_151C110C(Struct151C110C *arg0, s32 arg1, void **arg2, s32 arg3, s32 arg
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1ED0F0/func_151C1180.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1ED0F0/func_151C1570.s")
+typedef struct Sub151C1570 {
+    char pad0[0x80];
+    /* 0x80 */ void *unk80;
+    /* 0x84 */ void *unk84;
+    /* 0x88 */ u8 *unk88;
+    /* 0x8C */ void *unk8C;
+} Sub151C1570;
+
+void func_151C1570(void *arg0) {
+    Sub151C1570 *p;
+
+    p = (Sub151C1570 *)((u8 *)arg0 + 0x170);
+    if (p->unk80 != NULL) {
+        func_1516972C(p->unk80);
+    }
+    if (p->unk84 != NULL) {
+        func_1516972C(p->unk84);
+    }
+    if (p->unk88 != NULL) {
+        s32 *q;
+
+        q = (s32 *)(p->unk88 + 0x110);
+        *q = 0;
+    }
+    if (p->unk8C != NULL) {
+        func_1516972C(p->unk8C);
+    }
+    func_1000FD38(func_151C110C, arg0, 0);
+}
 
 void func_151C1570(void *);
 void func_15132570(void *);

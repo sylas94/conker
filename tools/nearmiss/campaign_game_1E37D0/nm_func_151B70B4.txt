@@ -1,0 +1,40 @@
+typedef struct {
+    s32 unk0;
+    s32 unk4;
+    u8 unk8;
+    u8 unk9;
+} Msg151B70B4;
+
+typedef struct {
+    s32 unk0;
+    u8 unk4;
+} Link151B70B4;
+
+typedef struct {
+    u8 pad0[0x1E];
+    u16 unk1E;
+    u8 pad20[0x30 - 0x20];
+    u8 unk30;
+    u8 pad31[0x98 - 0x31];
+    Link151B70B4 *unk98;
+} Obj151B70B4;
+
+void func_151B70B4(Obj151B70B4 *arg0, Msg151B70B4 *arg1, u8 arg2) {
+    Link151B70B4 *link = arg0->unk98;
+    s32 cur = link->unk0;
+
+    if (arg2 == 0) {
+        if (cur == arg1->unk0) {
+            arg0->unk30 = 0;
+            arg0->unk1E |= 8;
+        }
+    } else if (arg2 == 0x2D) {
+        if (link->unk0 == arg1->unk0) {
+            link->unk0 = arg1->unk4;
+            link->unk4 = arg1->unk9;
+        } else if (link->unk0 == arg1->unk4) {
+            link->unk0 = arg1->unk0;
+            link->unk4 = arg1->unk8;
+        }
+    }
+}

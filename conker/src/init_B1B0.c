@@ -1,9 +1,12 @@
 #include <ultra64.h>
 
+#define func_1000DF68 func_1000DF68_s16_decl_in_functions_h
 #include "functions.h"
+#undef func_1000DF68
 #include "variables.h"
 
 void func_1000DEC4(void);
+void func_1000DF68(s32 arg0, s32 arg1, s32 arg2);
 
 struct151 *func_1000B1B0(s32 arg0) {
     s32 i;
@@ -18,35 +21,28 @@ struct151 *func_1000B1B0(s32 arg0) {
     return NULL;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000B1FC.s")
-// permuter NO ZERO best 20 (2x600s on form B, base 225 -> internal 50, no zero)
-// PERMUTER CANDIDATE (register/CSE near-miss). Two shapes reached:
-//  (A) index form `for(i=0;i<3;i++)` -> score 20: byte-perfect structure AND
-//      register alloc (end pointer in v0, re-materialized per loop, matching the
-//      target), but the strength-reduced loop end emits reloc %hi/%lo(D_800417B0+0xc)
-//      instead of the target's symbol %hi/%lo(D_800417BC). i<3 never names D_800417BC.
-//  (B) do-while referencing &D_800417BC (below) -> score 245: reloc is CORRECT
-//      (D_800417BC), but IDO CSEs &D_800417BC into a3 shared across BOTH loops,
-//      whereas the target re-materializes it into v0 per loop. Shared/scoped 'end'
-//      locals scored worse (465). The v0-per-loop alloc only comes from the strength
-//      reduction (form A), which can't carry the D_800417BC symbol -> permuter needed.
-// struct151 *func_1000B1FC(s32 arg0) {
-//     s32 i; struct00 *temp;
-//     i = 0;
-//     do {
-//         if ((D_800417B0[i] != 0) && (arg0 == D_800417B0[i]->unk4)) return D_800417B0[i];
-//         i++;
-//     } while (&D_800417B0[i] < (struct151 **)&D_800417BC);
-//     i = 0;
-//     do {
-//         if (D_800417B0[i] != 0) {
-//             temp = D_800417B0[i]->unk60;
-//             if ((temp != 0) && (arg0 == temp->unk4)) return (struct151 *)temp;
-//         }
-//         i++;
-//     } while ((struct151 **)&D_800417BC != &D_800417B0[i]);
-//     return NULL;
-// }
+struct151 *func_1000B1FC(s32 arg0) {
+    s32 i;
+    struct00 *temp;
+
+    for (i = 0; i < 3; i++) {
+        if ((D_800417B0[i] != 0) && (arg0 == D_800417B0[i]->unk4)) {
+            return D_800417B0[i];
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        if (D_800417B0[i] != 0) {
+            temp = D_800417B0[i]->unk60;
+            if ((temp != 0) && (arg0 == temp->unk4)) {
+                return (struct151 *)temp;
+            }
+        }
+    }
+    return NULL;
+}
+// func_1000B1FC: the old pipeline parked form A at 20 because its loop end relocates as
+// D_800417B0+0xC rather than the alias D_800417BC. Same address, same bytes: the ROM gate
+// passes, so that 20 was a relocation-NAME artifact of the scorer, not a codegen difference.
 
 void func_1000B294(s32 *arg0) {
     struct151 *temp_v0;
@@ -813,7 +809,38 @@ void func_1000DEC4(void)
   while (var_s0 != ((struct137 *) D_80041E58));
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000DF68.s")
+void func_1000DF68(s32 arg0, s32 arg1, s32 arg2) {
+    struct151 *p;
+
+    p = func_1000B1FC(arg0);
+    if (p != NULL) {
+        p->unk4E = arg1;
+        if (arg2 == 1) {
+            p->unk4C = arg1;
+            if (p->unk0 >= 0) {
+                func_1000CC54(p->unk0);
+            }
+        }
+        if (arg2 >= 2) {
+            s32 rate;
+
+            rate = p->unk4C - arg1;
+            if (rate < 0) {
+                rate = -rate;
+            }
+            rate /= arg2;
+            if (rate <= 0) {
+                rate = 2;
+            } else if (rate >= 0x8000) {
+                rate = 0x7FFF;
+            }
+            p->unk50 = rate;
+        } else {
+            p->unk50 = 0x200;
+        }
+    }
+}
+
 
 void func_1000E054(s32 arg0, s32 arg1) {
     struct151 *sp1C;

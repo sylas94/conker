@@ -734,7 +734,7 @@ void func_15133E3C(s32 arg0, u8 arg1) {
     func_15169260(&sp18, 2, arg0, arg1);
 }
 
-s32 func_15133EEC(s32 arg0, u16 arg1, u8 arg2, s32 arg3);
+Gfx *func_15133EEC(Gfx *gfx, u16 arg1, u8 arg2, s32 arg3);
 
 void func_15133E84(s32 arg0, void *arg1, s32 arg2) {
     func_15133EEC(arg0, *(u16 *)((u8 *)arg1 + 0x170), *(u8 *)((u8 *)arg1 + 0x172), *(s32 *)((u8 *)arg1 + 0x174));
@@ -744,7 +744,34 @@ void func_15133EB8(s32 arg0, void *arg1, s32 arg2) {
     func_15133EEC(arg0, *(u16 *)((u8 *)arg1 + 0x174), *(u8 *)((u8 *)arg1 + 0x176), *(s32 *)((u8 *)arg1 + 0x178));
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_15F680/func_15133EEC.s")
+typedef struct {
+    s32 *unk0;
+    u8 pad4[6];
+    u8 unkA;
+    u8 unkB;
+} Entry15133EEC;
+
+extern Entry15133EEC D_80090B60[];
+extern s32 func_1510D0EC(s32, s32 *, s32, s32);
+
+Gfx *func_15133EEC(Gfx *gfx, u16 arg1, u8 arg2, s32 arg3) {
+    s32 data;
+    u8 kind;
+    u8 fmt;
+    Entry15133EEC *e;
+    s32 size;
+
+    e = &D_80090B60[arg1];
+    data = *e->unk0;
+    kind = e->unkA;
+    fmt = e->unkB;
+    data = func_1510D0EC(data, &size, arg3, 0);
+    gSPSegment(gfx++, arg2, data);
+    if (kind == 2) {
+        gSPSegment(gfx++, arg2 + 1, data + size - ((fmt == 1) ? 0x200 : 0x20));
+    }
+    return gfx;
+}
 
 typedef struct {
     u8 unk0[4];

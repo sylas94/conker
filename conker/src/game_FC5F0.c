@@ -260,7 +260,22 @@ s32 func_150CFD84(unsigned char *arg0, unsigned char **arg1) {
     return temp - arg0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_FC5F0/func_150CFDB8.s")
+s32 func_150CFDB8(unsigned char *arg0) {
+    s32 best;
+    unsigned char *end;
+    unsigned char *sp2C;
+
+    best = 0;
+    end = func_150CFD5C(arg0);
+    while (arg0 < end) {
+        s32 v = func_150CFD84(arg0, &sp2C);
+        if (best < v) {
+            best = v;
+        }
+        arg0 = sp2C + 1;
+    }
+    return best;
+}
 
 struct inner150CFE3C {
     char pad0[0x14];

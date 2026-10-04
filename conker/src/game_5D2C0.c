@@ -243,13 +243,49 @@ void func_15030158(Func15030158Arg0 *arg0, s32 arg1) {
     func_10004074(arg0);
 }
 
-s32 func_15030310(void *arg0, s32 arg1, s32 arg2);
+s32 func_15030310(struct127 *arg0, s32 arg1, s32 arg2);
 
 s32 func_150302F0(void *arg0, s32 arg1) {
     return func_15030310(arg0, arg1, 0xFF);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15030310.s")
+struct S15030310 {
+    u8 unk0;
+    u8 pad1[5];
+    u8 unk6;
+    u8 pad7[0x4D];
+    struct S15030310 *unk54;
+};
+
+s32 func_15030310(struct127 *arg0, s32 arg1, s32 arg2) {
+    struct S15030310 *var;
+    s32 ret;
+
+    if (arg0->unique_id == 0) {
+        return 0;
+    }
+    ret = 0;
+    var = (struct S15030310 *)D_800C3EE0;
+    while (var != 0) {
+        struct S15030310 *next = var->unk54;
+
+        if ((var->unk0 == arg0->unique_id) && (var->unk6 == arg1)) {
+            if ((arg2 != 0xFF) && (arg2 != 0)) {
+                arg2--;
+                var = next;
+                continue;
+            } else {
+                ret = 1;
+                func_15030158(var, 0);
+                if (arg2 == 0) {
+                    break;
+                }
+            }
+        }
+        var = next;
+    }
+    return ret;
+}
 
 struct S150303E4 {
     u8 unk0;
@@ -310,7 +346,35 @@ void func_15030D54(void *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5,
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15030E08.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15030F94.s")
+struct S15030F94 {
+    u8 unk0;
+    u8 pad1[2];
+    u8 unk3;
+    u8 pad4[0x50];
+    struct S15030F94 *unk54;
+};
+
+s32 func_150311C4(s32, struct S15030F94 *, struct127 *, s32, s32);
+
+s32 func_15030F94(s32 arg0, struct127 *arg1, s32 arg2, s32 arg3) {
+    struct S15030F94 *var;
+
+    if ((arg1 == NULL) || (arg1->unk1D4 == NULL) || (arg1->unique_id == 0)) {
+        return arg0;
+    }
+    var = (struct S15030F94 *)D_800C3EE0;
+    while (var != NULL) {
+        struct S15030F94 *next = var->unk54;
+
+        if ((var->unk0 != arg1->unique_id) || (var->unk3 == 0)) {
+            var = next;
+            continue;
+        }
+        arg0 = func_150311C4(arg0, var, arg1, arg2, arg3);
+        var = next;
+    }
+    return arg0;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15031070.s")
 

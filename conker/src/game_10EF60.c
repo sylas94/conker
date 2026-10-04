@@ -19,7 +19,9 @@ typedef struct {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_10EF60/func_150E28DC.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_10EF60/func_150E2DA4.s")
+s32 func_150E2DA4(s32 arg0, s32 arg1) {
+    return arg0;
+}
 
 void func_150E1AB0(s32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, u16, s32, s32, s16, s16, s32, u8, s16, s32, s32, u8, f32, f32, f32, f32, f32, f32);
 

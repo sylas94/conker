@@ -820,7 +820,30 @@ ObjRec *func_151438D8(s32 arg0, s32 arg1, u16 arg2, ObjRec *arg3) {
 //     if (*arg0 < arg2) { *arg0 = arg2; }
 //     if (arg3 < *arg1) { *arg1 = arg3; }
 // }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15143D18.s")
+void func_15143D18(s32 *arg0, s32 *arg1, s32 arg2, s32 arg3) {
+    s32 t;
+    s32 t2;
+
+    if (arg3 < arg2) {
+        t = arg2 ^ arg3;
+        t2 = arg3 ^ t;
+        arg3 = t2;
+        arg2 = t ^ t2;
+    }
+    if (*arg1 < *arg0) {
+        t = *arg1 ^ *arg0;
+        *arg0 = t;
+        t2 = *arg1 ^ t;
+        *arg1 = t2;
+        *arg0 = *arg0 ^ t2;
+    }
+    if (*arg0 < arg2) {
+        *arg0 = arg2;
+    }
+    if (arg3 < *arg1) {
+        *arg1 = arg3;
+    }
+}
 s32 func_15143DA8(s32 *arg0, s32 arg1, s32 arg2) {
     s32 **pp = &arg0;
     s32 t;
@@ -987,27 +1010,27 @@ f32 func_15144AA8(s32 arg0) {
 struct17 *func_15144B34(s32 arg0) {
     return (struct17 *)&D_800DBFF0[arg0].unk2F8;
 }
-// NON-MATCHING (score 60, the mov.s is one slot early): same blocker as func_1514672C. The original
-// wrote 2*PI as a float literal, which IDO materialises in its own entry region, so the following
-// block schedules as c.lt.s/mov.s. Reading it as extern D_800A56A4 makes it a plain load inside the
-// block and the scheduler pulls the mov.s up to cover the load-use gap. The literal reproduces the
-// target exactly, but this TU contributes no .rodata to conker.ld, so 6.2831855f would not land at
-// 0x800A56A4. Blocked on per-TU rodata migration.
-// f32 func_15144B68(f32 arg0) {
-//     f32 v = arg0;
-//     if (D_800A56A4 < v) {
-//         do {
-//             v -= D_800A56A4;
-//         } while (D_800A56A4 < v);
-//     }
-//     if (v < 0.0f) {
-//         do {
-//             v += D_800A56A4;
-//         } while (v < 0.0f);
-//     }
-//     return v;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_15144B68.s")
+// Wraps arg0 into [0, D_800A56A4) (2*PI, kept in the shared rodata block as an extern).
+// x is declared in its own block: that -g3 scheduling barrier is what lets the first
+// compare read the argument register before the copy into x (c.lt.s before mov.s).
+extern f32 D_800A56A4;
+
+f32 func_15144B68(f32 arg0) {
+    f32 lim;
+
+    lim = D_800A56A4;
+    {
+        f32 x = arg0;
+
+        while (lim < x) {
+            x -= lim;
+        }
+        while (x < 0.0f) {
+            x += lim;
+        }
+        return x;
+    }
+}
 
 f32 func_15144BC8(f32 arg0) {
     f32 v = arg0;
@@ -1543,20 +1566,20 @@ void func_15146508(struct127 *arg0, struct127 *arg1) {
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514654C.s")
 
-// NON-MATCHING (score 215, one instruction out of order): the original wrote the bounds as float
-// literals (19500.0f / -9500.0f), which IDO hoists to the top of the entry block as constant loads.
-// Referencing them as extern D_800A56C4/D_800A56C8 makes them ordinary memory reads, so the
-// arg0->unk0 load gets scheduled ahead of them. Writing the literals reproduces the order exactly,
-// but this TU contributes no .rodata to conker.ld (it is /DISCARD/ed), so the constants would not
-// land at 0x800A56C4. Blocked on per-TU rodata migration.
-// s32 func_1514672C(struct17 *arg0) {
-//     if ((D_800A56C4 < fabsf(arg0->unk0)) || (D_800A56C4 < fabsf(arg0->unk8)) || (D_800A56C4 < arg0->unk4) ||
-//         (arg0->unk4 < D_800A56C8)) {
-//         return 0;
-//     }
-//     return 1;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16EE20/func_1514672C.s")
+s32 func_1514672C(f32 *arg0) {
+    f32 lim;
+
+    lim = D_800A56C4;
+    {
+        extern f32 D_800A56C8;
+
+        if ((lim < fabsf(arg0[0])) || (lim < fabsf(arg0[2])) || (lim < arg0[1]) ||
+            (arg0[1] < D_800A56C8)) {
+            return 0;
+        }
+    }
+    return 1;
+}
 
 void func_151467A4(f32 *arg0, f32 arg1, f32 *arg2, f32 arg3, f32 arg4, f32 arg5, f32 arg6, f32 *arg7) {
     *arg0 = *arg0 - D_800BE9A4;

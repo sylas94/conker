@@ -95,7 +95,7 @@ s32 func_1507EC38(u8 *src, s32 srcLen, u8 *out, s32 *outLen, u8 *used) {
     return ret;
 }
 
-void func_1507EEB8(s32 arg0, void *arg1);
+void func_1507EEB8(u8 arg0, u8 *arg1);
 
 void func_1507EE58(s32 arg0, void *arg1) {
     func_1507EEB8(*((u8*)&arg0 + 3), arg1);
@@ -106,7 +106,14 @@ void func_1507EE58(s32 arg0, void *arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507EEB8.s")
+void func_1507EEB8(u8 arg0, u8 *arg1) {
+    s32 i;
+
+    for (i = 4; i > 0; i--) {
+        arg1[i] = arg1[i - 1];
+    }
+    arg1[0] = arg0;
+}
 
 void func_1507EEF4(void) {
     u8 *state;
@@ -152,7 +159,30 @@ void func_1507EFA0(s32 c, u8 *arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507EFD0.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AC030/func_1507F454.s")
+extern u8 *D_80086BA0[];
+
+s32 func_1507F454(void) {
+    u8 *state;
+    s32 value;
+    s32 frame;
+
+    state = (u8 *)D_800D154C->unk31C;
+    value = state[0x5C];
+    state += 0x58;
+
+    if (value == 0) {
+        return 1;
+    }
+    state[5]++;
+    frame = *(state[5] + D_80086BA0[value]);
+    if (frame == 0) {
+        state[4] = 0;
+        state[5] = 0;
+        return 1;
+    }
+    return 0;
+}
+
 
 s32 func_1507F4C0(s32 arg0) {
     s32 pad;

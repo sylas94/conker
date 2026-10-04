@@ -1,0 +1,2 @@
+best.c: D780 mism0, D8FC mism0 (C); D180 GLOBAL_ASM (needs block migration to ship, so NOT shippable alone)
+d180_candidate_full.c: all three C; D180 mism=166 (frame/homes exact, 2 delay-slot fills + case-24 a0 move); .rodata 0x230 layout exact

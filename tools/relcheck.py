@@ -37,6 +37,7 @@ USAGE
         <func>      e.g. func_151F2E88
         golden.s    optional; by default it is located under conker/asm/nonmatchings/**/<func>.s
 """
+import io
 import os
 import re
 import subprocess
@@ -86,6 +87,30 @@ def load_symbols():
                         syms.setdefault(nm, a)
                     pending = []
     return syms
+
+
+# Linker-map line:  " .rodata        0x000000008002c080       0x20 build/src/init_2E50.c.o"
+_MAPLINE = re.compile(
+    r"^\s(\.[\w.]+)\s+0x0*([0-9a-f]+)\s+0x[0-9a-f]+\s+(\S+\.o)\s*$", re.M)
+
+
+def load_section_addrs(obj):
+    """-> {section_name: vaddr} for THIS object, read from the linker map.
+
+    Only consulted for local SECTION symbols, which splat's symbol map cannot know
+    about because the address is assigned by conker.ld at link time.
+    """
+    mp = os.path.join(REPO, "conker", "build", "conker.us.map")
+    if not os.path.exists(mp):
+        return {}
+    key = os.path.normpath(os.path.abspath(obj))
+    out = {}
+    for sec, addr, path in _MAPLINE.findall(io.open(mp, encoding="utf-8",
+                                                    errors="replace").read()):
+        full = os.path.normpath(os.path.join(REPO, "conker", path))
+        if full == key:
+            out[sec] = int(addr, 16)
+    return out
 
 
 def main():
@@ -140,6 +165,7 @@ def main():
         raise SystemExit("FAIL -- LENGTH MISMATCH ours=%d gold=%d" % (len(words), len(gold)))
 
     bad, checked, plain, pending_hi = [], 0, 0, {}
+    secs, sec_rows, sec_used = None, set(), {}
     for i, a in enumerate(addrs):
         if a not in rel:
             if words[i] != gold[i]:
@@ -152,6 +178,16 @@ def main():
             mn = re.match(r"^func_([0-9A-F]{8})$", name)
             if mn:
                 syms[name] = int(mn.group(1), 16)
+        if name not in syms and name.startswith("."):
+            # Local section symbol: conker.ld assigns the address, so splat cannot know it.
+            # Resolving it is NOT amnesty -- a file-local object masquerading as a global
+            # still lands at the wrong address and still fails below.
+            if secs is None:
+                secs = load_section_addrs(obj)
+            if name in secs:
+                syms[name] = secs[name]
+                sec_rows.add(i)
+                sec_used[name] = secs[name]
         if name not in syms:
             bad.append((i, a, "symbol %s has NO KNOWN ADDRESS (fail closed)" % name,
                         words[i], gold[i]))
@@ -193,6 +229,12 @@ def main():
     print("unrelocated words equal:  %d" % plain)
     print("relocated fields checked: %d" % checked)
     print("unpaired HI16 left over:  %d" % leftover)
+    if sec_rows:
+        print("section-relative rows:    %d resolved via conker.us.map (%s)"
+              % (len(sec_rows), ", ".join("%s=0x%08X" % (n, v)
+                                          for n, v in sorted(sec_used.items()))))
+        print("                          these verify the REFERENCE, not the PLACEMENT --")
+        print("                          the map is our own link. ROM gate remains authority.")
     if leftover:
         bad.append((-1, 0, "unpaired HI16 relocations remain", 0, 0))
     if bad:

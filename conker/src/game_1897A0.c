@@ -45,9 +45,55 @@ void *func_1515C2F0(Struct1515C2F0Arg0 *arg0, s32 arg1, void *arg2, s32 arg3, u8
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515C388.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515C534.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515C6F4.s")
-// PERMUTER CANDIDATE (best 215): logic byte-identical (element base + unk94 cached), only
-// register renames remain (unk94 vs element-base register swap, -1 temp).
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1897A0/func_1515CF9C.s")
+
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+} Vec1515CF9C;
+
+typedef struct {
+    Vec1515CF9C pos;
+    f32 w;
+} Ent1515CF9C;
+
+typedef struct {
+    u8 pad0[0x10];
+    Vec1515CF9C unk10;
+    u8 pad1C[0x25 - 0x1C];
+    u8 unk25;
+    u8 pad26[0x2C - 0x26];
+    s8 unk2C;
+    u8 pad2D;
+    s8 unk2E;
+    u8 pad2F[0x94 - 0x2F];
+    Ent1515CF9C *unk94;
+} Obj1515CF9C;
+
+typedef struct {
+    u8 pad0[0x8];
+    f32 unk8;
+    u8 padC[0x39 - 0xC];
+    s8 unk39;
+} Arg1515CF9C;
+
+s32 func_1515CF9C(Obj1515CF9C *arg0, Arg1515CF9C *arg1) {
+    if (arg0->unk2C < arg0->unk25 - 1) {
+        Ent1515CF9C *ents;
+
+        ents = arg0->unk94;
+        arg0->unk2C++;
+        ents[arg0->unk2E].pos = arg0->unk10;
+        ents[arg0->unk2E].w = arg1->unk8;
+        arg0->unk2E++;
+        if (arg0->unk2E == arg0->unk25) {
+            arg0->unk2E = 0;
+        }
+    } else {
+        arg1->unk39 = -1;
+    }
+    return 1;
+}
 
 typedef struct {
     char pad0[0x25];

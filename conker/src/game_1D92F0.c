@@ -381,11 +381,79 @@ void func_151AE264(GameObjectFxOwner *arg0) {
     arg0->field_0x31C->field_0x9C = 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D92F0/func_151AE2BC.s")
+typedef struct {
+    u8 pad0[4];
+    f32 unk4;
+    u8 pad8[0x10];
+} Key151AE2BC;
+
+typedef struct {
+    u8 pad0[0x38];
+    Key151AE2BC *unk38;
+    u8 pad3C[6];
+    u8 unk42;
+} Track151AE2BC;
+
+void func_151AE2BC(f32 *arg0, Track151AE2BC *arg1, s32 arg2, f32 arg3) {
+    s32 n;
+    s32 i;
+    f32 d;
+
+    n = arg1->unk42;
+    for (i = 0; i < n - 1; i++) {
+        if (arg3 <= arg1->unk38[i].unk4) {
+            break;
+        }
+    }
+    if (i >= n - 2) {
+        *arg0 = 1.0f;
+        return;
+    }
+    if (i == 0) {
+        *arg0 = 0.0f;
+        return;
+    }
+    {
+        Key151AE2BC *k = &arg1->unk38[i];
+
+        d = k->unk4 - k[-1].unk4;
+        d = (d != 0.0f) ? (arg3 - k[-1].unk4) / d : 0.0f;
+    }
+    *arg0 = (f32)(i - 1) / (f32)(n - 3) + d / (f32)(n - 1);
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1D92F0/func_151AE3A8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D92F0/func_151AE590.s")
+typedef struct Node151AE590 {
+    u8 pad0[0x8];
+    struct Node151AE590 *next;
+    u8 padC[0x4];
+    u8 unk10;
+} Node151AE590;
+
+extern Node151AE590 *D_800DCE50[][104];
+extern s32 D_800A9270[];
+
+Node151AE590 *func_151AE590(u8 arg0) {
+    u8 i;
+    u8 j;
+    Node151AE590 *n;
+
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 2; j++) {
+            n = D_800DCE50[j][D_800A9270[i]];
+            while (n != NULL) {
+                Node151AE590 *next = n->next;
+
+                if (n->unk10 == arg0) {
+                    return n;
+                }
+                n = next;
+            }
+        }
+    }
+    return NULL;
+}
 
 void func_151AE640(s32 *arg0, s32 *arg1, u8 arg2)
 {

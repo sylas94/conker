@@ -1,3 +1,26 @@
+/* ############################################################################
+ * RULING 2026-08-21 -- DO NOT SHIP THIS. DO NOT RE-LITIGATE IT.
+ *
+ * This function reaches SCORE 0 with a byte-identical instruction stream, and a
+ * 16-byte `s32 pad[4]` would close it.  It was put to the project owner as an
+ * explicit policy question, with the precedent laid out (three ALREADY-SHIPPED
+ * functions carry exactly this construct: game_19A8B0/func_1516F024 with a
+ * documented rationale comment, game_10B7D0/func_150DE458, and
+ * game_57FA0/func_1502B9B4 as pad[3]+pad0).
+ *
+ * THE RULING WAS: leave it parked until the bytes can be NAMED.
+ *
+ * So the bar for this function is evidence that names the reservation -- not
+ * precedent, not a load-bearing test, not corpus base rates.  A future wave that
+ * rediscovers the pad[4] spelling has NOT found something new; it has found the
+ * thing that was already declined.
+ *
+ * WHAT WOULD ACTUALLY CLOSE IT: a match on any of func_15112A80, func_151135C4,
+ * func_15188F84, func_150F2A60, func_150F34F4 or func_150BDB70 -- the only other
+ * code written against these tables, and the only realistic source of a naming
+ * for the reserved block.
+ * ##########################################################################*/
+
 /* ============================================================================
  * func_15113218   (game_13D350.c, 247 instructions)
  *
@@ -142,6 +165,172 @@
  * the same loop shape and MORE of them live, or a matching function elsewhere
  * that spills one of them). Then swap the probes for the real names. Nothing
  * else about this function is in doubt.
+ *
+ * ---------------------------------------------------------------------------
+ * THIRD PASS 2026-08-23 -- TWO HYPOTHESES KILLED, AND THE QUESTION IS SHARPER
+ * ---------------------------------------------------------------------------
+ * 1. IT IS NOT A BUILD-FLAG PROBLEM. -g3 was shown today to change codegen enough to block
+ *    three other functions entirely (game_21C4F0 and game_21D420 shipped byte-perfect once
+ *    their TUs were pinned to plain -O2), so it was worth asking whether the 20 bytes are
+ *    compensating for the wrong flags. They are not. Scored with and without the probes at
+ *    every usable flag set:
+ *        with probes     -O2 -g3 = 0    -O2 = 20    -O1 = 783   -g = 965
+ *        without probes  -O2 -g3 = 26   -O2 = 45    -O1 = 783   -g = 965
+ *    No flag set matches the honest source. -O2 -g3 is correct for this TU.
+ *
+ * 2. THE SHAPE OF THE MISSING LOCALS IS UNDETERMINED, AND CANNOT BE MEASURED.
+ *    It is tempting to read the probe slots (0x7C, then 0x6C/0x68/0x64/0x60) as "one 16-byte
+ *    object plus one word", since the last four are contiguous. THAT REASONING IS CIRCULAR:
+ *    those addresses are where IDO put THIS FILE'S probes, not evidence about golden. Measured
+ *    directly, every one of these scores 0 at the same frame -0xD8:
+ *        5 scalars | 1 word + f32[4] | 1 word + s32[4] | 1 word + f32[2][2] | 1 word + f32[5]
+ *    and both of these score 26 at -0xD0:
+ *        f32[4] alone | 1 word + f32[3]
+ *    So the ONLY thing that matters is that the declared locals total enough bytes to reach
+ *    frame -0xD8. Any filler of the right size works, which is precisely why filler is banned
+ *    and why the score of 0 proves nothing about the source.
+ *
+ * WHAT WOULD ACTUALLY SETTLE IT: not another measurement. The residue is 20-24 bytes of
+ * declared locals whose identity the emitted code cannot reveal, because they are never read
+ * or written. Only understanding what this function was written to compute -- from its
+ * callers, its siblings, or the data it touches -- can name them. Until then the pragma stays.
+ *
+ * ========================================================================== */
+
+/* ============================================================================
+ * SECOND PASS ON THE OPEN QUESTION  --  VERDICT: STILL NOT IDENTIFIED
+ * (nothing above is retracted; everything below is new measurement.)
+ *
+ * I could NOT name the unexplained words from evidence, so the pragma stays.
+ * But three things about the question are now settled that were not before,
+ * and the budget is SMALLER than the header above states.
+ *
+ * ---------------------------------------------------------------------------
+ * 1. THE FRAME LAW, MEASURED -- the overhead is 92 and is NOT negotiable
+ * ---------------------------------------------------------------------------
+ * Under -O2 -g3 IDO gives EVERY declared automatic a stack home whether or not
+ * it is ever spilled, so framesize reads out the declared-local total directly:
+ *
+ *     framesize = roundup8( OVERHEAD + declared_local_bytes )
+ *
+ * with the locals packed TOP-DOWN from framesize (first declared = highest).
+ * Measured by sweeping trailing `s32 pad;` declarations (0..9) on this body:
+ *
+ *     declared L :  100  104  108  112  116  120  124  128  132  136
+ *     framesize  : 0xC0 0xC8 0xC8 0xD0 0xD0 0xD8 0xD8 0xE0 0xE0 0xE8
+ *
+ * => OVERHEAD = 92 exactly, and framesize 0xD8 pins L to {120, 124}.
+ *    (NOTE: the frame CANNOT distinguish 120 from 124 -- an 8-byte rounding
+ *    slack is real. Both score 0. So the tail is "16 or 20 bytes", not "20".)
+ *
+ * OVERHEAD 92 decomposes as, measured against standalone IDO probes:
+ *      0x00-0x0F  argument build      16   (= roundup8(max(16, nargs*4)))
+ *      0x10-0x17  FP-save-area pad     8   (appears IFF any $f2x is saved;
+ *                                          probes with no FP save have GPRs
+ *                                          starting at 0x10 and no hole)
+ *      0x18-0x1F  $f20                 8
+ *      0x20-0x47  s0..s8, ra          40   (ra at the TOP of the GPR block)
+ *      0x48-0x5B  compiler temp/spill 20   (allocated, NEVER referenced)
+ *
+ * The 20-byte temp area at 0x48 is NOT a lever. It is invariant across six
+ * separate body mutations -- deleting the func_150442C0 call, the three
+ * trunc.w.s/sh writebacks, the second func_150A7CB0, the three mtx[3][*]
+ * stores, the func_1511490C call, and the whole `type < 3` arm -- overhead
+ * stayed 92 in all six. It only moves when the emitted CODE changes (gutting
+ * the body to a bare double loop drops it to 80). Since a score-0 candidate by
+ * definition emits golden's code, its overhead is 92. There is no honest
+ * spelling that buys frame bytes back from the temp area.
+ *
+ * ---------------------------------------------------------------------------
+ * 2. THE SLOT MAP IS FULLY PINNED -- and the budget is 16 bytes, not 20
+ * ---------------------------------------------------------------------------
+ * Verified by scoring layout variants in-file (all reported as fastscore mism):
+ *
+ *   [3 words] [mtx 64B @0x8C] [1 word @0x88] [i @0x84] [1 word @0x80]
+ *   [v @0x70] [TAIL 16 or 20 bytes @0x60..0x6F/0x5C..0x6F]
+ *
+ *   - `i` MUST land at sp+0x84 (it is the only spilled scalar). Promoting i/k
+ *     above mtx and demoting obj/pos scores 6, not 0.
+ *   - the ORDER of the three words above mtx is free: type/obj/pos and
+ *     obj/pos/type both score 0. The binary does not determine it.
+ *   - THE IMPROVEMENT: spelling the offset vector `f32 v[4]` instead of
+ *     `f32 v[3]` scores 0 (verified) and ABSORBS the stray 0x7C word. That
+ *     leaves all SIX named scalars (type/obj/pos/actor/i/k) sitting on their
+ *     original homes with no dead scalar wedged among them, and reduces the
+ *     unnamed part to ONE CONTIGUOUS TRAILING BLOCK of 16 bytes at 0x60-0x6F:
+ *
+ *         s32 type; Obj *obj; Pos *pos; f32 mtx[4][4];
+ *         Actor *actor; s32 i; s32 k; f32 v[4];   <- w unused, 4-wide vector
+ *         s32 pad[4];                             <- 16 B, sp+0x60..0x6F
+ *
+ *     Measured score-0 spellings: v4+pad[4], v4+pad[5], v4+f32 w[4],
+ *     v4+f32 w[3]+s32, v3+word+pad[4], v3+word+pad[5]. All 0. The instruction
+ *     stream cannot tell them apart; only the total 120/124 is observable.
+ *
+ * ---------------------------------------------------------------------------
+ * 3. CORPUS BASE RATE FOR THIS EXACT SITUATION (full scan, this pass)
+ * ---------------------------------------------------------------------------
+ * Scanned every leading declaration block in conker/src (1616 matched
+ * functions with a parseable block; parser handles `T (*name)[4]` forms):
+ *      53 matched functions carry >=1 declared-but-never-referenced local
+ *      294 dead bytes in total
+ *      LARGEST DEAD BLOCK ANYWHERE = 16 BYTES, and it occurs three times:
+ *        game_19A8B0/func_1516F024   s32 pad[4];   (declared FIRST)
+ *        game_10B7D0/func_150DE458   s32 pad[4];   (declared FIRST)
+ *        game_57FA0 /func_1502B9B4   s32 pad[3]; + s32 pad0;
+ *      next: game_1FA770/func_151CD3CC  s32 unused[3];  (12 B)
+ * Two of them ship a standard rationale comment, verbatim from game_19A8B0:
+ *      "Reserves the 16 bytes at the top of the -g3 stack frame (sp+0x58..0x67)
+ *       that the shipped build allocated but never referenced.  Declared first
+ *       so the remaining locals land on their original stack homes."
+ * So the project ALREADY ships 16-byte unnamed reservations, with precedent and
+ * a comment convention -- the header above understated the precedent (it knew
+ * only func_150FDDA0's single `s32 unused;`). A 16-byte tail here would TIE the
+ * corpus record; a 20-byte tail would EXCEED it. That is the honest weight:
+ * precedent exists at exactly this size, but no evidence NAMES these bytes, and
+ * "16 vs 20" is not even decidable from the binary. Ranking-tie territory.
+ *
+ * ---------------------------------------------------------------------------
+ * 4. RULED OUT THIS PASS, WITH REASONS
+ * ---------------------------------------------------------------------------
+ *  - No ROM duplicate to difference against. Only four functions in the whole
+ *    corpus touch D_800DBEE8 (func_15112A80, this one, func_151135C4,
+ *    game_1B5CC0/func_15188F84) and only this one also calls guMtxF2L. The
+ *    three other users of the -100*0x32C actor bias 0xFFFEC2D0
+ *    (game_11FF10/func_150F2A60, /func_150F34F4, game_EB020/func_150BDB70)
+ *    are all still pragmas, so none can be read for a declaration template.
+ *  - Nearest MATCHED relatives declare no such block, so no twin calibrates it:
+ *      game_138520/func_1510B690 -- same `for (i = 0; i <= D_80082FA0; i++)`
+ *        chunk loop + guMtxF2L; declares only `s32 i; f32 sp4C[4][4];
+ *        f32 (*d9d10)[4][4];`  no pad.
+ *      game_185560/func_1515858C, /func_15158920 -- matrix build + guMtxF2L;
+ *        func_15158920 does carry ONE dead word, `f32 (*unused)[4];`, wedged
+ *        between two live locals. Closest shape found; one word, not four.
+ *      in-TU: func_15114348 (dx,dy,dz,ox,oy,oz,mtx,tmp,axes[3][3]),
+ *        func_1511490C / func_151148A8 (one f32[4][4] each) -- all fully used.
+ *  - Structural rewrites that would DISSOLVE the tail all break the pinned map:
+ *      bigger mtx ([5][4] or [4][5]) moves mtx[3][0] off 0xBC;
+ *      putting the pad above mtx moves mtx off 0x8C;
+ *      `f32 v[8]`/`f32 v[2][4]` at 0x60 would fit the arithmetic exactly (used
+ *        elements land on 0x70/0x74/0x78) but requires the code to index
+ *        v[4..6] / v[1][0..2] for no reason -- rejected as invention, not
+ *        evidence;
+ *      `f32 v[2][3]` or three s16 write-back locals mis-align v off 0x70.
+ *  - The three floats are NOT compiler arg-homing temps: the temp area lives at
+ *    0x48-0x5B, below the declared locals, and 0x70/0x74/0x78 sit inside the
+ *    declared-local region. The MEMORY-RESIDENT VECTOR law above stands.
+ *
+ * ---------------------------------------------------------------------------
+ * 5. WHAT WOULD ACTUALLY CLOSE IT
+ * ---------------------------------------------------------------------------
+ *  (a) Any of func_15112A80 / func_151135C4 / func_15188F84 / func_150F2A60 /
+ *      func_150F34F4 / func_150BDB70 reaching a match: they are the only code
+ *      in the ROM written against the same tables, and a declaration template
+ *      with a live 16-byte local in that family would name this block.
+ *  (b) A lead ruling that a documented 16-byte `s32 pad[4]` reservation is in
+ *      policy here as it already is in three shipped functions. That is a
+ *      POLICY call, not a decompilation finding, so I did not take it.
+ * Everything else about this function remains settled; only the tail is open.
  * ========================================================================== */
 
 /* ---- header block: paste above the pragma in src/game_13D350.c ---- */
@@ -200,6 +389,27 @@ struct Struct1511490C;
 void func_1511490C(f32 arg0[4][4], struct Struct1511490C *arg1);
 
 /* ---- the function: SCORE 0 exactly as written ---- */
+
+/* ALTERNATIVE SPELLING found on the second pass -- ALSO SCORE 0, and strictly
+ * better evidence-wise: every named local sits on its original home, no dead
+ * scalar is wedged between live ones, and the unnamed part collapses to ONE
+ * contiguous 16-byte trailing block (sp+0x60..0x6F) -- the same size and shape
+ * the project already ships in game_19A8B0/func_1516F024 and
+ * game_10B7D0/func_150DE458. Left COMMENTED because naming those 16 bytes is
+ * still unproven; swap it in only on a lead ruling.
+ *
+ *     s32 type;
+ *     Struct15113218Obj *obj;
+ *     Struct15113218Pos *pos;
+ *     f32 mtx[4][4];
+ *     Struct15113218Actor *actor;
+ *     s32 i;
+ *     s32 k;
+ *     f32 v[4];      -- 0x70..0x7F, w component unused
+ *     s32 pad[4];    -- 0x60..0x6F, allocated by the shipped build, never referenced
+ *
+ * (function body identical to the one below, unchanged.)
+ */
 
 void func_15113218(void) {
     s32 type;

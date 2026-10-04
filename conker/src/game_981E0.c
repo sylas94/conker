@@ -2105,7 +2105,24 @@ struct127 *func_150721E8(struct127 *arg0) {
     return func_15072208(arg0, 0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_15072208.s")
+struct127 *func_15072208(struct127 *arg0, s32 arg1) {
+    s32 idx;
+    s32 count;
+    s32 i;
+
+    idx = (arg0 - D_800CC2D0) + 1;
+    count = 0;
+    for (i = 0; i < 25; i++) {
+        if (idx == D_800CC2D0[i].unk65) {
+            if (count == arg1) {
+                return &D_800CC2D0[i];
+            }
+            count++;
+        }
+    }
+    return NULL;
+}
+
 
 void func_150722F0(void) {
     struct127 *temp_v0 = func_150721E8(D_800D154C);

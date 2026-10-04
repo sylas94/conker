@@ -122,7 +122,38 @@ void func_150E3514(Game1104D0EffectInstance *arg0) {
     func_1516972C((struct102 *)arg0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1104D0/func_150E35DC.s")
+extern u8 D_800DCE50[];
+
+typedef struct Node150E35DC {
+    u8 pad0[0x8];
+    struct Node150E35DC *unk8;
+    u8 padC[0x3C];
+    u8 unk48;
+} Node150E35DC;
+
+void func_150E35DC(s32 arg0) {
+    s32 i;
+    Node150E35DC *node;
+
+    arg0--;
+    for (i = 0; i != 2; i++) {
+        D_800DD190++;
+        node = ((Node150E35DC *(*)[104])D_800DCE50)[i][39];
+        while (node != NULL) {
+            *(Node150E35DC **)((u8 *)D_800DD198 + (D_800DD190 << 2)) = node->unk8;
+            if (arg0 == -1 || arg0 == node->unk48) {
+                func_150E3514((Game1104D0EffectInstance *)node);
+            }
+            node = *(Node150E35DC **)((u8 *)D_800DD198 + (D_800DD190 << 2));
+        }
+        {
+            extern s8 D_800DD190;
+
+            D_800DD190--;
+        }
+    }
+}
+
 
 void func_150E36BC(s32 arg0, s32 *arg1, s32 *arg2, s32 *arg3) {
     Game1104D0EffectInstance *temp;

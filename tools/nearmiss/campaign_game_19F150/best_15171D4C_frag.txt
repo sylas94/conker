@@ -1,0 +1,26 @@
+s32 func_15172B20(void *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, s32 arg5, s32 arg6, u8 arg7);
+
+void func_15171D4C(f32 arg0, f32 arg1, f32 arg2, s16 arg3, u16 arg4, u8 arg5, f32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10, s32 arg11, u8 arg12, s32 arg13) {
+    struct Obj15171CA0 *obj;
+
+    obj = func_15171CA0(arg3, arg4, arg5, arg9, arg10, arg11, arg12, arg13);
+    if (obj != NULL) {
+        if (!(arg9 & 2)) {
+            if (func_15172B20((u8 *)obj + 0x10, arg0, arg1, arg2, arg6, arg7, arg8, D_8008CA4C[obj->unk58]->unk6) == 0) {
+                func_1516972C((struct102 *)obj);
+            }
+        } else {
+            f32 size = arg8;
+
+            obj->vtx[0].v.ob[1] = obj->vtx[1].v.ob[1] = obj->vtx[2].v.ob[1] = obj->vtx[3].v.ob[1] = arg1;
+            obj->vtx[0].v.ob[0] = obj->vtx[3].v.ob[0] = arg0 - size;
+            obj->vtx[0].v.tc[0] = obj->vtx[3].v.tc[0] = 0x2000;
+            obj->vtx[1].v.ob[0] = obj->vtx[2].v.ob[0] = size + arg0;
+            obj->vtx[0].v.ob[2] = obj->vtx[1].v.ob[2] = arg2 - size;
+            obj->vtx[2].v.ob[2] = obj->vtx[3].v.ob[2] = size + arg2;
+            obj->vtx[0].v.tc[1] = obj->vtx[1].v.tc[1] = 0x2000;
+            obj->vtx[1].v.tc[0] = obj->vtx[2].v.tc[0] = (D_8008CA4C[arg5]->unk6 + 0x100) << 5;
+            obj->vtx[2].v.tc[1] = obj->vtx[3].v.tc[1] = (D_8008CA4C[arg5]->unk8 + 0x100) << 5;
+        }
+    }
+}

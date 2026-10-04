@@ -88,7 +88,42 @@ void func_1512B100(struct108 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_157840/func_1512B1B8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_157840/func_1512B53C.s")
+/* struct108 view: the header types unk5FC as u16 but this function reads it with lh. */
+typedef struct {
+    u8 pad0[4];
+    f32 unk4;
+    u8 pad8[0x178];
+} Rec1512B53C;
+
+typedef struct {
+    u8 pad0[0x23D];
+    u8 unk23D;
+    u8 pad23E[0x5F8 - 0x23E];
+    s16 unk5F8;
+    u8 pad5FA[2];
+    s16 unk5FC;
+    u8 pad5FE[0x60C - 0x5FE];
+    f32 unk60C;
+    u8 pad610[0x8BC - 0x610];
+    u16 *unk8BC;
+} Obj1512B53C;
+
+
+s32 func_1512B53C(Obj1512B53C *arg0) {
+    if (arg0->unk5FC != 0) {
+        s32 i;
+
+        arg0->unk5F8 = 1;
+        for (i = 0; i < ((Rec1512B53C *)D_800BE628)[arg0->unk23D].unk4; i++) {
+            arg0->unk8BC[i] = 0xFFFC;
+        }
+        arg0->unk60C = 0.0f;
+        arg0->unk5FC--;
+        return 1;
+    }
+    return 0;
+}
+
 
 struct Struct1512B5FC {
     u8 unk0;

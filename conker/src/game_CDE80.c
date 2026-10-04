@@ -216,7 +216,22 @@ void func_150A278C(u8 *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_CDE80/func_150A2864.s")
+extern u64 D_800D30F0[][3];
+
+void func_150A2864(u32 arg0, s32 arg1) {
+    s32 i;
+
+    arg0 &= 0xFFF;
+    if (arg0 < (u32)D_800D3094) {
+        (*(ObjRec **)&D_800D3098)[arg0].unk14 = arg1;
+    }
+    if (arg1 == 1) {
+        for (i = 0; i < 0x10; i++) {
+            D_800D30F0[i][arg0 >> 6] &= ~(1ULL << (arg0 & 0x3F));
+        }
+    }
+}
+
 
 void func_150A2940(s32 arg0, s32 arg1, s32 arg2) {
     typedef u8 entry[0x34];
@@ -256,7 +271,25 @@ s32 func_150A2CA4(u32 arg0) {
     return -1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_CDE80/func_150A2D84.s")
+s32 func_150A2D84(s32 a0, s32 a1) {
+    struct108 *p;
+    u8 sp18[0x32C];
+
+    p = &D_800DBFF0[a0];
+    a1 &= 0xFFF;
+    if ((u32)D_800D3094 < (u32)a1) {
+        return 1;
+    }
+    *(f32 *)&sp18[0x14] = p->unk2F8;
+    *(f32 *)&sp18[0x18] = p->unk2FC;
+    *(f32 *)&sp18[0x1C] = p->unk300;
+    *(f32 *)&sp18[0x180] = *(f32 *)&sp18[0x18];
+    *(f32 *)&sp18[0x2C] = p->unk304;
+    *(f32 *)&sp18[0x30] = p->unk308;
+    *(f32 *)&sp18[0x34] = p->unk30C;
+    return func_150A1DA0(sp18, (struct178 *)&D_800D3098[a1], 0);
+}
+
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_CDE80/func_150A2E4C.s")
 

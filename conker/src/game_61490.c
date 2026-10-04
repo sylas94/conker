@@ -71,7 +71,34 @@ void func_150345E4(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_61490/func_15034728.s")
+extern s32 func_1502DB20(u8);
+
+void func_15034728(struct127 *arg0) {
+    s32 i;
+    s32 j;
+    s32 k;
+    s32 n;
+    u8 *m;
+
+    if (arg0->unk1D4 != NULL && arg0->unk9C != 0) {
+        n = func_1502DB20(arg0->id) - 1;
+        m = (u8 *)arg0->unk1D4;
+        i = 31;
+        if (n < 31) {
+            i = n;
+        }
+        for (; i >= 0; i--) {
+            if (arg0->unk9C & (1 << i)) {
+                for (j = 0; j < 3; j++) {
+                    for (k = 0; k < 3; k++) {
+                        ((f32 *)((i << 6) + m + (j << 4)))[k] = 0.0f;
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 extern void func_15034728(struct127 *);
 

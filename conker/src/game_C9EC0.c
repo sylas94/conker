@@ -93,7 +93,23 @@ s32 func_1509CB68(void) {
     return count;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_C9EC0/func_1509CBD4.s")
+extern GameC9EC0Struct D_8008743C[];
+
+s32 func_1509CBD4(s32 arg0) {
+    u16 *p;
+    s32 ret;
+    s32 i;
+
+    p = (u16 *)D_8008743C[arg0].unk0;
+    for (i = 0; p[i] != 0xFFFF; i++) {
+        ret = func_1509CBD4(p[i]);
+        if (!(((u8 *)D_800D2E4C)[p[i] >> 3] & (1 << (p[i] & 7))) || ret == 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 
 extern void func_1509CE64(void *, void *);
 extern GameC9EC0Struct D_8008743C[];
@@ -134,7 +150,20 @@ s32 func_1509CCF4(s32 arg0)
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_C9EC0/func_1509CDDC.s")
+void func_1509CDDC(s32 arg0) {
+    s32 i;
+    s32 total;
+
+    func_1509CCF4(arg0);
+    do {
+        total = 0;
+        for (i = 0; i != 0xCC; i++) {
+            if ((*(u8 (*)[0xF0])&D_800D2E70)[i] == 3) {
+                total += func_1509CCF4(i);
+            }
+        }
+    } while (total != 0);
+}
 
 void func_1509CE64(void *arg0, void *arg1) {
     u16 *p;

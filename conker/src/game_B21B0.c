@@ -6,23 +6,23 @@
 extern u8 D_8009D954[];
 extern u8 *D_80087240[];
 
-// PERMUTER CANDIDATE: func_15084D00 best 855 (algorithm + non-unrolled single-back-edge
-// loop are correct). Residual = LICM hoisting the %hi(D_80087240) base out of the outer
-// loop (target recomputes `lui a3,%hi; addu a3,a3,i*4; lw a3,%lo(a3)` inline each iter) plus
-// register allocation cascade (count a0<->a2, j swap, one extra key copy). Key structural
-// insights: the inner search loop MUST be a goto/while(1) form (a counted `for`/do-while gets
-// 4x loop-unrolled by IDO -O2 → 4170); hoisting `j = 0` above the `if (count > 0)` dropped
-// 1495->855. Reconstruction (needs `extern u8 D_8009D954[]; extern u8 *D_80087240[];`):
-//   u8 func_15084D00(struct127 *arg0) {
-//     u8 key = arg0->id; s32 i, j, count; u8 *ptr, *p, b;
-//     for (i = 0; i != 7; i++) {
-//       count = D_8009D954[i]; j = 0;
-//       if (count > 0) { ptr = D_80087240[i]; p = ptr;
-//         loop: b = *p; j++; if (key == b) return ptr[0]; p++; if (j < count) goto loop; }
-//     }
-//     return key;
-//   }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B21B0/func_15084D00.s")
+/* Looks arg0->id up in the 7 rows of D_80087240 (row lengths in D_8009D954) and returns
+ * the first entry of the row that contains it, or the id itself when no row does.
+ * Same search as func_1503D5F0 (game_6A3D0). */
+s32 func_15084D00(struct127 *arg0) {
+    s32 key = arg0->id;
+    s32 i;
+    s32 j;
+
+    for (i = 0; i < 7; i++) {
+        for (j = 0; j < D_8009D954[i]; j++) {
+            if (key == D_80087240[i][j]) {
+                return D_80087240[i][0];
+            }
+        }
+    }
+    return key;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B21B0/func_15084D70.s")
 
