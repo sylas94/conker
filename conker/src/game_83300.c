@@ -345,25 +345,38 @@ s32 func_1505693C(struct127 *arg0, s32 arg1) {
     return 0;
 }
 
-// PERMUTER CANDIDATE best 3463 (structural match; IDO swaps v0<->v1 for result vs row-pointer and
-// keeps the row element pointer live across w rather than recomputing -> arg0 spills to s0/frame).
-// typedef struct { u8 b[0xA]; } Row56A00;
-// u8 func_15056A00(struct127 *arg0, u8 arg1, u8 arg2) {
-//     u8 v0; u16 w;
-//     v0 = 0;
-//     if (((Row56A00 *) D_80099A3C)[arg2].b[7] < arg1) v0 = 5;
-//     else if (((Row56A00 *) D_80099A3C)[arg2].b[2] < arg1) v0 = 2;
-//     w = arg0->unk76;
-//     if (((arg0->unk78 - w) & 0x8000) != 0) v0 += 3; else v0 += 4;
-//     if (((Row56A00 *) D_80099A3C)[arg2].b[v0] == 0xFF) return v0;
-//     arg0->unk218 = (struct216 *) ((s32) arg0->unk218 - 5);
-//     arg0->unk21C = 0x4E20; arg0->unk223 = 0xD; arg0->unk44 = 0.0f;
-//     arg0->unkF4 &= ~0xE; arg0->unkF4 |= 4;
-//     arg0->unk78 = w; arg0->unk7A = w; arg0->unk138 = 0;
-//     arg0->unk244 = ((Row56A00 *) D_80099A3C)[arg2].b[v0];
-//     return v0;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15056A00.s")
+/* D_80099A3C is really u8[][10] (variables.h declares s16[]). Neither caller reads a return value. */
+void func_15056A00(struct127 *arg0, u8 arg1, u8 arg2) {
+    u8 sel;
+    u16 w;
+    u8 *p;
+
+    sel = 0;
+    if (((u8 (*)[10])D_80099A3C)[arg2][7] < arg1) {
+        sel = 5;
+    } else if (((u8 (*)[10])D_80099A3C)[arg2][2] < arg1) {
+        sel = 2;
+    }
+    w = arg0->unk76;
+    if ((arg0->unk78 - w) & 0x8000) {
+        sel += 3;
+    } else {
+        sel += 4;
+    }
+    p = &((u8 (*)[10])D_80099A3C)[arg2][sel];
+    if (*p != 0xFF) {
+        arg0->unk218 = (struct216 *)((s32)arg0->unk218 - 5);
+        arg0->unk21C = 0x4E20;
+        arg0->unk223 = 0xD;
+        arg0->unk44 = 0.0f;
+        arg0->unk244 = *p;
+        arg0->unkF4 &= ~0xE;
+        arg0->unkF4 |= 4;
+        arg0->unk78 = w;
+        arg0->unk7A = w;
+        arg0->unk138 = 0;
+    }
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_15056B08.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505841C.s")
 // NON-MATCHING: JUSTREG

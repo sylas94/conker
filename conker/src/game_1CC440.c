@@ -515,7 +515,62 @@ void func_151A1EE8(struct Src151A1EE8 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1CC440/func_151A24A8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1CC440/func_151A25E0.s")
+typedef struct Fade151A25E0 {
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+    s16 unk8;
+    s16 unkA;
+    s16 unkC;
+    s16 unkE;
+    s16 unk10;
+    s16 unk12;
+    s16 unk14;
+    s16 unk16;
+    s16 unk18;
+    s16 unk1A;
+} Fade151A25E0;
+
+typedef struct Obj151A25E0 {
+    u8 pad0[0x32];
+    s16 unk32;
+    s16 unk34;
+    s16 unk36;
+    s16 unk38;
+    u8 pad3A[0x5];
+    u8 unk3F;
+    u8 unk40;
+    u8 unk41;
+    u8 unk42;
+    u8 pad43[0xD];
+    Fade151A25E0 unk50;
+} Obj151A25E0;
+
+void func_151A25E0(Obj151A25E0 *arg0) {
+    Fade151A25E0 *s = &arg0->unk50;
+
+    if (arg0->unk38 > s->unk4) {
+        arg0->unk3F = (s->unk2 - arg0->unk38) * s->unk0;
+    }
+    if (arg0->unk38 > s->unkA) {
+        arg0->unk34 = arg0->unk36 = (s->unk8 - arg0->unk38) * s->unk6;
+    }
+    if (arg0->unk38 < s->unk10) {
+        arg0->unk3F = arg0->unk38 * s->unk12;
+    }
+    if (arg0->unk38 < s->unk14) {
+        s16 d = s->unk16 * D_800BE9E4;
+
+        arg0->unk34 += d;
+        arg0->unk36 += d;
+    }
+    if (arg0->unk38 < s->unk18) {
+        arg0->unk32 = s->unk1A;
+        s->unk18 = -9999;
+    }
+    arg0->unk40 = arg0->unk41 = arg0->unk42 = arg0->unk38 * s->unkE;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1CC440/func_151A26EC.s")
 

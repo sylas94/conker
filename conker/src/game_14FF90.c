@@ -293,29 +293,28 @@ void func_15122AE0(void) {
 //     }
 // }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14FF90/func_15123070.s")
-// NON-MATCHING: 1 missing lui
-// void func_15123070(struct108 *arg0) {
-//     f32 temp_f0;
-//     struct17 tmp;
-//
-//     if ((arg0->unk6C8 != 0) && ((arg0->unk6FC == 10) || (arg0->unk6FC == 14))) {
-//         func_15048F90(&arg0->unk618, &arg0->unk2A4, &tmp, arg0);
-//         arg0->unk390 = arg0->unk37C - func_15048FC8(&tmp);
-//     } else {
-//         temp_f0 = arg0->unk3D0->unk40 - arg0->unk37C - 180.0f;
-//
-//         while (temp_f0 < 0.0f) {
-//             temp_f0 += 360.0f;
-//         }
-//
-//         arg0->unk390 = temp_f0;
-//     }
-//
-//     while (arg0->unk390 < -360.0f) {
-//         arg0->unk390 += 360.0f;
-//     }
-// }
+void func_15123070(struct108 *arg0) {
+    f32 temp_f0;
+
+    if ((arg0->unk6C8 != 0) && ((arg0->unk6FC == 10) || (arg0->unk6FC == 14))) {
+        struct17 tmp;
+
+        func_15048F90((struct17 *)&arg0->unk618, (struct17 *)&arg0->unk2A4, &tmp);
+        arg0->unk390 = arg0->unk37C - func_15048FC8(&tmp);
+    } else {
+        temp_f0 = arg0->unk3D0->unk40 - arg0->unk37C - 180.0f;
+
+        while (temp_f0 < 0.0f) {
+            temp_f0 += 360.0f;
+        }
+
+        arg0->unk390 = temp_f0;
+    }
+
+    while (arg0->unk390 < -360.0f) {
+        arg0->unk390 += 360.0f;
+    }
+}
 
 void func_1511FC60(struct108 *arg0);
 void func_150495B0(f32 *arg0, f32 arg1, f32 *arg2, f32 arg3, f32 arg4, f32 arg5);

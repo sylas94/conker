@@ -1,3 +1,8 @@
+/* SHIPPED 2026-10-05 (wave 7): live in conker/src/game_20A290.c with yaml line
+ * `[0x250010, .rodata, game_20A290]`, ROM byte-perfect. The 'IDO never puts initialised data in
+ * .rodata' claim below is WRONG for arrays: `const s32 D_800AB550[1] = {0x10};` lands in .rodata.
+ * Kept for history only. */
+
 /* game_20A290 / func_151DCDE0 -- SOURCE-COMPLETE (scores 0), BLOCKED ON RODATA MIGRATION.
  * Wave 61. Was parked at 240; the residual is gone, the C is written, and the only thing
  * standing between this and a match is one line of conker.us.yaml owned by the other lane.

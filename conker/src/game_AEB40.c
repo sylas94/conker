@@ -288,7 +288,31 @@ void func_150836CC(struct127 *arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AEB40/func_150837D4.s")
+void func_150837D4(s32 arg0, s32 arg1, s32 arg2) {
+    struct127 *obj = &D_800CC2D0[arg0];
+    GameAEB40Def *def;
+
+    obj->id = arg1;
+    if (arg1 == 0xFF) {
+        obj->unkE4 = 0;
+        obj->unkE6 = 0;
+        obj->unkE8 = 0;
+        obj->unkD2 = 70;
+        obj->unkD4 = 70;
+        obj->unkD6 = 0;
+        *(s16 *)((u8 *)obj + 0x160) = 0;
+        *(f32 *)((u8 *)obj + 0xC8) = 0.0f;
+    } else {
+        *(f32 *)((u8 *)obj + 0xC8) = *(s16 *)((u8 *)D_800D1C90[arg1] + 6);
+        func_15062BDC(obj, obj->xz_scale, obj->y_scale);
+        def = (GameAEB40Def *)D_800D1C90[arg1];
+        obj->unk5 = def->unk12;
+    }
+    obj->unk6 = func_15084D00(obj);
+    if (((u16 *)D_800C5A90)[obj->unk6] != 0) {
+        *(s32 *)((u8 *)obj + 0x58) = func_1502B020(0, 2, 2, obj->unk6);
+    }
+}
 
 extern s32 allocate_memory(s32, s32, s32, s32);
 

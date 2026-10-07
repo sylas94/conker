@@ -168,7 +168,29 @@ s32 func_1502B224(s32 arg0, void *arg1, u32 arg2, u32 arg3) {
     return size;
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_57FA0/func_1502B350.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_57FA0/func_1502B4A8.s")
+/* Offset-table entry: unk0 is rebased onto the table (-1 = none); bit 31 of unk4 ends the table. */
+typedef struct {
+    s32 unk0;
+    s32 unk4;
+} Pair1502B4A8;
+
+s32 func_1502B4A8(Pair1502B4A8 *arg0, s32 arg1) {
+    s32 i;
+
+    if (arg1 == 0) {
+        while ((arg0[arg1++].unk4 & 0x80000000) == 0) {
+        }
+    }
+    for (i = 0; i < arg1; i++) {
+        arg0[i].unk4 &= 0x0FFFFFFF;
+        if (arg0[i].unk0 == -1 || arg0[i].unk4 == 0) {
+            arg0[i].unk0 = 0;
+        } else {
+            arg0[i].unk0 += (s32)arg0;
+        }
+    }
+    return arg1;
+}
 extern u8 D_AB1950;
 s32 func_1502AC88(u8 *arg0, s32 arg1, s32 *arg2);
 s32 func_1502B350(u8 *arg0, s32 arg1, s32 *arg2);
@@ -210,7 +232,7 @@ s32 func_1502B5C8(s32 *arg0, s32 arg1, s32 arg2, s32 arg3) {
 
     return ret;
 }
-s32 func_1502B4A8(s32 *arg0, s32 arg1);
+s32 func_1502B4A8(Pair1502B4A8 *arg0, s32 arg1);
 
 s32 func_1502B6BC(s32 *arg0, s32 arg1, s32 *arg2, s32 arg3) {
     s32 *more;

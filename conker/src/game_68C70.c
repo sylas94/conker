@@ -24,7 +24,27 @@ void func_1503B7C0(struct127 *arg0) {
     ((func_1503B7C0_inner *)arg0->unk31C)->unk11C->unk4C = func_150ADA20() % 30U;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_68C70/func_1503B840.s")
+extern u16 D_8009877C[90];
+extern u16 D_80098830[3];
+
+void func_1503B840(struct127 *arg0) {
+    s32 i;
+
+    if (arg0->interaction_state == 1) {
+        for (i = 0; i < 3; i++) {
+            if (arg0->unk84.uh == D_80098830[i]) {
+                arg0->unk2FB |= 2;
+                return;
+            }
+        }
+        for (i = 0; i < 90; i++) {
+            if (arg0->unk84.uh == D_8009877C[i]) {
+                arg0->unk2FB |= 1;
+                return;
+            }
+        }
+    }
+}
 
 extern u8 D_800CC5CB[];
 

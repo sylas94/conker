@@ -183,4 +183,29 @@ s32 func_1508114C(struct127 *obj, struct17 *rayOrigin, struct17 *rayDir, struct1
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AE1D0/func_15081574.s")
+s32 func_15080D20(s32, struct127 *, u8, f32, f32, s32);
+
+s32 func_15081574(s32 arg0, f32 arg1, f32 arg2, s32 arg3, s32 arg4, s32 arg5) {
+    s32 i;
+    struct127 *obj;
+    s32 idx;
+    s32 ret;
+
+    *(struct127 **)arg3 = NULL;
+    for (i = 0; i < 25; i++) {
+        obj = &D_800CC2D0[i];
+        if (obj->interaction_state == 0 || obj->unk1D4 == NULL || arg5 != obj->id) {
+            continue;
+        }
+        idx = func_1508108C((Struct1508108C *)obj);
+        if (idx == -1) {
+            continue;
+        }
+        ret = func_15080D20(arg0, obj, ((u8 (*)[4])&D_8009BD30)[idx][2], arg1, arg2, arg4);
+        if (ret != 0) {
+            *(struct127 **)arg3 = obj;
+            return ret;
+        }
+    }
+    return 0;
+}

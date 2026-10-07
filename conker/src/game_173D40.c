@@ -58,25 +58,6 @@ extern void func_151DAB58(u8, f32, u8, struct17 *, s32, u8, u8);
 extern u8 (*D_8008FD04)(void);
 extern u8 (*D_8008FD1C)(void);
 extern u8 (*D_8008FD30)(void);
-extern f32 D_800A5708;
-extern f32 D_800A570C;
-extern f32 D_800A5710;
-extern f32 D_800A5714;
-extern f32 D_800A5718;
-extern f32 D_800A571C;
-extern f32 D_800A5720;
-extern f32 D_800A5724;
-extern f32 D_800A5728;
-extern f32 D_800A572C;
-extern f32 D_800A5730;
-extern f32 D_800A5734;
-extern f32 D_800A5738;
-extern f32 D_800A573C;
-extern f32 D_800A5740;
-extern f32 D_800A5744;
-extern f32 D_800A5748;
-extern f32 D_800A574C;
-extern f32 D_800A5750;
 extern void func_15150F90(void *, s32, s32, s32);
 void func_15143794(s32, s32, f32, f32 *);
 struct260 *func_15130374(void *, u8, s32, u8, s32);
@@ -107,7 +88,44 @@ s32 func_15146890(Struct15147040 *arg0, ActorFields *arg1, s32 arg2, u8 arg3) {
     return func_15046C80(sp2C, 0, arg0->unk4 - 50.0f, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_173D40/func_15146970.s")
+extern s32 func_151420F8(s32);
+extern s32 func_150A2AEC(s32, s32, const s32 *, s32);
+
+/* Map an actor's damage/effect kind (arg0) onto the particle-effect id used for it,
+   for the actor `arg1`.  Most kinds are a fixed id; kind 1 depends on the current
+   world (D_800BE9F0) and, in world 4, on whether func_151420F8 accepts the actor;
+   kind 6 first has to register a five-entry effect list against the actor's index in
+   D_800CC2D0, and reports -1 if that fails.  Anything from 9 up is unmapped. */
+s32 func_15146970(s32 arg0, s32 arg1) {
+    switch (arg0) {
+    case 8: return 0x10;
+    case 7: return 0xF;
+    case 5: return 5;
+    case 2: return 2;
+    case 0: return 0;
+    case 1:
+        if (D_800BE9F0 == 4) {
+            if (func_151420F8(arg1) != 0) {
+                return 6;
+            }
+            return 3;
+        }
+        return 1;
+    case 4: return 4;
+    case 3: return 3;
+    case 6:
+        {
+            const s32 list[5] = { 0x401D, 0x401E, 0x401F, 0x4020, 0x4021 };
+
+            if (func_150A2AEC((arg1 - (s32)D_800CC2D0) / (s32)sizeof(struct127), 5, list,
+                              arg1) == -1) {
+                return -1;
+            }
+        }
+        return 6;
+    }
+    return -1;
+}
 
 void func_15146A98(s32 arg0, s32 arg1, s32 arg2) {
     Struct15147040 sp5C;
@@ -118,18 +136,18 @@ void func_15146A98(s32 arg0, s32 arg1, s32 arg2) {
         sp18.unk0 = 5;
         sp18.unk4 = 0x16;
         sp18.unk8 = sp5C;
-        sp18.unk14 = D_800A5708;
-        sp18.unk18 = D_800A570C;
+        sp18.unk14 = 0.024999999f;
+        sp18.unk18 = 0.0199f;
         sp18.unk1C = 0;
         sp18.unk1E = 0xFF;
         sp18.unk20 = -0x14;
         sp18.unk22 = 0xE;
         sp18.unk24 = 6.0f;
         sp18.unk28 = 3.0f;
-        sp18.unk2C = D_800A5710;
-        sp18.unk30 = D_800A5714;
-        sp18.unk34 = D_800A5718;
-        sp18.unk38 = D_800A571C;
+        sp18.unk2C = 7.9760003f;
+        sp18.unk30 = -0.40300003f;
+        sp18.unk34 = 0.284f;
+        sp18.unk38 = 0.95355f;
         sp18.unk3C = 3;
         sp18.unk3E = 0x19;
         sp18.unk40 = 0x19;
@@ -157,8 +175,8 @@ void func_15146BF8(ActorFields *arg0, s32 arg1, s32 arg2, s32 arg3) {
     if (arg0->field_0x1D4 != 0) {
         if (func_15146890(&sp4C, (ActorFields *)*(s32 *)&arg0, (s32)&sp2C[-1], temp_a3) != 0) {
             temp_v0 = ((u8)arg3 != 0) ? 0xC : 0xB;
-            func_15141F78((u8)temp_v0, (struct157 *)&sp2C[-1], (f32)arg2 * D_800A5720,
-                          (u8)(u32)(arg0->field_0x40 * D_800A5724),
+            func_15141F78((u8)temp_v0, (struct157 *)&sp2C[-1], (f32)arg2 * 0.0076923077f,
+                          (u8)(u32)(arg0->field_0x40 * 0.7111111f),
                           (struct157 *)&sp4C, temp_a3);
             if (arg2 >= 0x73) {
                 func_15142180(2, &sp4C, sp2C[5], 1.0f, 1.0f);
@@ -175,8 +193,8 @@ void func_15146D60(ActorFields *arg0, s32 arg1, s32 arg2) {
     temp_a3 = (u8)arg1;
     if (arg0->field_0x1D4 != 0) {
         if (func_15146890(&sp4C, (ActorFields *)*(s32 *)&arg0, (s32)&sp2C[-1], temp_a3) != 0) {
-            func_15141F78(0xA, (struct157 *)&sp2C[-1], (f32)arg2 * D_800A5728,
-                          (u8)(u32)(arg0->field_0x40 * D_800A572C),
+            func_15141F78(0xA, (struct157 *)&sp2C[-1], (f32)arg2 * 0.011764706f,
+                          (u8)(u32)(arg0->field_0x40 * 0.7111111f),
                           (struct157 *)&sp4C, temp_a3);
         }
     }
@@ -303,7 +321,7 @@ s32 func_151470FC(s32 arg0, s32 arg1, f32 arg2, f32 arg3, f32 arg4, s32 arg5, s3
     stack.sp30.unk38 = arg4;
     ((s32 *)&stack.sp28)[-2] = func_150ADA20();
     func_15143794(arg8, (s16)((((s32 *)&stack.sp28)[-2] % 0xBU) - 0xB),
-                  ((func_150ADA68() * 396.0f) + 202.0f) * D_800A5730, &stack.sp30.unk48);
+                  ((func_150ADA68() * 396.0f) + 202.0f) * 0.01f, &stack.sp30.unk48);
     stack.sp30.unk54 = 0.0f;
     stack.sp30.unk58 = 0xE05;
 
@@ -316,8 +334,8 @@ s32 func_151470FC(s32 arg0, s32 arg1, f32 arg2, f32 arg3, f32 arg4, s32 arg5, s3
     }
 
     stack.sp30.unk62 = 0xA;
-    stack.sp30.unk24 = D_800A5734;
-    stack.sp28 = D_800A5738;
+    stack.sp30.unk24 = 1.02f;
+    stack.sp28 = 0.94000006f;
     stack.sp30.unk63 = -1;
     stack.sp30.unk1E = 0x14;
     stack.sp30.unk20 = 0xC;
@@ -341,8 +359,8 @@ void func_15147318(ActorFields *arg0, s32 arg1, s32 arg2) {
             if (arg2 >= 0x73) {
                 func_15142180(0, &sp4C, sp2C[5], 1.0f, 1.0f);
             }
-            func_15141F78((u8)D_8008FD04(), (struct157 *)&sp2C[-1], (f32)arg2 * D_800A573C,
-                          (u8)(u32)(arg0->field_0x40 * D_800A5740),
+            func_15141F78((u8)D_8008FD04(), (struct157 *)&sp2C[-1], (f32)arg2 * 0.0076923077f,
+                          (u8)(u32)(arg0->field_0x40 * 0.7111111f),
                           (struct157 *)&sp4C, temp_a3);
         }
     }
@@ -356,8 +374,8 @@ void func_15147478(ActorFields *arg0, s32 arg1, s32 arg2) {
     temp_a3 = (u8)arg1;
     if (arg0->field_0x1D4 != 0) {
         if (func_15146890(&sp4C, (ActorFields *)*(s32 *)&arg0, (s32)&sp2C[-1], temp_a3) != 0) {
-            func_15141F78((u8)D_8008FD1C(), (struct157 *)&sp2C[-1], (f32)arg2 * D_800A5744,
-                          (u8)(u32)(arg0->field_0x40 * D_800A5748),
+            func_15141F78((u8)D_8008FD1C(), (struct157 *)&sp2C[-1], (f32)arg2 * 0.0076923077f,
+                          (u8)(u32)(arg0->field_0x40 * 0.7111111f),
                           (struct157 *)&sp4C, temp_a3);
             if (arg2 >= 0x73) {
                 func_15142180(6, &sp4C, sp2C[5], 1.0f, 1.0f);
@@ -374,8 +392,8 @@ void func_151475D8(ActorFields *arg0, s32 arg1, s32 arg2) {
     temp_a3 = (u8)arg1;
     if (arg0->field_0x1D4 != 0) {
         if (func_15146890(&sp4C, (ActorFields *)*(s32 *)&arg0, (s32)&sp2C[-1], temp_a3) != 0) {
-            func_15141F78((u8)D_8008FD30(), (struct157 *)&sp2C[-1], (f32)arg2 * D_800A574C,
-                          (u8)(u32)(arg0->field_0x40 * D_800A5750),
+            func_15141F78((u8)D_8008FD30(), (struct157 *)&sp2C[-1], (f32)arg2 * 0.0076923077f,
+                          (u8)(u32)(arg0->field_0x40 * 0.7111111f),
                           (struct157 *)&sp4C, temp_a3);
             if (arg2 >= 0x73) {
                 func_15142180(0xB, &sp4C, sp2C[5], 1.0f, 1.0f);

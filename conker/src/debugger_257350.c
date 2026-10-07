@@ -2,6 +2,7 @@
 
 #include "libc/stdarg.h"
 #include "libc/stdlib.h"
+#include "libc/string.h"
 #include "functions.h"
 #include "variables.h"
 
@@ -28,6 +29,14 @@ typedef struct {
 extern u8 D_16003CB8[];
 extern u8 D_16003CCC[];
 extern s32 func_16001BB4(s32 (*arg0)(u8 *, u8 *, u32), u8 *arg1, u8 *arg2, va_list arg3);
+extern u8 D_16003C70[];
+extern u8 D_16003C94[];
+extern u8 D_16004800[];
+extern u8 D_16004804[];
+extern u32 D_1600480C[];
+void func_160021FC(DebuggerPft *px, va_list *pap, u8 code, u8 *ac);
+void func_1600288C(void *arg0, unsigned char code);
+void func_160033A8(DebuggerPft *px, u8 code);
 
 // whats wrong with bcopy?
 u8* func_16001AD0(u8 *arg0, u8 *arg1, u32 arg2) {
@@ -82,14 +91,217 @@ s32 func_16001B8C(u8 *arg0, u8 *arg1, u32 arg2) {
     return func_16001AD0(arg0, arg1, arg2) + arg2;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/debugger_257350/func_16001BB4.s")
-// uses jump table
-#pragma GLOBAL_ASM("asm/nonmatchings/debugger_257350/func_160021FC.s")
-// contains delay slot
+#define ATOI(dst, src)                         \
+    for (dst = 0; *src >= '0' && *src <= '9'; ++src) {  \
+        if (dst < 999)                                  \
+            dst = dst * 10 + *src - '0';                \
+    }
+#define PUT(s, n)                              \
+    if (0 < (n)) {                                      \
+        if ((arg = (u8 *)(*pfn)(arg, s, n)) != NULL)    \
+            x.nchar += (n);                             \
+        else                                            \
+            return x.nchar;                             \
+    }
+#define PAD(s, n)                                      \
+    if (0 < (n)) {                                              \
+        int i, j = (n);                                         \
+        for (; 0 < j; j -= i) {                                 \
+            i = 32 < (unsigned int)j ? 32 : j;                  \
+            PUT(s, i);                                 \
+        }                                                       \
+    }
+
+/* libultra _Printf (xprintf.c), private debugger copy. D_16003C70 = spaces, D_16003C94 = zeroes
+ * (32 chars each, hence MAX_PAD 32), D_16004800 = "hlL", D_16004804 = fchar, D_1600480C = fbit. */
+s32 func_16001BB4(s32 (*pfn)(u8 *, u8 *, u32), u8 *arg, u8 *fmt, va_list args) {
+    DebuggerPft x;
+
+    x.nchar = 0;
+    while (1) {
+        u8 *s;
+        u8 c;
+        u8 *t;
+        u8 ac[32];
+
+        s = fmt;
+        while ((c = *s++) > 0) {
+            if (c == '%') {
+                s--;
+                break;
+            }
+        }
+        PUT(fmt, s - fmt);
+        if (c == 0) {
+            return x.nchar;
+        }
+        fmt = ++s;
+        for (x.flags = 0; (t = (u8 *)strchr((char *)D_16004804, *s)) != NULL; s++) {
+            x.flags |= D_1600480C[t - D_16004804];
+        }
+        if (*s == '*') {
+            x.width = va_arg(args, int);
+            if (x.width < 0) {
+                x.width = -x.width;
+                x.flags |= 4;
+            }
+            s++;
+        } else {
+            ATOI(x.width, s);
+        }
+        if (*s != '.') {
+            x.prec = -1;
+        } else if (*++s == '*') {
+            x.prec = va_arg(args, int);
+            ++s;
+        } else {
+            ATOI(x.prec, s);
+        }
+        x.qual = strchr((char *)D_16004800, *s) ? *s++ : '\0';
+        if (x.qual == 'l' && *s == 'l') {
+            x.qual = 'L';
+            ++s;
+        }
+        func_160021FC(&x, &args, *s, ac);
+        x.width -= x.n0 + x.nz0 + x.n1 + x.nz1 + x.n2 + x.nz2;
+        if (!(x.flags & 4)) {
+            PAD(D_16003C70, x.width);
+        }
+        PUT(ac, x.n0);
+        PAD(D_16003C94, x.nz0);
+        PUT(x.s, x.n1);
+        PAD(D_16003C94, x.nz1);
+        PUT(x.s + x.n1, x.n2);
+        PAD(D_16003C94, x.nz2);
+        if (x.flags & 4) {
+            PAD(D_16003C70, x.width);
+        }
+        fmt = s + 1;
+    }
+    return 0;
+}
+
+void func_160021FC(DebuggerPft *px, va_list *pap, u8 code, u8 *ac) {
+    s32 strLen;
+
+    px->n0 = px->nz0 = px->n1 = px->nz1 = px->n2 = px->nz2 = 0;
+
+    switch (code) {
+    case 'c':
+        ac[px->n0++] = va_arg(*pap, int);
+        break;
+
+    case 'd':
+    case 'i':
+        if (px->qual == 'l') {
+            px->v.ll = va_arg(*pap, long);
+        } else if (px->qual == 'L') {
+            px->v.ll = va_arg(*pap, long long);
+        } else {
+            px->v.ll = va_arg(*pap, int);
+        }
+
+        if (px->qual == 'h') {
+            px->v.ll = (short)px->v.ll;
+        }
+
+        if (px->v.ll < 0) {
+            ac[px->n0++] = '-';
+        } else if (px->flags & 2) {
+            ac[px->n0++] = '+';
+        } else if (px->flags & 1) {
+            ac[px->n0++] = ' ';
+        }
+
+        px->s = &ac[px->n0];
+        func_160033A8(px, code);
+        break;
+
+    case 'x':
+    case 'X':
+    case 'u':
+    case 'o':
+        if (px->qual == 'l') {
+            px->v.ll = va_arg(*pap, long);
+        } else if (px->qual == 'L') {
+            px->v.ll = va_arg(*pap, long long);
+        } else {
+            px->v.ll = va_arg(*pap, int);
+        }
+
+        if (px->qual == 'h') {
+            px->v.ll = (unsigned short)px->v.ll;
+        } else if (px->qual == 0) {
+            px->v.ll = (unsigned int)px->v.ll;
+        }
+
+        if (px->flags & 8) {
+            ac[px->n0++] = '0';
+            if (code == 'x' || code == 'X') {
+                ac[px->n0++] = code;
+            }
+        }
+
+        px->s = &ac[px->n0];
+        func_160033A8(px, code);
+        break;
+
+    case 'e':
+    case 'f':
+    case 'g':
+    case 'E':
+    case 'G':
+        px->v.d = (px->qual == 'L') ? va_arg(*pap, double) : va_arg(*pap, double);
+
+        if ((*(u16 *)&px->v.d) & 0x8000) {
+            ac[px->n0++] = '-';
+        } else if (px->flags & 2) {
+            ac[px->n0++] = '+';
+        } else if (px->flags & 1) {
+            ac[px->n0++] = ' ';
+        }
+
+        px->s = &ac[px->n0];
+        func_1600288C(px, code);
+        break;
+
+    case 'n':
+        if (px->qual == 'h') {
+            *va_arg(*pap, unsigned short *) = px->nchar;
+        } else if (px->qual == 'l') {
+            *va_arg(*pap, unsigned long *) = px->nchar;
+        } else if (px->qual == 'L') {
+            *va_arg(*pap, unsigned long long *) = px->nchar;
+        } else {
+            *va_arg(*pap, unsigned int *) = px->nchar;
+        }
+        break;
+
+    case 'p':
+        px->v.ll = (long)va_arg(*pap, void *);
+        px->s = &ac[px->n0];
+        func_160033A8(px, 'x');
+        break;
+
+    case 's':
+        px->s = va_arg(*pap, u8 *);
+        strLen = func_16001B00(px->s);
+        px->n1 = strLen;
+        if (px->prec >= 0 && px->prec < px->n1) {
+            px->n1 = px->prec;
+        }
+        break;
+
+    case '%':
+        ac[px->n0++] = '%';
+        break;
+
+    default:
+        ac[px->n0++] = code;
+        break;
+    }
+}
 extern double D_16004828[];
-extern u8 D_16004870[];
-extern u8 D_16004874[];
-extern double D_16004950;
 s16 func_16002D2C(s16 *arg0, struct05 *arg1);
 void func_16002DE4(DebuggerPft *px, u8 code, u8 *p, s16 nsig, s16 xexp);
 
@@ -121,7 +333,7 @@ void func_1600288C(void *arg0, unsigned char code) {
 
     err = func_16002D2C(&xexp, (struct05 *)px);
     if (err > 0) {
-        func_16001AD0(px->s, err == 2 ? D_16004870 : D_16004874, px->n1 = 3);
+        func_16001AD0(px->s, err == 2 ? "NaN" : "Inf", px->n1 = 3);
         return;
     } else if (err == 0) {
         nsig = 0;
@@ -169,7 +381,7 @@ void func_1600288C(void *arg0, unsigned char code) {
                 long lo = ldval;
 
                 if ((gen -= 8) > 0) {
-                    ldval = (ldval - lo) * D_16004950;
+                    ldval = (ldval - lo) * 1e8;
                 }
 
                 for (p += 8, j = 8; lo > 0 && --j >= 0;) {
@@ -245,7 +457,6 @@ s16 func_16002D2C(s16 *arg0, struct05 *arg1) {
     *arg0 = 0;
     return 0;
 }
-extern u8 D_16004878[];
 
 #define FLAGS_HASH 8
 #define FLAGS_ZERO 16
@@ -253,7 +464,7 @@ extern u8 D_16004878[];
 
 void func_16002DE4(DebuggerPft *px, u8 code, u8 *p, s16 nsig, s16 xexp) {
     if (nsig <= 0) {
-        p = D_16004878;
+        p = "0";
         nsig = 1;
     }
 

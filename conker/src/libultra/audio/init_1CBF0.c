@@ -1,4 +1,7 @@
+/* n_synthInternals.h declares n_alFxNew with the heap and bus swapped; the real signature is below. */
+#define n_alFxNew n_alFxNew_hdr_decl
 #include "n_synthInternals.h"
+#undef n_alFxNew
 
 #if 0
 f32 PI = 3.1415927410125732;
@@ -121,7 +124,133 @@ void func_1001CF38(ALLowPass *arg0, f32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/libultra/audio/init_1CBF0/n_alFxNew.s")
+/* Conker's n_audio reverb layout differs from synthInternals.h: each delay stage keeps two
+ * resampler / low-pass states, and the effect keeps two delay lines. */
+typedef struct {
+    s16 fc;                    /* 0x00 */
+    u8 pad2[0x2A];
+    POLEF_STATE *fstate;       /* 0x2C */
+    POLEF_STATE *fstate2;      /* 0x30 */
+    s32 unk34;
+} N_ALLowPass; /* 0x38 */
+
+typedef struct {
+    u8 pad0[0x14];
+    RESAMPLE_STATE *state;     /* 0x14 */
+    RESAMPLE_STATE *state2;    /* 0x18 */
+    u8 pad1C[0x8];
+    f32 delta;                 /* 0x24 */
+    s32 first;                 /* 0x28 */
+    u8 pad2C[0xC];
+} N_ALResampler; /* 0x38 */
+
+typedef struct {
+    u32 input;
+    u32 output;
+    s16 ffcoef;
+    s16 fbcoef;
+    s16 gain;
+    f32 rsinc;
+    f32 rsval;
+    s32 rsdelta;
+    f32 rsgain;
+    N_ALLowPass *lp;
+    N_ALResampler *rs;
+} N_ALDelay; /* 0x28 */
+
+typedef struct {
+    u32 length;                /* 0x00 */
+    N_ALDelay *delay;          /* 0x04 */
+    u8 section_count;          /* 0x08 */
+    u8 pad9[0x17];
+    s16 *base;                 /* 0x20 */
+    s16 *base2;                /* 0x24 */
+    s16 *input;                /* 0x28 */
+    s16 *output;               /* 0x2C */
+} N_ALFx; /* 0x30 */
+
+typedef struct {
+    u8 pad0[0x2C];
+    s32 outputRate;            /* 0x2C */
+    u8 fxType[4];              /* 0x30, one per fx bus */
+    s32 *params[4];            /* 0x34 */
+} N_ALSynConfig;
+
+extern s32 D_8002BBE0[]; /* default reverb parameters */
+
+#define RANGE 2.0f
+
+void n_alFxNew(N_ALFx **fx_ar, N_ALSynConfig *c, s16 bus, ALHeap *hp) {
+    u16 i, j, k;
+    s32 *param = 0;
+    N_ALDelay *d;
+    N_ALFx *r;
+
+    r = alHeapAlloc(hp, 1, sizeof(N_ALFx));
+    *fx_ar = r;
+
+    switch (c->fxType[bus]) {
+        case AL_FX_CUSTOM:
+            param = c->params[bus];
+            break;
+        default:
+            param = D_8002BBE0;
+            break;
+    }
+
+    j = 0;
+
+    r->section_count = param[j++];
+    r->length = param[j++];
+
+    r->delay = alHeapAlloc(hp, r->section_count, sizeof(N_ALDelay));
+    r->base = alHeapAlloc(hp, r->length, sizeof(s16));
+    r->input = r->base;
+    r->base2 = alHeapAlloc(hp, r->length, sizeof(s16));
+    r->output = r->base2;
+
+    for (k = 0; k < r->length; k++) {
+        r->base2[k] = 0;
+        r->base[k] = r->base2[k];
+    }
+
+    for (i = 0; i < r->section_count; i++) {
+        d = &r->delay[i];
+        d->input = param[j++];
+        d->output = param[j++];
+        d->fbcoef = param[j++];
+        d->ffcoef = param[j++];
+        d->gain = param[j++];
+
+        if (param[j]) {
+            d->rsinc = ((((f32)param[j++]) / 1000) * RANGE) / c->outputRate;
+            d->rsgain = (((f32)param[j++]) / D_8002C788) * (d->output - d->input);
+            d->rsval = 1.0;
+            d->rsdelta = 0.0;
+            d->rs = alHeapAlloc(hp, 1, sizeof(N_ALResampler));
+            d->rs->state = alHeapAlloc(hp, 1, sizeof(RESAMPLE_STATE));
+            d->rs->state2 = alHeapAlloc(hp, 1, sizeof(RESAMPLE_STATE));
+            d->rs->delta = 0.0;
+            d->rs->first = 1;
+        } else {
+            d->rs = 0;
+            j++;
+            j++;
+        }
+
+        if (param[j]) {
+            d->lp = alHeapAlloc(hp, 1, sizeof(N_ALLowPass));
+            d->lp->fstate = alHeapAlloc(hp, 1, sizeof(POLEF_STATE));
+            d->lp->fstate2 = alHeapAlloc(hp, 1, sizeof(POLEF_STATE));
+            d->lp->fc = param[j++];
+            init_lpfilter((ALLowPass *)d->lp);
+        } else {
+            d->lp = 0;
+            j++;
+        }
+    }
+}
+
 
 void alN_PVoiceNew(N_PVoice *mv, ALDMANew dmaNew, ALHeap *hp) {
     mv->dc_state = alHeapDBAlloc(0, 0, hp, 1, sizeof(ADPCM_STATE));

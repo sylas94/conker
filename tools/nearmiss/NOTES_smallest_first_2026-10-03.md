@@ -151,3 +151,33 @@ CORRECTION: func_1507C22C (game_A9260) scored 0 and passed the whole-TU masked .
 BROKE THE ROM sha1 when linked -- reverted, stays asm. Copy: batch6A/ROMFAIL_func_1507C22C_game_A9260.c.
 Suspect the `*(u8 *)&D_800C3654` read or a relocation/data difference the masked compare can't see.
 The masked .text check is NOT sufficient; only the full ROM build is.
+
+## Wave 7 (2026-10-05, 252-288 B, 3 agents x 15) -- 26 shipped, ROM byte-perfect, UNCOMMITTED
+Shipped: func_1515AA84, func_15087CC0, func_15123070, func_1510FD20, func_15007440, func_15022528,
+func_1502B4A8 (A); func_151B47D8, func_15056A00, func_150D01A0, func_150D0534, func_150837D4,
+func_1503B840, func_15081574, func_151DCDE0 (B); func_15183C28, func_1503F800, func_15001A08 (+ real
+empty func_15001B08), func_1509C120, func_1000CDA0, func_151218C4, func_151A25E0, func_1503D660,
+func_151415D4, func_15063E84, func_150D82BC (C). Pragmas 1489 -> 1463. Bodies of every
+near-miss/blocked/rejected: pending_repo_changes/wave7/.
+MIGRATED: `[0x250010, .rodata, game_20A290]` (func_151DCDE0; old park said impossible). Law: a
+const SCALAR goes to .data but a ONE-ELEMENT const ARRAY goes to .rodata -- a named addressed object
+at the head of a block is NOT a blocker. Re-screen other "named object in the block" parks.
+Coordinator rulings: ACCEPTED `arg0 &= ~mask; return arg0 == 0;` on a u8 flags param
+(func_1000CDA0 -- same meaning, not a reused working var); ACCEPTED one-line loop bodies
+(func_15007440 -- formatting only; the -g3 line table changes unrolled store order; commented in
+the TU). REJECTED comma index `[0, idx]` (func_15075938, would be 0).
+BLOCKED rodata: func_1513A5E0 + func_1513A48C (block 249110, owned only by game_161520 -> campaign),
+func_1505F188 (23DC00 shared with game_77AD0), func_1504A620 (23DB70: D_800990B0/B4, sole user ->
+cheap one-line migration once the literal form reaches 0; literal best 4).
+REJECT: func_150A43E0 (hand-written: mtc1 of s-regs, branches into other functions).
+Near-misses: func_150DFCA8 2 (f12 vs f14 for an extern load), func_15075938 5, func_160014F0 8
+(K&R def needed; col/bits/glyph rotation), func_1514A594 9 (FP colouring of lerp bases),
+func_1507E2B0 16 (constant 1 hoisted into a1), func_1501E2F8 17 (prologue interleaving),
+func_151897A4 22, func_1503F9F0 23 (IDO CSEs &D_80084484), func_1502AF04 29, func_150A24C0 41,
+func_10003ACC 50 (was 220), func_151CE51C 74 (frame 0x50 vs 0x38), func_15062D10 86,
+func_15195868 128 (golden not strength-reduced).
+Levers: named sub-structs p0/p1 instead of a 2-element array (operand canonicalisation); `b` to the
+next insn ending a then-block = a real `else` whose constant stores uopt hoisted; `continue` guards
+reorder loop-invariant s-registers; `i = 0` before a NULL check + `for (; i < n; ...)` stops one of two
+loops unrolling; named+used locals set the -g3 frame and spill slots; struct-at-declaration in the
+if-block (barrier) fixes a b-delay-slot steal.

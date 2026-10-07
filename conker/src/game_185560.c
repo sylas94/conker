@@ -1017,6 +1017,52 @@ void func_1515A974(struct102 *volatile arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_1515AA84.s")
+typedef struct {
+    s32 words[10];
+} Payload1515AA84;
+
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+} Vec1515AA84;
+
+typedef struct {
+    f32 unk0;
+    Vec1515AA84 unk4;
+    f32 unk10;
+    Payload1515AA84 unk14;
+} Locals1515AA84;
+
+typedef struct {
+    s16 base;
+    s16 range;
+    Payload1515AA84 payload;
+} Spawn1515AA84;
+
+typedef struct {
+    u8 pad0[0x1];
+    u8 unk1;
+    u8 pad2[0xA];
+    u8 unkC;
+    u8 padD[0x73];
+    Spawn1515AA84 unk80;
+} Struct1515AA84;
+
+void func_1515AA84(Struct1515AA84 *arg0, Vec1515AA84 *arg1, f32 arg2, s32 arg3) {
+    Locals1515AA84 local;
+    Spawn1515AA84 *spawn;
+    struct260 *ret;
+
+    spawn = &arg0->unk80;
+    local.unk0 = 0.0f;
+    local.unk4 = *arg1;
+    local.unk10 = arg2;
+    local.unk14 = spawn->payload;
+    ret = func_15149130((u32)func_150ADA20() % (spawn->range + 1) + spawn->base, -1, 0x3F, -1, 1, 0, (struct37 *)0x3C, arg0->unkC, arg0->unk1);
+    if (ret != NULL) {
+        memcpy((u8 *)ret + 0x28, &local, 0x3C);
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_1515AB88.s")

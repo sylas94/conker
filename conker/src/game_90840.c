@@ -204,7 +204,60 @@ struct127 *func_15063C60(struct127 *arg0, s32 arg1) {
     return NULL;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_90840/func_15063E84.s")
+typedef struct Ctl15063E84 {
+    u8 pad0[0x27];
+    u8 unk27;
+    u8 pad28[0x50];
+    u8 unk78;
+    u8 pad79[0x1C];
+    u8 unk95;
+    u8 pad96[0x84];
+    u8 unk11A;
+} Ctl15063E84;
+
+/* struct126 declares unk95 as s8; golden reads it with lbu, so view the block through a local u8 layout. */
+#define CTL ((Ctl15063E84 *)arg0->unk31C)
+
+s32 func_15063E84(struct127 *arg0, u16 anim, u16 flags, s32 arg3, s32 arg4) {
+    s32 state;
+
+    if (arg4 & 0x4000) {
+        if (arg0->unk28 == 0.0f) {
+            if (arg0->y_velocity <= 0.0f) {
+                if (CTL->unk95 == 0) {
+                    if (arg0->unk84.uh != anim) {
+                        state = CTL->unk11A;
+                        if (state == 0 || state == 2) {
+                            if (CTL->unk27 == 0) {
+                                if (arg3 != 0 && arg0->disable_jump != 0) {
+                                    return 999;
+                                }
+                                if (flags & 1) {
+                                    arg0->disable_jump = 20;
+                                }
+                                if (arg3 != 0) {
+                                    if (CTL->unk11A == 2) {
+                                        return 999;
+                                    }
+                                    CTL->unk11A = 1;
+                                } else {
+                                    CTL->unk11A = 3;
+                                }
+                                CTL->unk78 = arg3;
+                                arg0->disable_run = 0xFF;
+                                arg0->unk83 = 0xFF;
+                                return anim;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return 999;
+}
+
+#undef CTL
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_90840/func_15063FA0.s")
 

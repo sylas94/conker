@@ -186,7 +186,36 @@ void func_1510FC34(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13BB20/func_1510FD20.s")
+#define ABS_1510FD20(x) ((x) < 0 ? -(x) : (x))
+
+s32 func_1510FD20(s32 arg0, s32 arg1) {
+    unkfunc_1510FE30 *node;
+
+    node = D_800DBE48;
+    while (node != NULL) {
+        if (node->unkC != 0) {
+            if (ABS_1510FD20(arg0 - node->unk8) <= node->unk6 && ABS_1510FD20(arg1 - node->unkA) <= node->unk6) {
+                node = (unkfunc_1510FE30 *)((u8 *)node + node->unkC);
+            } else if (node->unk4 != 0) {
+                node = (unkfunc_1510FE30 *)((u8 *)node + node->unk4);
+            } else {
+                node = NULL;
+            }
+        } else {
+            if (ABS_1510FD20(arg0 - node->unk8) <= node->unk6 && ABS_1510FD20(arg1 - node->unkA) <= node->unk6) {
+                return (s32)node;
+            }
+            if (node->unk4 != 0) {
+                node = (unkfunc_1510FE30 *)((u8 *)node + node->unk4);
+            } else {
+                node = NULL;
+            }
+        }
+    }
+    return 0;
+}
+
+#undef ABS_1510FD20
 
 s32 func_1510FE30(s32 arg0) {
     unkfunc_1510FE30 *temp_v0;

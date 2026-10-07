@@ -1406,7 +1406,7 @@ segments:
       - [0x249560, rodata]
       - [0x249CC0, rodata]
       - [0x249F40, rodata]
-      - [0x24A190, rodata] # MIGRATION-READY -> [0x24A190, .rodata, game_173D40] (D_800A56D0 + jtbl_800A56E4 + 19 floats, all func_15146970). Apply ONLY with the C decompilation. PARKED 2026-08-15: the 19 floats reproduce bit-exactly as literals, but func_15146970 stalls on a delay-slot plateau (see tools/nearmiss/func_15146970.c).
+      - [0x24A190, .rodata, game_173D40]
       - [0x24A220, rodata]
       - [0x24A230, rodata]
       - [0x24A240, .rodata, game_176A00]
@@ -1512,7 +1512,7 @@ segments:
       - [0x24FDD0, rodata]
       - [0x24FE00, rodata]
       - [0x24FFC0, rodata]
-      - [0x250010, rodata]
+      - [0x250010, .rodata, game_20A290]
       - [0x250030, rodata]
       - [0x250550, rodata]
       - [0x2505E0, rodata]
@@ -1542,7 +1542,8 @@ segments:
       - [0x259070, rodata]
       - [0x259370, rodata]
       - [0x2593B0, rodata]
-      - [0x25A0F0, rodata]
+      - [0x25A0F0, .rodata, debugger_257350]
+      - [0x25A1E0, rodata]
 
       # BSS ?
 

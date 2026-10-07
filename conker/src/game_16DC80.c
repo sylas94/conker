@@ -158,7 +158,47 @@ s32 func_15141564(struct conk141478 *arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_16DC80/func_151415D4.s")
+typedef struct Ramp151415D4 {
+    f32 unk0;
+    f32 unk4;
+    f32 unk8;
+    f32 unkC;
+    f32 unk10;
+    f32 unk14;
+    f32 unk18;
+    f32 unk1C;
+    f32 unk20;
+} Ramp151415D4;
+
+typedef struct Obj151415D4 {
+    u8 pad0[0x158];
+    f32 unk158;
+    u8 pad15C[0x14];
+    Ramp151415D4 unk170;
+} Obj151415D4;
+
+s32 func_151415D4(Obj151415D4 *arg0) {
+    Ramp151415D4 *s = &arg0->unk170;
+
+    if (s->unkC < s->unk10) {
+        arg0->unk158 = s->unk4;
+    } else if (s->unkC < s->unk14) {
+        f32 t = (s->unkC - s->unk10) * s->unk20;
+
+        arg0->unk158 = s->unk4 + s->unk8 * t;
+    } else if (s->unkC < s->unk18) {
+        arg0->unk158 = s->unk0;
+    } else {
+        f32 t = 1.0f - (s->unkC - s->unk18) * s->unk20;
+
+        arg0->unk158 = s->unk4 + s->unk8 * t;
+    }
+    s->unkC += D_800BE9A4;
+    while (s->unk1C < s->unkC) {
+        s->unkC -= s->unk1C;
+    }
+    return 1;
+}
 
 typedef void (*Callback_151416E8)(void *, s32, u8);
 extern Callback_151416E8 D_8008A02C[];
