@@ -101,7 +101,37 @@ u32 *func_15183BA4(u32 *arg0, s32 arg1, s32 arg2, s32 arg3) {
     return arg0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1B0740/func_15183C28.s")
+extern s8 D_800DDF70;
+extern s8 D_800DDF71;
+extern s32 D_800DDF20;
+extern s32 D_800DDF98;
+void func_1510D630(s32);
+void func_10004074(s16 *);
+
+void func_15183C28(s32 arg0) {
+    if (((Struct15183974 *)D_800DDE80)[arg0].unk10 != 0) {
+        func_1510D630(((Struct15183974 *)D_800DDE80)[arg0].unk10);
+        ((Struct15183974 *)D_800DDE80)[arg0].unk10 = 0;
+    }
+    if (arg0 == 8) {
+        if (D_800DDF71 != -2) {
+            return;
+        }
+    } else if (arg0 == 9) {
+        if (D_800DDF70 == -2) {
+            if (D_800DDF20 != 0) {
+                func_10004074((s16 *) D_800DDF20);
+                D_800DDF20 = 0;
+                D_800DDF98 = 0;
+            }
+        }
+    }
+    if (((Struct15183974 *)D_800DDE80)[arg0].unk0 != 0) {
+        func_10004074((s16 *) ((Struct15183974 *)D_800DDE80)[arg0].unk0);
+        ((Struct15183974 *)D_800DDE80)[arg0].unk0 = 0;
+        D_800DDF78[arg0] = 0;
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1B0740/func_15183D28.s")
 

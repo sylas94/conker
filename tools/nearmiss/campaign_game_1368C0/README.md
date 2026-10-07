@@ -12,3 +12,9 @@ placed differently (`lw t0, arg0` one slot early around `fx.unk58 = A | (B|5) | 
 consistent temp renaming (92 rows). Refuted: 120 operator orders/groupings, 320 ternary/type combos,
 242 statement moves, 60 store reorders, callee proto width, u32 field, 76 declaring-block placements.
 Full all-C TU with the 94 version: game_1368C0.allC_9848_at_94.c
+
+2026-10-06: TU-aware permuter, 30 min / ~13.7K iterations from the 94 version (REQUIRE_FRAME=272). Its
+best (permuter 685 -> 205) is `fx.unk58 = (short)(<flag ORs>) | 0xC200;` -- but that is 154 by fastscore
+(n=248/246): the permuter's weights bought register-row wins with 2 extra instructions, a dead end.
+Its other output split the store into `fx.unk58 = 0xC200; fx.unk58 = ... | fx.unk58;` (forcer).
+Honest variants of the hint also lose: `s16 flags` / `u16 flags` local = 188-195 and frame 0x118.

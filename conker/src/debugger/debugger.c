@@ -4,6 +4,7 @@
 #include "variables.h"
 
 s32 func_1600160C();
+s32 func_16001B34(u8 *arg0, u8 *arg1, ...);
 
 typedef struct {
     s32 unk0;
@@ -398,27 +399,25 @@ s32 func_16000A5C(void) {
 
 // called from func_10007DAC
 #pragma GLOBAL_ASM("asm/nonmatchings/debugger/debugger/func_16000B14.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/debugger/debugger/func_16000F8C.s")
-// NON-MATCHING: lots to figure out
-// void func_16000F8C(s32 arg0, f32 arg1) {
-//     struct165 tmp;
-//     s32 temp_v1;
-//     u32 temp_t9;
-//
-//     if ((arg0 >= (D_160038A0 << 5)) && (arg0 < 833)) {
-//         tmp.unk18 = arg1;
-//         temp_v1 = *(s32*)&tmp.unk18;
-//         temp_t9 = (u32) (temp_v1 & 0x7F800000) >> 0x17;
-//         if ((temp_t9 == 0) || (temp_t9 >= 0x255U)) {
-//             if ((temp_v1 * 2) != 0) {
-//                 func_160012B0(arg1, &D_160047D0); // arg0,
-//                 return;
-//             }
-//         }
-//         func_16001B34(&arg0, &tmp.unk0, &D_160047D4, &D_160047DC, &D_160047E0); // , (f64) arg1
-//         func_160012B0(arg0, &tmp.unk0);
-//     }
-// }
+void func_16000F8C(s32 arg0, f32 arg1) {
+    f32 f;
+    u8 buf[44];
+    u32 bits;
+
+    if ((arg0 >= (D_160038A0 << 5)) && (arg0 < 833)) {
+        f = arg1;
+        bits = (*(u32 *)&f & 0x7F800000) >> 23;
+        if (bits == 0 || bits >= 0xFF) {
+            bits = *(u32 *)&f << 1;
+            if (bits != 0) {
+                func_160012B0(arg0, D_160047D0);
+                return;
+            }
+        }
+        func_16001B34(buf, D_160047D4, D_160047DC, D_160047E0, arg1);
+        func_160012B0(arg0, buf);
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/debugger/debugger/func_16001044.s")
 

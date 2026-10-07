@@ -1,9 +1,11 @@
 #include <ultra64.h>
 #define func_1000F85C func_1000F85C_hdr
 #define func_1000EDA0 func_1000EDA0_hdr
+#define func_1000EE70 func_1000EE70_hdr
 #include "functions.h"
 #undef func_1000F85C
 #undef func_1000EDA0
+#undef func_1000EE70
 #include "variables.h"
 
 s32 func_10010E78(s32 arg0, s32 arg1, u16 arg2, s16 arg3, u8 arg4,
@@ -178,31 +180,39 @@ s32 func_1000EDA0(struct_init_EB00_1000ECCC *arg0, s32 arg1, s32 arg2, s32 arg3,
 }
 
 
-// PERMUTER CANDIDATE (best 1650). Body is byte-correct (float trunc block, all casts
-// match: unk1C & 0xFF -> lw+andi, (u32)unk184 -> srl). Blocked by the return-placement /
-// branch-likely heuristic (same class as func_1000CDA0, memory: "unfixable from C"):
-// target emits `beqzl obj, EPILOGUE; li v0,1` guards (return value in v0 delay slot),
-// but IDO gives `bnezl obj, continue` with the next load hoisted into the delay, forcing
-// the return value into v1 + a trailing `move v0,v1` that cascades a v0/v1 swap on every
-// obj access. Tried early-return / || / single-return-var / inverted-guard: 1650-1990.
-// typedef struct { u8 pad0[2]; s16 unk2; s16 unk4; s16 unk6; u8 pad8[0x10];
-//     struct127 *unk18; s32 unk1C; u8 pad20[4]; u16 unk24; } struct_init_EB00_EE70;
-// s32 func_1000EE70(struct_init_EB00_EE70 *arg0, s32 arg1, s32 *arg2, s32 arg3,
-//                   s32 arg4, s32 *arg5) {
-//     struct127 *obj = arg0->unk18;
-//     if (obj == 0) { return 1; }
-//     if (*arg2 == 0) { return 1; }
-//     if ((obj->interaction_state != 0) && (obj->unique_id == (arg0->unk1C & 0xFF))) {
-//         *arg5 = (((u32) obj->unk184 >> 3) & 0x30) << 1;
-//         arg0->unk2 = (s16) obj->x_position;
-//         arg0->unk4 = (s16) obj->y_position;
-//         arg0->unk6 = (s16) obj->z_position;
-//         return 0;
-//     }
-//     if (func_1000F44C(arg0->unk24) != 0) { return 1; }
-//     return 0;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000EE70.s")
+typedef struct {
+    u8 pad0[2];
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+    u8 pad8[0x10];
+    struct127 *unk18;
+    s32 unk1C;
+    u8 pad20[4];
+    u16 unk24;
+} struct_init_EB00_EE70;
+
+s32 func_1000EE70(struct_init_EB00_EE70 *arg0, s32 arg1, s32 *arg2, s32 arg3, s32 arg4, s32 *arg5) {
+    struct127 *obj;
+    u8 uid;
+
+    if ((obj = arg0->unk18) != 0) {
+        if (*arg2 != 0) {
+            uid = arg0->unk1C & 0xFF;
+            if ((obj->interaction_state != 0) && (uid == obj->unique_id)) {
+                *arg5 = (((u32) obj->unk184 >> 3) & 0x30) << 1;
+                arg0->unk2 = (s16) obj->x_position;
+                arg0->unk4 = (s16) obj->y_position;
+                arg0->unk6 = (s16) obj->z_position;
+                return 0;
+            }
+            if (func_1000F44C(arg0->unk24) == 0) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
 
 s32 func_1000EF40(struct57 *arg0, struct57 *arg1, s32 *arg2, s32 arg3, s32 arg4, s32 arg5, u16 *arg6) {
     if (arg0->unk10 & 0x80) {
@@ -426,25 +436,44 @@ u16 func_1000FA64(u16 arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4,
     }
     return 0;
 }
-// PERMUTER CANDIDATE (best 280). Everything matches (arg promotion s2-s6, all 5 bnel
-// field compares incl. operand order, the func_100111C8 guard, unk10|=0x80) EXCEPT the
-// D_80042760 count reload placement after the call: target sinks it call-path-only (merge
-// at the ori), IDO puts it at the merge so the beqzl skip-path reloads count too. Pointer
-// vs base[i] indexing: 520 vs 280; for/do-while/operand-order all tried. Reload-sink heuristic.
-// typedef struct { u16 unk0; s16 unk2; s16 unk4; s16 unk6; u16 unk8; u8 padA[6];
-//     s32 unk10; u8 pad14[0x10]; u16 unk24; u8 pad26[0xA]; } struct_init_EB00_FC18;
-// void func_1000FC18(u16 arg0, s16 arg1, s16 arg2, s16 arg3, u16 arg4) {
-//     struct_init_EB00_FC18 *base = (struct_init_EB00_FC18 *) D_80041FE0;
-//     s32 i;
-//     for (i = 0; i < D_80042760; i++) {
-//         if ((base[i].unk0 == arg0) && (arg1 == base[i].unk2) && (arg2 == base[i].unk4) &&
-//             (arg3 == base[i].unk6) && ((base[i].unk8 & 0x7FFF) == arg4)) {
-//             if (base[i].unk24 != 0) { func_100111C8(base[i].unk24); }
-//             base[i].unk10 |= 0x80;
-//         }
-//     }
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/init_EB00/func_1000FC18.s")
+typedef struct {
+    u16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+    u16 unk8;
+    u8 padA[6];
+    s32 unk10;
+    u8 pad14[0x10];
+    u16 unk24;
+    u8 pad26[0xA];
+} struct_init_EB00_FC18;
+
+void func_1000FC18(u16 arg0, s16 arg1, s16 arg2, s16 arg3, u16 arg4) {
+    s32 id;
+    s32 x;
+    s32 y;
+    s32 z;
+    s32 i;
+    struct_init_EB00_FC18 *ptr;
+    u16 handle;
+
+    id = arg0;
+    x = arg1;
+    y = arg2;
+    z = arg3;
+    for (i = 0; i < D_80042760; i++) {
+        ptr = (struct_init_EB00_FC18 *)&D_80041FE0[i];
+        if ((id == ptr->unk0) && (x == ptr->unk2) && (y == ptr->unk4) &&
+            (z == ptr->unk6) && ((ptr->unk8 & 0x7FFF) == arg4)) {
+            handle = D_80041FE0[i].unk24;
+            if (handle != 0) {
+                func_100111C8(handle);
+            }
+            D_80041FE0[i].unk10 |= 0x80;
+        }
+    }
+}
 void func_1000FD38(s32 arg0, s32 arg1, s32 arg2) {
     s32 i;
 

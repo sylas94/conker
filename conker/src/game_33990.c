@@ -136,23 +136,27 @@ void func_15007168(void) {
 //     if (D_8002AC5C == 0) { ret = func_151DCEF0(&D_800BE900, 0x44, &D_800BE2F0, 0x70); }
 // }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_33990/func_15007360.s")
-// PERMUTER/DATA-LAYOUT CANDIDATE best 705: structure byte-exact. Blockers: (1) checksum pointer
-// gets offset -2 (base+i) + v0/v1 swap vs target's base+0; (2) fill/copy loops reference the
-// D_800E0BFC symbol as the unrolled end + clean count -> requires D_800E0BE0/D_800E0BFC to be
-// compile-time-related (same struct/array); with separate externs IDO emits D_800E0BE0+0x1c and
-// picks the src pointer for the copy bound. Reconstruction:
-// void func_15007440(void) {
-//     u16 sum; s32 i; s8 saved;
-//     func_151DD3A0(&D_800BE900, 0, &D_800BE358, 0x20);
-//     sum = 0xCC;
-//     for (i = 2; i < 0x1E; i++) { sum += D_800BE35A[i - 2] << (i & 3); }
-//     saved = D_800E0BE0[0x10];
-//     if (sum != *(u16 *)D_800BE358) { for (i=0;i<0x1C;i++) D_800E0BE0[i] = -1; }
-//     else { for (i=0;i<0x1C;i++) D_800E0BE0[i] = D_800BE358[i + 2]; }
-//     D_800E0BE0[0x10] = saved;
-//     func_151DD9E4(); func_151E7EF8(); D_8008FE30 = 1;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_33990/func_15007440.s")
+/* Keep each loop body on one line: under -g3 the line table changes the unrolled store order. */
+void func_15007440(void) {
+    u16 sum;
+    s32 i;
+    s8 saved;
+
+    func_151DD3A0(&D_800BE900, 0, &D_800BE358, 0x20);
+    sum = 0xCC;
+    for (i = 2; i < 0x1E; i++) { sum += D_800BE358[i] << (i & 3); }
+    saved = D_800E0BE0[0x10];
+    if (sum != *(u16 *)D_800BE358) {
+        for (i = 0; i < 0x1C; i++) { D_800E0BE0[i] = -1; }
+    } else {
+        for (i = 0; i < 0x1C; i++) { D_800E0BE0[i] = D_800BE358[i + 2]; }
+    }
+    D_800E0BE0[0x10] = saved;
+    func_151DD9E4();
+    func_151E7EF8();
+    D_8008FE30 = 1;
+}
+
 // PERMUTER CANDIDATE best 610: checksum loop byte-exact. Two residual blockers:
 // (1) the dead func_151DCEF0 return -> target keeps `sw v0,0x18(sp)` (frame 0x20); my build DCEs it
 //     (a `volatile s32 ret` restores the store but overshoots frame to 0x30). Same blocker as

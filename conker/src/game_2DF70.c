@@ -71,38 +71,40 @@ void func_15001970(void) {
     D_800B0DC4 = D_800B0DC0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2DF70/func_15001A08.s")
-// NON-MATCHING: JUSTREG
-// void func_15001A08(void) {
-//     s32 sp24;
-//     s32 tmp;
-//     s32 sp1C;
-//
-//     tmp = D_800BE9F0;
-//     sp24 = D_80091AF0[tmp];
-//
-//     __osPiGetAccess();
-//
-//     while ((IO_READ(PI_STATUS_REG) & 3)) {};
-//
-//     tmp = D_80000308 | 0xB0000D24 | 0xA0000000;
-//     sp1C = *(s32*)tmp;
-//
-//     __osPiRelAccess();
-//
-//     if (sp1C != 0x98CCE31A) {
-//         sp24 <<= 1;
-//     }
-//
-//     D_800B0DDC = allocate_memory(sp24, 1, 0, 0);
-//     D_800B0DE0 = D_800B0DDC;
-//     D_800B0DCC = 0;
-//     D_800B0DD0 = 0;
-//     D_800DBE30 = 0;
-//     D_800DBE32 = 0;
-//     D_800DBE34 = 0;
-//     D_800DBE36 = 0;
-// }
+void __osPiGetAccess(void);
+void __osPiRelAccess(void);
+
+void func_15001A08(void) {
+    s32 size;
+    u32 stat;
+    s32 id;
+
+    size = D_80091AF0[D_800BE9F0];
+
+    __osPiGetAccess();
+    stat = IO_READ(PI_STATUS_REG);
+    while (stat & (PI_STATUS_IO_BUSY | PI_STATUS_DMA_BUSY)) {
+        stat = IO_READ(PI_STATUS_REG);
+    }
+    id = IO_READ(D_80000308 | 0xB0000D24);
+    __osPiRelAccess();
+
+    if (id != 0x98CCE31A) {
+        size <<= 1;
+    }
+
+    D_800B0DDC = allocate_memory(size, 1, 0, 0);
+    D_800B0DE0 = D_800B0DDC;
+    D_800B0DCC = 0;
+    D_800B0DD0 = 0;
+    D_800DBE30 = 0;
+    D_800DBE32 = 0;
+    D_800DBE34 = 0;
+    D_800DBE36 = 0;
+}
+
+void func_15001B08(void) {
+}
 
 u16* func_15001B10(void) {
     u16 *temp_v0;

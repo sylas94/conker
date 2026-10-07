@@ -103,7 +103,50 @@ s32 func_1503D5F0(s32 arg0) {
     return arg0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6A3D0/func_1503D660.s")
+typedef struct Hdr1503D660 {
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+    s32 unkC;
+} Hdr1503D660;
+
+Hdr1503D660 *func_1502B5C8(s32 *, s32, s32, s32);
+
+/* D_800D1588[] holds one loaded header block per id; the golden re-reads the slot on every use. */
+#define SLOT (((Hdr1503D660 **)D_800D1588)[arg0])
+
+s32 func_1503D660(s32 arg0, s32 arg1) {
+    s32 size;
+    Hdr1503D660 *p;
+
+    if (SLOT != NULL) {
+        return 0;
+    }
+    p = func_1502B5C8(&size, 2, 15, func_1503D5F0(arg0));
+    if (p == NULL) {
+        SLOT = NULL;
+        D_800C5A90[arg0] = 0;
+        func_1503D510(arg0);
+        return 4;
+    }
+    SLOT = p;
+    if ((SLOT)->unk0 != 0) {
+        (SLOT)->unk0 += (s32)SLOT;
+        func_1503D45C((s32 *)(SLOT)->unk0, (s32)(SLOT + 1));
+    }
+    if ((SLOT)->unk4 != 0) {
+        (SLOT)->unk4 += (s32)SLOT;
+    }
+    if ((SLOT)->unk8 != 0) {
+        (SLOT)->unk8 += (s32)SLOT;
+    }
+    SLOT = SLOT + 1;
+    func_1503D484((struct Elem1503D484 *)SLOT, arg0);
+    func_1503D510(arg0);
+    return 0;
+}
+
+#undef SLOT
 
 extern struct124 *D_800D1C90[];
 struct124 *func_1502B6BC(s32, s32, s32, s32, s32, s32);

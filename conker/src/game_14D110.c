@@ -108,4 +108,44 @@ void func_151216F8(struct108 *arg0) {
     *(f32 *)((u8 *)arg0 + 0x99C) = 0.0f;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_14D110/func_151218C4.s")
+typedef struct {
+    u8 pad0[0x2C];
+    f32 unk2C;
+    u8 pad30[0x1C];
+    u8 unk4C;
+    u8 unk4D;
+} Sub740; /* sub-block at actor+0x740 (func_1511FC60 uses +0x34/+0x4D too) */
+
+void func_151C9ED4(struct108 *);
+
+void func_151218C4(struct108 *arg0) {
+    Sub740 *s = (Sub740 *)((u8 *)arg0 + 0x740);
+
+    if (*arg0->unk36C & 0x10) {
+        return;
+    }
+    if (*(s32 *)((u8 *)arg0 + 0x34) == 0x40) {
+        if (arg0->unk6FC == 0xF) {
+            *(f32 *)((u8 *)arg0 + 0x898) = 0.0f;
+            *(f32 *)((u8 *)arg0 + 0x89C) = 0.0f;
+        }
+        arg0->unk3D4->unk198 = 0;
+        arg0->unk73C = 0;
+        *(s16 *)((u8 *)arg0 + 0x84A) = 0x3C;
+    } else {
+        *(s16 *)((u8 *)arg0 + 0x84A) = 0x3C;
+        arg0->unk73C = 3;
+    }
+    arg0->unk374 = 200.0f;
+    arg0->unk348 = 100.0f;
+    arg0->unk134 = s->unk2C;
+    s->unk4C = 0;
+    arg0->unk190 = 0.0f;
+    *(f32 *)((u8 *)arg0 + 0x99C) = 0.0f;
+    arg0->unk198 = 0.0f;
+    func_1506160C(arg0->unk3D0, 2, 0xFF, 0x20, arg0->unk23D);
+    if (*((u8 *)arg0 + 0x84C) != 0) {
+        func_151C9ED4(arg0);
+        *((u8 *)arg0 + 0x84C) = 0;
+    }
+}

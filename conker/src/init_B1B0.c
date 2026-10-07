@@ -551,32 +551,28 @@ void func_1000E40C(s32 arg0, s32 arg1);
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000C530.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000C7E8.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000C934.s")
-// NON-MATCHING: close but last part isn't quite right
-// s32 func_1000C934(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
-//     s32 sp3C;
-//     s32 sp38;
-//     s32 temp_a1;
-//     s32 temp_t7;
-//
-//     sp3C = 0;
-//     temp_t7 = D_800DBFF0->unk5F0 & 1;
-//     if (temp_t7 != 0) {
-//         sp38 = 0x7FFF;
-//     } else {
-//         sp38 = 12000;
-//     }
-//     if ((D_800BE9F0 == 0x37) && (temp_t7 == 0)) {
-//         func_100114D0(2200, 1066, -1600, sp38, 3000, 1500, 0, &sp3C, 0);
-//         sp3C = sp38 - (sp3C & 0xFF00);
-//     }
-//     temp_a1 = sp3C;
-//     if ((sp3C != arg0) & 0xFFFF) {
-//         sp3C = temp_a1;
-//         func_1000E40C(84, sp3C);
-//     }
-//     return sp3C | 0x80000000;
-// }
+s32 func_1000C934(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
+    s32 sp3C;
+    s32 sp38;
+    s32 temp_t7;
+
+    sp3C = 0;
+    temp_t7 = D_800DBFF0->unk5F0 & 1;
+    if (temp_t7 != 0) {
+        sp38 = 0x7FFF;
+    } else {
+        sp38 = 12000;
+    }
+    if ((D_800BE9F0 == 0x37) && (temp_t7 == 0)) {
+        func_100114D0(2200, 1066, -1600, sp38, 3000, 1500, 0, &sp3C, 0);
+        sp3C &= 0xFF00;
+        sp3C = sp38 - sp3C;
+    }
+    if ((sp3C != arg0) & 0xFFFF) {
+        func_1000E40C(84, sp3C);
+    }
+    return sp3C | 0x80000000;
+}
 
 s32 func_1000CA18(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     s32 tmp;
@@ -720,7 +716,30 @@ s32 func_1000CD40(s32 arg0, s32 arg1, s32 arg2) {
     return arg0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000CDA0.s")
+s32 func_1000CDA0(u8 arg0, s32 *arg1) {
+    if (arg0 == 0) {
+        return 1;
+    }
+    if (arg1 != NULL) {
+        if (arg1[0] >= 0) {
+            if (D_800417B0[arg1[0]] == NULL || arg1[1] <= 0) {
+                return 1;
+            }
+            if (func_1000853C(arg1[0]) == 3) {
+                return 1;
+            }
+            if (!(D_8002B078[arg1[1]][0] & 0x20)) {
+                D_800418AC[arg1[0]] |= 3;
+            }
+            arg0 &= ~D_800418AC[arg1[0]];
+        } else {
+            return 1;
+        }
+    } else {
+        return 1;
+    }
+    return arg0 == 0;
+}
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000CEAC.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000D2F8.s")
 // PERMUTER CANDIDATE / near-miss (best 74): logic is BYTE-PERFECT — every instruction matches

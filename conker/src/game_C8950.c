@@ -271,8 +271,33 @@ void func_1509C228(void);
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_C8950/func_1509BFB0.s")
 
-// need a bigger brain
-#pragma GLOBAL_ASM("asm/nonmatchings/game_C8950/func_1509C120.s")
+void func_1509C120(void) {
+    s32 i;
+    s32 n;
+    struct102 *bufs[4];
+    struct102 *old;
+
+    n = func_150ADA20() & 3;
+    old = D_800D2E4C;
+    if (old != NULL) {
+        if (!(func_150ADA20() & 4)) {
+            return;
+        }
+    }
+    for (i = 0; i <= n; i++) {
+        bufs[i] = allocate_memory(0x1B, 0xFF, 2, 0);
+    }
+    for (i = 0; i <= n; i++) {
+        if (i != n) {
+            func_10004074(bufs[i]);
+        }
+    }
+    D_800D2E4C = bufs[n];
+    if (old != NULL) {
+        bcopy(old, D_800D2E4C, 0x1B);
+        func_10004074(old);
+    }
+}
 
 void func_1509C228(void) {
     if ((D_800D2E68 & 8) || (D_800D2E4C->unkF & 1)) {

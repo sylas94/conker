@@ -1,3 +1,9 @@
+/* SHIPPED 2026-10-06: live in conker/src/game_173D40.c (0 pragmas) with [0x24A190, .rodata, game_173D40].
+ * The 'unsteerable' delay slot was the -g3 SCOPE of case 6's array: close the block BEFORE `return 6;`
+ * (the array's scope ends after the call) and IDO fills the range-check slot from the default target.
+ * The array must be `const` -- a non-const initialiser image goes to .data, golden's is in .rodata.
+ * Kept for history only. */
+
 /* ===========================================================================
  * func_15146970 -- game_173D40.c -- PARKED 2026-08-15 (rodata-migration wave)
  * ===========================================================================

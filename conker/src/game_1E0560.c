@@ -171,7 +171,50 @@ final_return:
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1E0560/func_151B42A4.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1E0560/func_151B47D8.s")
+typedef struct {
+    s32 unk0;
+    u8 pad4[0x37];
+    u8 unk3B;
+    u8 pad3C[0x198];
+    s32 unk1D4;
+} Struct151B47D8Actor;
+
+typedef struct {
+    Struct151B47D8Actor *unk0;
+    u8 unk4;
+    u8 unk5;
+    u8 pad6[2];
+    f32 unk8[3];
+} Struct151B47D8Part;
+
+typedef struct {
+    u8 pad0[0x10];
+    u8 unk10;
+} Struct151B47D8;
+
+typedef struct {
+    Struct151B47D8Part p0;
+    Struct151B47D8Part p1;
+} Struct151B47D8Pair;
+
+void func_15143134(void *, s32, s32);
+
+s32 func_151B47D8(Struct151B47D8 *arg0, Struct151B47D8Pair *arg1, s32 arg2, u8 arg3) {
+    Struct151B47D8Actor *a = arg1->p0.unk0;
+    Struct151B47D8Actor *b = arg1->p1.unk0;
+
+    if (a->unk1D4 == 0 || b->unk1D4 == 0) {
+        arg0->unk10 |= 0xC;
+        return 1;
+    }
+    if (a->unk0 == 0 || a->unk3B != arg1->p0.unk4 || b->unk0 == 0 || b->unk3B != arg1->p1.unk4) {
+        return 0;
+    }
+    arg0->unk10 &= ~(arg3 ? 4 : 8);
+    func_15143134(arg3 ? arg1->p0.unk8 : arg1->p1.unk8, arg2,
+                  arg3 ? a->unk1D4 + (arg1->p0.unk5 << 6) : b->unk1D4 + (arg1->p1.unk5 << 6));
+    return 1;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1E0560/func_151B48DC.s")
 

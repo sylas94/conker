@@ -180,7 +180,33 @@ s32 func_15086D48(s32 arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15087350.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15087CC0.s")
+extern u8 *D_800872A0;
+void func_150891E8(s8 *, struct127 *);
+void func_150896EC(s8 *, struct127 *, s32);
+
+void func_15087CC0(void) {
+    s8 *p;
+    struct127 *obj;
+    s32 i;
+
+    D_800D23A9 = 0;
+    if (D_800872A0 == 0) {
+        return;
+    }
+    for (i = 0; i < D_800D2398; i++) {
+        p = (s8 *)(i * 0x84 + (s32)D_800872A0);
+        obj = &D_800CC2D0[p[0x31]];
+        if (obj->camera != NULL) {
+            if (p[0x30] >= 2) {
+                func_150891E8(p, obj);
+            } else if (((u8 *)p)[0x48] == 0) {
+                func_150896EC(p, obj, 0);
+            } else if (p[0x49] != 0) {
+                func_150896EC(p, obj, 1);
+            }
+        }
+    }
+}
 
 extern u8 *D_800872A0;
 u8 func_150888A8(u8, u8, s32);
