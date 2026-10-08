@@ -112,7 +112,55 @@ s32 func_150E5FD0(struct17 *arg0, struct17 *arg1, f32 arg2, f32 arg3, f32 arg4, 
     return ret;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_113480/func_150E6230.s")
+typedef struct {
+    u8 pad_0x00[0x34];
+    f32 field_0x34;
+    f32 field_0x38;
+    f32 field_0x3C;
+    f32 field_0x40;
+    f32 field_0x44;
+    f32 field_0x48;
+    u8 pad_0x4C[4];
+    f32 field_0x50;
+    u8 pad_0x54[0xBC];
+    Struct150E5FD0Extra field_0x110;
+} Struct150E6230Object;
+
+extern s32 (*D_80088A10[])(Struct150E6230Object *);
+
+s8 func_150E6230(Struct150E6230Object *arg0) {
+    s8 ret = 1;
+
+    {
+        Struct150E5FD0Extra *e = &arg0->field_0x110;
+        f32 sign;
+        struct17 sp30;
+
+        if (e->field_0x00 & 1) {
+            sp30.unk0 = e->field_0x04.unk0 - arg0->field_0x34;
+            sp30.unk4 = e->field_0x04.unk4 - arg0->field_0x38;
+            sp30.unk8 = e->field_0x04.unk8 - arg0->field_0x3C;
+            if (func_15144A74(&sp30, &e->field_0x04) < 0.0f) {
+                sign = -1.0f;
+            } else {
+                sign = 1.0f;
+            }
+            if (sign != e->field_0x28) {
+                ret = (e->field_0x2C != -1) ? D_80088A10[e->field_0x2C](arg0) : 0;
+            }
+        }
+    }
+    {
+        f32 vx = arg0->field_0x40 * arg0->field_0x50;
+        f32 vy = arg0->field_0x44 * arg0->field_0x50;
+        f32 vz = arg0->field_0x48 * arg0->field_0x50;
+
+        arg0->field_0x34 += vx * D_800BE9A4;
+        arg0->field_0x38 += vy * D_800BE9A4;
+        arg0->field_0x3C += vz * D_800BE9A4;
+    }
+    return ret;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_113480/func_150E63A0.s")
 

@@ -24,17 +24,70 @@ extern OSPifRam D_800E0A30;
 /* func_151DD304 = __osPackEepReadData.  Byte-perfect at the tree default -- no OPT_FLAGS
  * override needed here, unlike the game's other private libultra copies.
  *
- * func_151DD140 = osEepromRead.  PARKED at mism=101, n=112/113, and the frame is already
- * golden's (sdata 0x3C, eepromformat 0x30, ret 0x4C -- four word automatics above the two
- * aggregates, sdata declared before eepromformat).  The ONE missing instruction is a
- * redundant `b .L151DD1D0` that golden emits at the end of the LAST switch case, with
- * `addiu $a0,$zero,-0x1` in its delay slot; IDO folds ours into a bare `addiu` because that
- * block is physically last.  Refuted as a source question: default-first / default-middle /
- * default-last, if-else-if, early `break` inside each case, `>` vs `>=`, switching on a u16
- * local, hoisting the early-out above the switch, and -O2 / -O1 all leave it at 100-141.
- * Next lever is the permuter, not another spelling.
+ * func_151DD140 = osEepromRead, verbatim SDK shape.  The redundant `b` at the end of the
+ * 16K case (the old mism=101 park) is the SDK's `default:` having NO `break`: the default
+ * body is physically last, so the 16K case's break jumps over it, and as1 later moves the
+ * default's `li` into the compare chain's delay slot and deletes the body.
  */
-#pragma GLOBAL_ASM("asm/nonmatchings/game_20A5F0/func_151DD140.s")
+extern u8 __osContLastCmd;
+s32 __osSiRawStartDma(s32 dir, void *dramAddr);
+s32 func_151DD710(OSMesgQueue *mq, OSContStatus *data);
+void func_151DD304(u8 address);
+
+s32 func_151DD140(OSMesgQueue *mq, u8 address, u8 *buffer) {
+    s32 ret = 0;
+    s32 i = 0;
+    u16 type;
+    u8 *ptr;
+    OSContStatus sdata;
+    __OSContEepromFormat eepromformat;
+
+    ptr = (u8 *) &D_800E0A30;
+    __osSiGetAccess();
+    ret = func_151DD710(mq, &sdata);
+    if (ret == 0) {
+        type = sdata.type & (CONT_EEPROM | CONT_EEP16K);
+        switch (type) {
+            case CONT_EEPROM:
+                if (address >= 64) {
+                    ret = -1;
+                }
+                break;
+            case CONT_EEPROM | CONT_EEP16K:
+                if (address >= 256) {
+                    ret = -1;
+                }
+                break;
+            default:
+                ret = CONT_NO_RESPONSE_ERROR;
+        }
+    }
+    if (ret != 0) {
+        __osSiRelAccess();
+        return ret;
+    }
+    while (sdata.status & CONT_EEPROM_BUSY) {
+        func_151DD710(mq, &sdata);
+    }
+    func_151DD304(address);
+    __osSiRawStartDma(OS_WRITE, &D_800E0A30);
+    osRecvMesg(mq, NULL, OS_MESG_BLOCK);
+    __osSiRawStartDma(OS_READ, &D_800E0A30);
+    __osContLastCmd = 4;
+    osRecvMesg(mq, NULL, OS_MESG_BLOCK);
+    for (i = 0; i < 4; i++) {
+        ptr++;
+    }
+    eepromformat = *(__OSContEepromFormat *) ptr;
+    ret = (eepromformat.rxsize & 0xC0) >> 4;
+    if (ret == 0) {
+        for (i = 0; i < 8; i++) {
+            *buffer++ = eepromformat.data[i];
+        }
+    }
+    __osSiRelAccess();
+    return ret;
+}
 
 void func_151DD304(u8 address) {
     u8 *ptr;

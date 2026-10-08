@@ -32,7 +32,61 @@ struct260 *func_151D71B0(s16 arg0, u8 arg1, u8 arg2, f32 arg3, void *arg4, u8 ar
     return temp_v0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_204660/func_151D7264.s")
+typedef struct Sub151D7264 {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ u8 unk4;
+    /* 0x05 */ u8 unk5;
+    /* 0x06 */ u8 pad6[2];
+    /* 0x08 */ struct17 unk8;
+    /* 0x14 */ f32 unk14;
+} Sub151D7264;
+
+typedef struct Obj151D7264 {
+    /* 0x00 */ u8 pad0[0xD];
+    /* 0x0D */ u8 unkD;
+    /* 0x0E */ s16 unkE;
+    /* 0x10 */ u8 pad10[0x18];
+    /* 0x28 */ Sub151D7264 unk28;
+} Obj151D7264;
+
+extern s32 (*D_8008FCA0[])(Obj151D7264 *);
+extern f32 func_15143E64(struct17 *);
+void func_151D77C8();
+void func_151D7830(s32 *arg0);
+
+void func_151D7264(Obj151D7264 *arg0) {
+    Sub151D7264 *p;
+    struct17 pos;
+    u8 flag;
+    struct17 d;
+
+    p = &arg0->unk28;
+    pos = p->unk8;
+    flag = p->unk5 & 1;
+    if (D_8008FCA0[p->unk4](arg0) == 0) {
+        arg0->unkE = -1;
+        arg0->unkD |= 1;
+        return;
+    }
+    if (p->unk5 & 1) {
+        if (flag) {
+            d.unk0 = p->unk8.unk0 - pos.unk0;
+            d.unk4 = p->unk8.unk4 - pos.unk4;
+            d.unk8 = p->unk8.unk8 - pos.unk8;
+            if (func_15143E64(&d) < p->unk14) {
+                if (p->unk0 == 0) {
+                    func_151D7830((s32 *)arg0);
+                }
+            } else {
+                func_151D77C8((s32 *)arg0);
+            }
+        } else {
+            func_151D77C8((s32 *)arg0);
+        }
+    } else {
+        func_151D77C8((s32 *)arg0);
+    }
+}
 
 extern void (*D_8008FCA4[])(s32 *, s32, u8);
 

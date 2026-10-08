@@ -1,5 +1,8 @@
 #include <ultra64.h>
+#define func_1513D668 func_1513D668_void_proto
 #include "functions.h"
+#undef func_1513D668
+s32 func_1513D668(s32 arg0, s32 arg1, u8 arg2, u8 arg3, u8 arg4, u8 arg5, s16 arg6, f32 arg7, f32 arg8, s32 arg9, s32 argA, u8 argB, s32 argC, u8 argD, s32 argE);
 #include "variables.h"
 
 extern f32 D_800A05E0[];
@@ -24,7 +27,9 @@ struct260 *func_15130374(void *, u8, s32, u8, s32);
 s32 func_15132A4C(void *, s32, s32, s32, u8, s32);
 
 typedef struct {
-    char pad_0[0x1D4];
+    char pad_0[0x7A];
+    u16 unk7A;
+    char pad_7C[0x1D4 - 0x7C];
     s32 field_0x1D4;
 } AnimFrameOwner;
 
@@ -65,7 +70,181 @@ s32 func_150CB1E0(s32 arg0, s32 arg1) {
     return 0xB;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_F8590/func_150CB1F4.s")
+typedef struct {
+    f32 unk00;
+    f32 unk04;
+    f32 unk08;
+    f32 unk0C;
+    f32 unk10;
+    f32 unk14;
+    f32 unk18;
+    u8 unk1C;
+    u8 pad1D[0x7];
+} CB1F4Ground; /* 0x24 */
+
+typedef struct {
+    s16 unk0;
+    f32 unk4;
+} CB1F4Extra;
+
+typedef struct {
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+    s16 unk8;
+} CB1F4Col;
+
+typedef struct {
+    u8 unk0;
+    u8 unk1;
+    s16 unk2;
+    s16 unk4;
+    u8 pad6[2];
+    s32 unk8;
+    s32 unkC;
+    u8 unk10;
+    u8 unk11;
+    u8 unk12;
+    u8 unk13;
+    f32 unk14;
+    f32 unk18;
+    struct17 unk1C;
+    f32 unk28;
+    f32 unk2C;
+    f32 unk30;
+    f32 unk34;
+    f32 unk38;
+    f32 unk3C;
+    s32 unk40;
+    u8 unk44;
+    u8 unk45;
+    u8 unk46;
+    u8 unk47;
+    s32 unk48;
+    u8 unk4C;
+    u8 pad4D[3];
+    s32 unk50;
+    s16 unk54;
+    s16 unk56;
+} CB1F4Main; /* 0x58 */
+
+typedef struct {
+    u8 r;
+    u8 g;
+    u8 b;
+} CB1F4Rgb;
+
+extern f32 D_800A05F8;
+extern f32 D_800A05FC;
+extern f32 D_800A0600;
+void func_150CCD90(f32, f32 *, f32 *, f32 *);
+void func_1514C678(f32, f32, s32, f32, s32, s32, s32, s32, s32, f32, s32, s32);
+s32 func_1518ABD0(s32, s32, s32);
+
+void func_150CB1F4(AnimFrameOwner *arg0, s32 arg1, s32 arg2) {
+    f32 pos[3];
+    CB1F4Ground ground;
+    f32 fr;
+    f32 fg;
+    f32 fb;
+    u8 r;
+    u8 g;
+    u8 b;
+    s32 off;
+    CB1F4Extra extra;
+    CB1F4Main mn;
+    s32 ret;
+
+    if (arg0->field_0x1D4 == 0) {
+        return;
+    }
+    if (func_150CB0E0(pos, arg0, (s32)&ground, (u8)arg1) == 0) {
+        return;
+    }
+    func_1512D748(&D_800DBFF0[D_800BE9E8], 7, 1);
+    func_151D5404((struct17 *)pos, 1502.0f, 3000.0f, 0.0003333333298f, 0xC, 0xF, 0xFF, 0);
+    func_150CCD90(pos[2], &fr, &fg, &fb);
+    r = (u8)fr;
+    g = (u8)fg;
+    b = (u8)fb;
+    {
+        CB1F4Col cols[4];
+        s16 spd;
+        s16 spd2;
+        CB1F4Rgb rgb;
+
+        cols[0].unk0 = r;
+        cols[0].unk2 = g;
+        cols[0].unk4 = b;
+        cols[0].unk6 = 0xFF;
+        cols[0].unk8 = 0;
+        cols[1].unk0 = r;
+        cols[1].unk2 = g;
+        cols[1].unk4 = b;
+        cols[1].unk6 = 0xFF;
+        cols[1].unk8 = 0;
+        cols[2].unk0 = r;
+        cols[2].unk2 = g;
+        cols[2].unk4 = b;
+        cols[2].unk6 = 0xFF;
+        cols[2].unk8 = 0;
+        cols[3].unk0 = r;
+        cols[3].unk2 = g;
+        cols[3].unk4 = b;
+        cols[3].unk6 = 0xFF;
+        cols[3].unk8 = 0;
+        if (arg1 == 1) {
+            mn.unk0 = 0x4C;
+        } else {
+            mn.unk0 = 0x4B;
+        }
+        mn.unk2 = 0x2603;
+        mn.unk4 = 2;
+        mn.unk8 = 0;
+        mn.unkC = 0;
+        mn.unk10 = 0xFF;
+        mn.unk11 = 0xFF;
+        mn.unk12 = 0xFF;
+        mn.unk13 = 0xFF;
+        mn.unk14 = mn.unk18 = ((func_150ADA68() * 50.0f) + D_800A05F8) * D_800A05FC;
+        mn.unk1C.unk0 = pos[0];
+        mn.unk1C.unk4 = ground.unk00 + 10.0f;
+        mn.unk1C.unk8 = pos[2];
+        mn.unk28 = 0.0f;
+        mn.unk2C = 0.0f;
+        mn.unk30 = 0.0f;
+        mn.unk34 = 1.0f;
+        mn.unk38 = 1.0f;
+        mn.unk3C = 1.0f;
+        mn.unk40 = 0x401C0000;
+        mn.unk44 = (func_150ADA20() % 51U) + 160;
+        mn.unk45 = 0xFF;
+        extra.unk0 = (func_150ADA20() & 3) + 7;
+        extra.unk4 = (((func_150ADA68() * 30.0f) + 30.0f) * mn.unk14) * D_800A0600;
+        mn.unk46 = 0;
+        mn.unk47 = 6;
+        off = (arg1 == 1) ? -8 : 8;
+        ret = func_1513D668((s32)&mn, (s32)cols, 0, 0x17, 0, 0,
+                            (s16)((arg0->unk7A >> 8) - off),
+                            500.0f, 500.0f, 0, (s32)&ground.unk04, 1, 8, 0xFF, 0);
+        if (ret != 0) {
+            memcpy((u8 *)ret + 0x128, &extra, 8);
+            if (func_1518ABD0(D_800D98E0, ret, 2) == 0) {
+                func_1516972C((struct102 *)ret);
+            }
+        }
+        spd = (func_150ADA20() & 0xF) + 10;
+        func_1514C678(pos[0], pos[1], *(s32 *)&pos[2], (func_150ADA68() * 59.0f) + 80.0f,
+                      0, 0xFF, spd, 0xE, 0, 0.0f, 0, 0xFF);
+        spd2 = (func_150ADA20() & 0xF) + 5;
+        rgb.r = r;
+        rgb.g = g;
+        rgb.b = b;
+        func_1514C678(pos[0], pos[1], *(s32 *)&pos[2], (func_150ADA68() * 59.0f) + 70.0f,
+                      0, 0xFF, spd2, 0xF, 0, 0.0f, (s32)&rgb, 0xFF);
+    }
+}
 
 struct Func150CB7CC {
     char pad0[0x1C];

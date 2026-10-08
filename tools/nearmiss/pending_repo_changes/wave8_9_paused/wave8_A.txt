@@ -1,0 +1,15 @@
+func_1505D5D0	game_83300	288B	rodata
+func_150A3194	game_CDE80	288B	
+func_150E6FAC	game_113D60	288B	rodata
+func_151D42E8	game_200930	288B	rodata
+func_1504ADD0	game_77AD0	292B	rodata
+func_150A29C8	game_CDE80	292B	
+func_151406AC	game_169510	292B	
+func_15102D90	game_12FDD0	296B	
+func_151670C0	game_1944C0	296B	
+func_151671E8	game_1944C0	296B	
+func_15167C58	game_1944C0	300B	
+func_150AEB9C	game_DBA60	304B	
+func_150E75A0	game_113D60	304B	
+func_1514BE20	game_176A00	304B	rodata
+func_151C6D70	game_1F3780	304B	rodata
