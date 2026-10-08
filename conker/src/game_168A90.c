@@ -84,7 +84,7 @@ Gfx *func_1513B83C(Gfx *arg0, ObjRenderState *arg1, s16 arg2) {
     return arg0;
 }
 
-s32 func_1513B968(s32 arg0, s32 arg1) {
+s32 func_1513B968(s32 arg0, s16 arg1) {
     // FIXME: &arg0->unk_120[D_800BE9C0]
     func_150A7B80(arg0 + 120 + (D_800BE9C0 << 6));
     return 1;
@@ -163,7 +163,84 @@ struct102 *func_1513BAE8(void) {
     }
     return temp_v0;
 }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_168A90/func_1513BBFC.s")
+
+typedef struct {
+    u8 pad0[0x50];
+    s32 unk50;
+    u8 pad54[4];
+    Vtx *unk58[2][4];
+} Obj1513BBFC;
+
+typedef struct {
+    s32 start;
+    s32 count;
+} Range1513BBFC;
+
+extern struct17 D_800A49C0[];
+extern Range1513BBFC D_800A4A2C[];
+extern f32 D_800A4A74;
+extern f32 D_800A4A78;
+extern f32 D_800A4A7C;
+extern f32 D_800A4A80;
+extern struct17 *func_15144B34(s32);
+
+s32 func_1513BBFC(Obj1513BBFC *arg0, s16 arg1) {
+    f32 *v;
+    f32 scaleX;
+    f32 scaleY;
+    f32 offX;
+    f32 offY;
+    s32 k;
+    struct17 *center;
+    f32 dirX;
+    f32 dirZ;
+    s32 j;
+
+    func_1513B968((s32)arg0, arg1);
+    v = (f32 *)((u8 *)arg0 + arg0->unk50 + 0xF8);
+    scaleX = sinf(v[3]) * D_800A4A74 + D_800A4A78;
+    scaleY = sinf(v[4]) * D_800A4A7C + D_800A4A80;
+    center = func_15144B34(arg1);
+    offX = v[0] - (s32)(v[0] * (1.0f / 1024.0f)) * 1024.0f;
+    offY = v[1] - (s32)(v[1] * (1.0f / 1024.0f)) * 1024.0f;
+    for (k = 0; k < 9; k++) {
+        f32 dx;
+        f32 dz;
+
+        dx = D_800A49C0[k].unk0 - center->unk0;
+        dz = D_800A49C0[k].unk8 - center->unk8;
+        if (dx != 0.0f || dz != 0.0f) {
+            f32 len;
+
+            len = 1.0f / sqrtf(dx * dx + dz * dz);
+            dirX = dz * len;
+            dirZ = -dx * len;
+        } else {
+            dirX = 1.0f;
+            dirZ = 0.0f;
+        }
+        for (j = D_800A4A2C[k].start; j < D_800A4A2C[k].start + D_800A4A2C[k].count; j++) {
+            Vtx *vtx;
+            f32 x;
+            f32 y;
+            f32 z;
+            f32 ex;
+            f32 ey;
+            f32 ez;
+
+            vtx = &arg0->unk58[D_800BE9C0][arg1][j];
+            x = vtx->v.ob[0];
+            y = vtx->v.ob[1];
+            z = vtx->v.ob[2];
+            ex = x - D_800A49C0[k].unk0;
+            ey = y - D_800A49C0[k].unk4;
+            ez = z - D_800A49C0[k].unk8;
+            vtx->v.tc[0] = (ex * dirX + ez * dirZ) * scaleX - offX;
+            vtx->v.tc[1] = ey * scaleY - offY;
+        }
+    }
+    return 1;
+}
 
 struct Obj1513BEB0 {
     u8 pad0[0x50];

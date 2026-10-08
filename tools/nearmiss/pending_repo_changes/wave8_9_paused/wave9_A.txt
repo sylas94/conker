@@ -1,0 +1,15 @@
+func_1510E670	game_13BB20	308B	rodata
+func_151794C8	game_1A6360	312B	rodata
+func_150C5568	game_F2820	316B	rodata
+func_16000590	debugger/debugger	316B	
+func_15141E38	game_16EE20	320B	
+func_1500FFCC	game_3D2E0	324B	
+func_150C68C4	game_F3BA0	324B	rodata
+func_151BC64C	game_1E73B0	328B	
+func_1000C7E8	init_B1B0	332B	rodata
+func_15010880	game_3DC30	336B	parked,rodata
+func_15016850	game_43D00	336B	
+func_15031070	game_5D2C0	340B	
+func_1502B350	game_57FA0	344B	
+func_1000E934	init_B1B0	352B	rodata
+func_15035FE8	game_61D10	352B	

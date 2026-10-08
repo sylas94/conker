@@ -1,5 +1,10 @@
 #include <ultra64.h>
+/* functions.h types func_150ADA20 as returning u8; golden spills/uses the full u32 return
+ * (same shadow-prototype idiom as game_121A20.c). */
+#define func_150ADA20 func_150ADA20_u8_decl_in_functions_h
 #include "functions.h"
+#undef func_150ADA20
+u32 func_150ADA20(void);
 #include "variables.h"
 
 extern f32 D_8009FC98;
@@ -304,7 +309,122 @@ void func_150B60E0(s32 *arg0, s32 arg1) {
     func_15143134(&D_8009FC30, arg1, arg0[0x1D4 / 4] + 0x140);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_E2DA0/func_150B6110.s")
+typedef struct {
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+    s16 unk8;
+    u8 padA[0xA];
+    u8 unk14;
+} Obj150B6110;
+
+typedef struct {
+    Obj150B6110 *obj;
+    f32 accum;
+} Data150B6110;
+
+typedef struct {
+    u8 unk0;
+    u8 unk1;
+    u8 pad2[0xA];
+    u8 unkC;
+    u8 padD[0x1B];
+    Obj150B6110 *unk28;
+    f32 unk2C;
+    u8 unk30;
+} Arg150B6110;
+
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+} Vec150B6110;
+
+typedef struct {
+    f32 unk0;
+    f32 unk4;
+    f32 unk8;
+    f32 unkC;
+    f32 unk10;
+    s16 unk14;
+    s16 unk16;
+    s16 unk18;
+    s16 unk1A;
+    s16 unk1C;
+    s32 unk20;
+    s32 unk24;
+    u8 unk28;
+    u8 unk29;
+    u8 unk2A;
+    u8 unk2B;
+    u8 unk2C;
+} Desc150B6110;
+
+extern f32 D_8009FCBC;
+extern f32 D_8009FCC0;
+extern f32 D_8009FCC4;
+extern f32 D_8009FCC8;
+extern void func_1514373C(f32 arg0, f32 arg1, f32 *arg2, f32 *arg3);
+extern void func_15106F98(Vec150B6110 *, Vec150B6110 *, s32, Desc150B6110 *, f32, s32, s32, s32);
+
+void func_150B6110(Arg150B6110 *arg0) {
+    Data150B6110 *data;
+    Obj150B6110 *obj;
+    u8 prev;
+    u8 a;
+
+    obj = arg0->unk28;
+    prev = arg0->unk30;
+    arg0->unk30 = obj->unk14;
+    if (obj->unk14 == 1) {
+        if (arg0->unk30 != prev) {
+            func_151494E0(0, 0x4A);
+        }
+        return;
+    }
+    data = (Data150B6110 *)((u8 *)arg0 + 0x28);
+    data->accum += (D_8009FCBC + func_150ADA68() * D_8009FCC0) * D_800BE9A4;
+    if (data->accum > 1.0f) {
+        Desc150B6110 desc;
+        Vec150B6110 from;
+        Vec150B6110 to;
+        f32 size;
+
+        desc.unk0 = 35.0f;
+        desc.unk4 = 35.0f;
+        desc.unk8 = 76.0f;
+        desc.unkC = 103.0f;
+        desc.unk10 = D_8009FCC4;
+        desc.unk14 = 0x28;
+        desc.unk16 = 0;
+        desc.unk18 = 4;
+        desc.unk1A = 3;
+        desc.unk1C = 7;
+        desc.unk20 = 4;
+        desc.unk24 = 3;
+        desc.unk28 = 0x7E;
+        desc.unk29 = 0xF9;
+        desc.unk2A = 0xFF;
+        desc.unk2B = 0x7F;
+        desc.unk2C = 0x80;
+        size = D_8009FCC8;
+        from.y = obj->unk2 + obj->unk8;
+        to.y = obj->unk2 + obj->unk8;
+        do {
+            a = func_150ADA20();
+            func_1514373C((u32)a, obj->unk6, &from.x, &from.z);
+            from.x += obj->unk0;
+            from.z += obj->unk4;
+            a += func_150ADA20() % 129 + 64;
+            func_1514373C((u32)a, obj->unk6, &to.x, &to.z);
+            to.x += obj->unk0;
+            to.z += obj->unk4;
+            func_15106F98(&from, &to, 4, &desc, size, 1, arg0->unkC, arg0->unk1);
+            data->accum -= 1.0f;
+        } while (data->accum > 1.0f);
+    }
+}
 
 void func_150B6450(struct102 *arg0, s32 arg1, u8 arg2) {
     if (arg2 == 0x4A) {

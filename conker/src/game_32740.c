@@ -14,7 +14,42 @@ void func_1510E7A4(s32, s32, s32, s32, s32, s32, f32, f32, f32, f32, u16, s32, f
 void func_15123070(struct108 *);
 void func_1512D560(struct108 *, s32, struct168 *);
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_32740/func_15005290.s")
+extern void *allocate_memory(s32, s32, s32, s32);
+extern s32 func_1502B5C8(u32 *, s32, s32, s32, s32);
+extern void func_1512ABF8(void);
+extern void func_1512D238(void);
+void func_150054C4(struct108 *arg0, s32 arg1, s16 arg2, s32 arg3);
+
+void func_15005290(s32 arg0, s32 arg1) {
+    struct108 *obj;
+    u32 size;
+    s32 count;
+    u32 i;
+    s16 id;
+
+    D_800DC020 = func_1502B5C8(&size, 3, 12, arg0, 8);
+    D_80089550 = size / 24;
+    count = D_80082FA0 + 1;
+    D_800DBFF0 = allocate_memory(count * sizeof(struct108), 1, 1, 0);
+    D_800DC2B0 = (s32)allocate_memory(count * 0xB0, 1, 0, 0);
+    ((s32 *)&D_800DC2A0)[0] = (s32)allocate_memory(count << 6, 1, 1, 0);
+    ((s32 *)&D_800DC2A0)[1] = (s32)allocate_memory(count << 6, 1, 1, 0);
+    id = arg0;
+    for (i = 0; i <= D_80082FA0; i++) {
+        obj = &D_800DBFF0[i];
+        D_800BE2B0[i] = (s32)allocate_memory(D_800BE620 * 2, 1, 2, 0);
+        func_150054C4(obj, i, id, arg1);
+        {
+            extern u8 D_800DBFF4[];
+
+            D_800DBFF4[i] = 0;
+        }
+    }
+    func_1512ABF8();
+    func_1512D238();
+    D_800894B0 = 0;
+    D_800DC010 = (s32)allocate_memory(D_80082FA0 * sizeof(struct108) + sizeof(struct108), 1, 2, 0);
+}
 // NON-MATCHING: first half ok, second half needs work
 // void func_15005290(s32 arg0, s32 arg1) {
 //     s32 pad0;
