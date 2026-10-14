@@ -681,7 +681,85 @@ void func_1516FA88(s16 arg0, s16 arg1, s16 arg2, s32 arg3, u8 arg4, s32 arg5) {
         arg3, 0, 0, arg4, arg5);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_19A8B0/func_1516FBCC.s")
+typedef struct {
+    char pad_0[0x14];
+    s16 sizeX;
+    s16 sizeY;
+    char pad_0x18[0x4];
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 alpha;
+    char pad_0x20[0x4];
+    u8 fadingIn;
+    char pad_0x25[0x1];
+    u8 r0;
+    u8 g0;
+    u8 b0;
+    u8 r1;
+    u8 g1;
+    u8 b1;
+    u8 blend;
+    s8 growX;
+    s8 growY;
+    u8 fadeShift;
+} Obj1516FBCC;
+
+s32 func_1516FBCC(Obj1516FBCC *arg0) {
+    s32 v; /* alpha, then growth, then blend */
+    s32 lo;
+    s32 hi;
+
+    v = arg0->alpha;
+    if (arg0->fadingIn != 0) {
+        if (v != 0xFF) {
+            v += D_800BE9E4 << 4;
+            if (v >= 0x100) {
+                v = 0xFF;
+            }
+            arg0->alpha = v;
+        }
+    } else {
+        if (v != 0) {
+            v -= D_800BE9E4 << arg0->fadeShift;
+            if (v < 0) {
+                v = 0;
+            }
+            arg0->alpha = v;
+        }
+    }
+    if ((arg0->fadingIn == 0) && (v == 0)) {
+        return 1;
+    }
+    v = arg0->growX;
+    v *= D_800BE9E4;
+    arg0->sizeX += v;
+    v = arg0->growY;
+    v *= D_800BE9E4;
+    arg0->sizeY += v;
+    /* BUG (original game): sizeX is tested twice, sizeY never */
+    if ((arg0->sizeX <= 0) || (arg0->sizeX <= 0)) {
+        arg0->sizeX = arg0->sizeY = 0;
+        return 1;
+    }
+    v = arg0->blend;
+    v += D_800BE9E4;
+    if (v >= 0x80) {
+        v = 0x7F;
+    }
+    arg0->blend = v;
+    v *= 2;
+    lo = arg0->r0;
+    hi = arg0->r1;
+    arg0->r = (((hi - lo) * v) >> 8) + lo;
+    lo = arg0->g0;
+    hi = arg0->g1;
+    arg0->g = (((hi - lo) * v) >> 8) + lo;
+    lo = arg0->b0;
+    hi = arg0->b1;
+    arg0->b = (((hi - lo) * v) >> 8) + lo;
+    return 0;
+}
 
 s32 func_1516FD50(Obj1516FadeStepState *arg0) {
     s32 temp_a1;

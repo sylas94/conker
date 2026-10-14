@@ -25,7 +25,54 @@ typedef struct {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_AB760/func_1507E2B0.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AB760/func_1507E3C0.s")
+typedef struct {
+    u8 pad0[4];
+    u8 unk4;
+    u8 pad5[0x67];
+    u8 unk6C[2];
+    u8 pad6E[0x26];
+    s32 unk94;
+} Actor1507E3C0;
+
+void func_1507E3C0(Actor1507E3C0 *arg0) {
+    s32 i;
+    s32 vals[2];
+    u8 type;
+
+    type = arg0->unk4;
+    if ((type == 0xF) || (type == 0x46) || (type == 0x4C)) {
+        for (i = 0; i < 2; i++) {
+            vals[i] = arg0->unk6C[i];
+            if (vals[i] >= 10) {
+                vals[i] -= 10;
+                if (vals[i] == 5) {
+                    vals[i] = 0;
+                } else if (vals[i] == 1) {
+                    vals[i] = 1;
+                } else {
+                    vals[i] = 2;
+                }
+            } else if (vals[i] < 2) {
+                vals[i]++;
+            }
+        }
+        arg0->unk94 |= 0x7E;
+        if (vals[0] == 0) {
+            arg0->unk94 &= ~8;
+        } else if (vals[0] == 1) {
+            arg0->unk94 &= ~0x10;
+        } else {
+            arg0->unk94 &= ~4;
+        }
+        if (vals[1] == 0) {
+            arg0->unk94 &= ~0x20;
+        } else if (vals[1] == 1) {
+            arg0->unk94 &= ~0x40;
+        } else {
+            arg0->unk94 &= ~2;
+        }
+    }
+}
 
 void func_1507E500(u8 *arg0, s32 arg1, s32 arg2) {
     u8 *temp;

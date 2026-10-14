@@ -907,7 +907,42 @@ s32 func_1000E134(s32 arg0) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000E17C.s")
+#define VOICE_TYPE(v) (((s32 *)&D_8002B074[(v)->unk4])[1] & ~0xF0)
+/* struct137's 0x60 word is a link to another voice (the shared header still pads it) */
+#define VOICE_LINK60(v) (*(struct137 **)&(v)->pad60)
+
+void func_1000E17C(void) {
+    s32 i;
+    struct137 *v;
+
+    for (i = 0; i < 12; i++) {
+        v = &D_800419A8[i];
+        if (v->unk4 > 0) {
+            if (((1 == VOICE_TYPE(v)) || (3 == VOICE_TYPE(v))) && (v->unk0 == -1)) {
+                v->unk4 = -1;
+            }
+        }
+    }
+    for (i = 0; i < 12; i++) {
+        v = &D_800419A8[i];
+        if (v->unk4 > 0) {
+            if ((VOICE_LINK60(v) != NULL) && (VOICE_LINK60(v)->unk4 == -1)) {
+                VOICE_LINK60(v) = NULL;
+            }
+            if ((v->unk10 != NULL) && (v->unk10->unk4 == -1)) {
+                v->unk10 = NULL;
+            }
+        }
+    }
+    for (i = 0; i < 12; i++) {
+        v = &D_800419A8[i];
+        if (v->unk4 > 0) {
+            if (((1 == VOICE_TYPE(v)) || (3 == VOICE_TYPE(v))) && (v->unk0 != -1)) {
+                func_1000DE1C(v->unk4, 4);
+            }
+        }
+    }
+}
 
 void func_1000E2F4(s32 arg0) {
     struct151 *p;
@@ -1151,7 +1186,34 @@ u8 func_1000E8F0(s32 arg0) {
 }
 
 // initialising with grim loops
-#pragma GLOBAL_ASM("asm/nonmatchings/init_B1B0/func_1000E934.s")
+/* D_800418B0 and D_800417C0 are [3][16] per-channel tables; variables.h types D_800418B0 as s32[]. */
+extern s32 D_800417C0[3][16];
+extern s32 D_800418A0[];
+extern s32 D_80041890[];
+extern s32 D_80041880[];
+
+void func_1000E934(void) {
+    u32 i;
+    s32 j;
+    s32 k;
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 16; j++) {
+            ((s32 (*)[16])D_800418B0)[i][j] = 0x8000;
+            D_800417C0[i][j] = 0x100;
+        }
+        func_10008F24(i);
+        D_800417B0[i] = NULL;
+        D_800418A0[i] = 0;
+        D_80041890[i] = 0;
+        D_80041880[i] = 0;
+    }
+    bzero(D_800419A8, sizeof(D_800419A8));
+    D_800419A0 = 0;
+    for (k = 0; k < 12; k++) {
+        D_800419A8[k].unk4 = -1;
+    }
+}
 
 u16 func_1000EA94(s32 arg0) {
     u16 tmp;

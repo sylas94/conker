@@ -157,7 +157,59 @@ void func_151D7538(s32 arg0, s32 arg1, u8 arg2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_204660/func_151D75C4.s")
+typedef struct Link151D75C4 {
+    /* 0x00 */ struct struct127 *actor;
+    /* 0x04 */ u8 id;
+    /* 0x05 */ u8 bone;
+    /* 0x06 */ s8 handler;
+} Link151D75C4;
+
+typedef struct Obj151D75C4 {
+    /* 0x00 */ u8 pad0[0x28];
+    /* 0x28 */ Sub151D7264 unk28;
+    /* 0x40 */ Link151D75C4 link;
+} Obj151D75C4;
+
+typedef struct Rider151D75C4 {
+    u8 pad0[0x197];
+    u8 active;
+} Rider151D75C4;
+
+extern struct17 D_800AB280[];
+extern u8 D_800AB2D4[];
+extern s32 (*D_8008FCA8[])(Obj151D75C4 *);
+void func_15143134(void *, void *, s32);
+
+s32 func_151D75C4(Obj151D75C4 *arg0) {
+    Link151D75C4 *link;
+    struct struct127 *actor;
+    Sub151D7264 *p;
+
+    p = &arg0->unk28;
+    link = &arg0->link;
+    actor = link->actor;
+    if ((actor->interaction_state == 0) || (actor->unique_id != link->id)) {
+        return 0;
+    }
+    if (actor->unk1D4 == NULL) {
+        p->unk5 &= ~1;
+        return 1;
+    }
+    if ((actor->unk31C != NULL) && (((Rider151D75C4 *)actor->unk31C)->active != 0) && (actor->camera != NULL)) {
+        p->unk5 &= ~1;
+        return 1;
+    }
+    if (actor->unk7 != 0xFF) {
+        p->unk5 &= ~1;
+        return 1;
+    }
+    func_15143134(&D_800AB280[link->bone], &p->unk8, (s32)actor->unk1D4 + (D_800AB2D4[link->bone] << 6));
+    p->unk5 |= 1;
+    if (link->handler != -1) {
+        return D_8008FCA8[link->handler](arg0);
+    }
+    return 1;
+}
 
 s32 func_151D7724(s32 *arg0) {
     s32 *v0 = (s32 *)arg0[0x40 / 4];

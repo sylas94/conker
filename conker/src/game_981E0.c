@@ -3,7 +3,14 @@
 #define func_150ADA20 func_150ADA20_u8_proto
 #include "functions.h"
 #undef func_150ADA20
+#define D_80099A3C D_80099A3C_s16_hdr
+#define D_80099A3E D_80099A3E_s16_hdr
 #include "variables.h"
+#undef D_80099A3C
+#undef D_80099A3E
+/* variables.h types these as s16; they are byte tables (lbu). */
+extern u8 D_80099A3C[];
+extern u8 D_80099A3E;
 
 void func_15131D4C(s32 arg0, s32 arg1);
 s32 func_1000F568(s32 arg0, s32 arg1);
@@ -327,7 +334,38 @@ void func_1506B3B0(void) {
 //     D_800D154C->unk244 = ((u8 *)D_80099A3C)[sel];
 //     D_800D154C->unk21C = 0x4E20;
 // }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_981E0/func_1506B3B8.s")
+void func_1506B3B8(void) {
+    s32 mag;
+    s16 sdiff;
+    u8 sel = 0;
+    u8 ang;
+
+    sdiff = (D_800D154C->unk7A + (D_800D154C->unk1FD << 8)) -
+            func_1505A630(D_800CC2D0[0].x_position - D_800D154C->x_position,
+                          D_800D154C->z_position - D_800CC2D0[0].z_position, 0);
+    ang = sdiff >> 8;
+    if (ang & 0x80) {
+        ang = -ang;
+    }
+    mag = ang;
+    if (ang < D_80099A3C[sel]) {
+        sel = 1;
+    } else {
+        if (D_80099A43 < mag) {
+            sel = 5;
+        } else if (D_80099A3E < mag) {
+            sel = 2;
+        }
+        if (sdiff < 0) {
+            sel += 4;
+        } else {
+            sel += 3;
+        }
+    }
+    D_800D154C->unk138 = 0;
+    D_800D154C->unk244 = D_80099A3C[sel];
+    D_800D154C->unk21C = 0x4E20;
+}
 // NON-MATCHING: 5% there...
 // void func_1506B3B8(void) {
 //     u8 sp19;

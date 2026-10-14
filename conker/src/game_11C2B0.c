@@ -768,9 +768,105 @@ void func_150F1684(struct func150F1684_sub *arg0, struct func150F1684_sub *arg1,
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_11C2B0/func_150F16DC.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11C2B0/func_150F1A00.s")
+typedef struct {
+    u16 v[3];
+} Rates150F1A00;
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11C2B0/func_150F1B48.s")
+typedef struct {
+    u8 pad0[0x14];
+    s16 unk14;
+} Timer150F1A00;
+
+typedef struct {
+    u8 pad0[0xF80];
+    f32 m[4][4];
+} Model150F1A00;
+
+typedef struct {
+    u8 pad0[0x1D4];
+    Model150F1A00 *unk1D4;
+    u8 pad1D8[0x10C];
+    s32 unk2E4;
+} Actor150F1A00;
+
+extern Rates150F1A00 D_80088B00;
+extern f32 D_800A18E8;
+extern f32 D_800A18EC;
+extern f32 D_800A18F0;
+f32 cosf(f32);
+
+void func_150F1A00(Actor150F1A00 *arg0) {
+    Model150F1A00 *model;
+    Rates150F1A00 rates;
+    s32 idx;
+    Timer150F1A00 *timer;
+    u16 rate;
+    f32 scale;
+    s32 i;
+    s32 j;
+    f32 *row;
+
+    rates = D_80088B00;
+    idx = 0;
+    if ((arg0->unk2E4 & 3) == 3) {
+        idx = 1;
+    }
+    if ((arg0->unk2E4 & 0xC) == 0xC) {
+        idx = 2;
+    }
+    rate = rates.v[idx];
+    timer = (Timer150F1A00 *)&D_800CC298;
+    timer->unk14 += rate * D_800BE9E4;
+    scale = (((cosf(timer->unk14 * D_800A18E8) + 1.0f) * 0.5f) * D_800A18EC) + D_800A18F0;
+    model = arg0->unk1D4;
+    for (i = 0, row = model->m[0]; i < 3; i++, row += 4) {
+        for (j = 0; j < 3; j++) {
+            row[j] *= scale;
+        }
+    }
+}
+
+typedef struct {
+    u8 pad0[0x12];
+    s16 unk12;
+} Tilt150F1B48;
+
+/* D_800CC298 is typed s32 in variables.h; this function sees it as a tilt record. */
+#define TILT ((Tilt150F1B48 *)&D_800CC298)
+
+extern f32 D_800A18F4;
+extern f32 D_800A18F8;
+
+s16 *func_150F1B48(s16 *arg0, s32 arg1) {
+    s32 down;
+    s32 step;
+    s32 v;
+    s32 i;
+
+    down = (D_800CC2D0[arg1].unk84.uh == 0x21) ? 1 : 0;
+    step = D_800BE9E4 * 0x222;
+    if (down) {
+        v = TILT->unk12 - step;
+        if (D_800A18F4 < v) {
+            TILT->unk12 = v;
+        } else {
+            TILT->unk12 = -0x1999;
+        }
+    } else {
+        v = TILT->unk12 + step;
+        if (v < D_800A18F8) {
+            TILT->unk12 = v;
+        } else {
+            TILT->unk12 = 0x1555;
+        }
+    }
+    for (i = 0; i < 6; i++) {
+        *arg0++ = 0xB2 + i * 6;
+        *arg0++ = TILT->unk12;
+    }
+    return arg0;
+
+}
 
 void func_150F1CB0(ActorStateFields *arg0) {
     if (arg0->field_0x84 == 0x14) {
@@ -789,7 +885,37 @@ void func_150F1CB0(ActorStateFields *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_11C2B0/func_150F1D10.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_11C2B0/func_150F20F0.s")
+extern u8 D_800D98F0;
+extern f32 D_800A191C;
+
+void func_150F20F0(s32 arg0) {
+    f32 x;
+    f32 z;
+    s32 vol;
+    s32 sp48;
+    s32 sp44;
+    struct127 *obj;
+
+    obj = &D_800CC2D0[arg0];
+    x = obj->x_position;
+    z = obj->z_position;
+    x *= x;
+    z *= z;
+    /* squares the already-squared terms: compares x^4 + z^4, as golden does */
+    x = (x * x) + (z * z);
+    if (D_800D98F0 != 0) {
+        if (D_800BE9E4 < D_800D98F0) {
+            D_800D98F0 -= D_800BE9E4;
+        } else {
+            D_800D98F0 = 0;
+        }
+    } else if (x > D_800A191C) {
+        func_100114D0(0, (s32)D_800CC2D0[arg0].y_position, 0, 0x7FFF, 0x4E20, 0x4A38, &vol, &sp48, &sp44);
+        vol += 0x80;
+        D_800D98F0 = (func_150ADA20() & 0x7F) + 0x80;
+        func_10010F30(((u32)func_150ADA20() % 3) + 0x6C, 0x5DC0, vol, 0, 0);
+    }
+}
 
 void func_150F2230(struct127 *arg0, s32 arg1, s32 arg2) {
     struct { f32 x; f32 y; f32 z; } sp2C;

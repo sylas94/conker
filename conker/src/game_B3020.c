@@ -791,7 +791,54 @@ s32 func_15088A08(struct Struct15088A08 *arg0, f32 arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15088D58.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_15088F30.s")
+typedef struct {
+    s16 x;
+    s16 y;
+    s16 z;
+    u8 pad6[3];
+    u8 links[5];
+    u8 type;
+    u8 padF;
+} Node15088F30;
+
+typedef struct {
+    f32 t;
+    u8 pad4[0x27];
+    u8 ids[4];
+} Obj15088F30;
+
+void func_15088F30(Obj15088F30 *arg0, f32 *outX, f32 *outY, f32 *outZ) {
+    s32 i;
+    s32 j;
+    u8 id;
+    Node15088F30 *node;
+    Node15088F30 *next;
+    f32 dx;
+    f32 dz;
+
+    for (i = 0; i < 4; i++) {
+        if (arg0->ids[i] != 0xFF) {
+            node = &((Node15088F30 *)D_800D2350)[arg0->ids[i]];
+            next = node;
+            for (j = 0; j < 5; j++) {
+                id = node->links[j];
+                if ((id != 0xFF) && (((Node15088F30 *)D_800D2350)[id].type == 4)) {
+                    next = id + (Node15088F30 *)D_800D2350;
+                    j = 5;
+                }
+            }
+            dx = next->x - node->x;
+            dz = next->z - node->z;
+            outX[i] = node->x + (dx * arg0->t);
+            outY[i] = node->y;
+            outZ[i] = node->z + (dz * arg0->t);
+        } else {
+            outX[i] = i * 64;
+            outY[i] = 0.0f;
+            outZ[i] = 0.0f;
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508907C.s")
 
@@ -857,7 +904,46 @@ void func_1508B20C(f32 arg0, f32 arg1, f32 arg2, f32 arg3) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508B2A8.s")
+typedef struct {
+    f32 x;
+    f32 z;
+    f32 radiusSq;
+    f32 dist[8];
+    s16 count;
+    u8 ids[8];
+    u8 visited[1];
+} Search1508B2A8;
+
+void func_1508B2A8(u8 id, Search1508B2A8 *s) {
+    Node15088F30 *node;
+    f32 dx;
+    f32 dist;
+    s32 j;
+    u8 link;
+
+    /* BUG (original game): the bit index should be id & 7, so ids 8 apart share a visited bit */
+    s->visited[id >> 3] |= 1 << (id & 3);
+    node = id + (Node15088F30 *)D_800D2350;
+    dx = node->x - s->x;
+    dist = node->z - s->z;
+    dist = (dx * dx) + (dist * dist);
+    if (s->radiusSq < dist) {
+        if (s->count < 8) {
+            s->ids[s->count] = id;
+            s->dist[s->count] = dist;
+            s->count++;
+        }
+    } else {
+        for (j = 0; j < 5; j++) {
+            if (node->links[j] != 0xFF) {
+                link = node->links[j];
+                if (!(s->visited[link >> 3] & (1 << (link & 3)))) {
+                    func_1508B2A8(node->links[j], s);
+                }
+            }
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_B3020/func_1508B3F8.s")
 

@@ -195,7 +195,6 @@ void func_150E71E4(s32 arg0, s32 arg1, f32 *arg2, f32 *out) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_113D60/func_150E7290.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_113D60/func_150E75A0.s")
 
 typedef struct {
     /* 0x00 */ f32 unk00;
@@ -244,6 +243,54 @@ typedef struct {
 extern Struct150E76D0Tbl D_80088A68;
 extern Struct150E76D0Tbl D_80088A74;
 extern void *func_1515548C(Struct150E76D0 *, s32, s32, s32, s32, u8, s32);
+
+typedef struct {
+    /* 0x0 */ u8 unk0[1];
+} Struct150E75A0Tbl;
+
+typedef struct {
+    /* 0x0 */ f32 unk0;
+    /* 0x4 */ f32 unk4;
+} Struct150E75A0Pos;
+
+extern Struct150E75A0Tbl D_80088A64;
+
+void func_150E75A0(Struct150E75A0Pos *arg0, f32 arg1, s16 arg2, u8 arg3, u8 arg4, u8 arg5, s16 arg6, s16 arg7, s32 arg8,
+                   s32 arg9, u8 argA, s32 argB) {
+    Struct150E76D0 sp2C;
+    Struct150E75A0Tbl sp28;
+
+    sp28 = D_80088A64;
+    *(Struct150E75A0Pos *)&sp2C.unk00 = *arg0;
+    sp2C.unk08 = arg1;
+    sp2C.unk0C = arg1;
+    sp2C.unk10 = sp28.unk0[0];
+    sp2C.unk12 = arg2;
+    sp2C.unk14 = arg3 | 0x40;
+    sp2C.unk16 = arg6;
+    sp2C.unk18 = arg7;
+    sp2C.unk1A = 4;
+    sp2C.unk1B = 0xFF;
+    sp2C.unk1C = 0xE6;
+    sp2C.unk1D = 0xBE;
+    sp2C.unk1E = arg4;
+    sp2C.unk1F = 0xFF;
+    sp2C.unk20 = 0xFF;
+    sp2C.unk21 = 0xFF;
+    sp2C.unk22 = 0xFF;
+    sp2C.unk23 = arg5;
+    sp2C.unk24 = 1;
+    sp2C.unk28 = 0;
+    sp2C.unk2C = 0;
+    sp2C.unk40 = 0;
+    sp2C.unk41 = 0xA;
+    sp2C.unk30 = 7;
+    sp2C.unk34 = 0x3C;
+    sp2C.unk38 = 0x80;
+    sp2C.unk3C = 0x20;
+    func_1515548C(&sp2C, 0, arg8, arg9, 0, argA, argB);
+}
+
 
 void func_150E76D0(f32 arg0, s16 arg1, u8 arg2, u8 arg3, u8 arg4, s16 arg5, s16 arg6, s32 arg7, s32 arg8, u8 arg9, s32 arg10) {
     Struct150E76D0 sp54;

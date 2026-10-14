@@ -1242,8 +1242,30 @@ void func_1505D5D0(struct127 *arg0, struct127 *arg1, f32 arg2, f32 arg3, f32 arg
 }
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505D6F0.s")
 #pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505DADC.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_83300/func_1505DDA8.s")
-f32 func_1505DF10(struct127 *arg0, u8 arg1, s16 *arg2, f32 *arg3, f32 *arg4) {
+f32 func_1505DF10(struct127 *arg0, u8 arg1, u16 *arg2, f32 *arg3, f32 *arg4, s32 arg5);
+
+s8 func_1505DDA8(struct127 *arg0, s32 arg1, u16 arg2, f32 arg3) {
+    u8 i;
+    u16 angle;
+    f32 distXZ;
+    f32 dy;
+    f32 range;
+
+    for (i = 0; i <= D_80082FA0; i++) {
+        if (D_800CC2D0[i].interaction_state == 0) {
+            continue;
+        }
+        range = arg0->xz_velocity * arg3 * 0.5f;
+        if (func_1505DF10(arg0, i, &angle, &distXZ, &dy, 0) < range * range) {
+            if ((u16)(arg0->unk76 - angle + arg2 / 2) < arg2) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+/* Both callers pass a 6th argument (always 0) that the body never reads. */
+f32 func_1505DF10(struct127 *arg0, u8 arg1, u16 *arg2, f32 *arg3, f32 *arg4, s32 arg5) {
     struct127 *ptr;
     f32 temp_f12;
     f32 temp_f2;

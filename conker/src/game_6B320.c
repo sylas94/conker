@@ -194,7 +194,32 @@ s32 func_1503E1F4(s32 arg0, s32 arg1) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_6B320/func_1503E260.s")
+extern u8 *D_80084460[];
+extern void func_10004074(void *);
+
+void func_1503E260(s32 arg0) {
+    u8 *bones;
+    s32 count;
+    s32 i;
+
+    if (D_800C6660[arg0].unkF != 0) {
+        bones = D_80084460[*(u8 *)&D_800C6660[arg0].pad[2]];
+        if (bones != NULL) {
+            count = D_80098914[*(u8 *)&D_800C6660[arg0].pad[2]];
+            for (i = 0; i < count; i++) {
+                if ((bones[i] != 0xFF) && (func_1503E1F4(i, arg0) != 0)) {
+                    D_800CC2D0[arg0].unk94 |= 1 << bones[i];
+                }
+            }
+        }
+        D_800C6660[arg0].unkF = 0;
+        if (D_800C6660[arg0].unk0 != 0) {
+            func_10004074((void *)D_800C6660[arg0].unk0);
+        }
+        D_800C6660[arg0].unk0 = 0;
+        D_800CC2D0[arg0].unk74 &= ~0x80;
+    }
+}
 
 void func_1503E3C4(s32 arg0, s32 arg1, s32 arg2, struct func_1503E3C4_s *arg3, s32 arg4) {
     struct func_1503E3C4_mtx sp94;
