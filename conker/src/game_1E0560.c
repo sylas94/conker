@@ -237,7 +237,58 @@ s32 func_151B498C(s32 arg0, s32 *arg1, s32 *arg2, s32 *arg3, s32 *arg4, s32 *arg
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1E0560/func_151B4A14.s")
+typedef struct {
+    u8 pad0[0xA4];
+    u8 unkA4;
+} Model151B4A14;
+
+typedef struct {
+    u8 pad0[0x150];
+    Model151B4A14 *unk150;
+} Obj151B4A14;
+
+extern void func_1502EC34(void *, u32 *, u32 *, u32 *, u32 *);
+
+u8 func_151B4A14(Obj151B4A14 *arg0, s32 *arg1, s32 *arg2, s32 *arg3, s32 *arg4, s32 *arg5,
+                 s32 *arg6, s32 *arg7, s32 *arg8, s32 *arg9, s32 *arg10, s32 *arg11,
+                 u8 *arg12, u8 *arg13) {
+    u8 ret;
+    s32 mode1;
+    s32 mode2;
+    Model151B4A14 *model;
+    u32 r;
+    u32 g;
+    u32 b;
+    u32 a;
+    s32 full;
+    u32 alpha;
+
+    ret = 1;
+    full = 0xFF;
+    mode1 = 0x200005;
+    mode2 = 0x60600;
+    model = arg0->unk150;
+    func_1502EC34(model, &r, &g, &b, &a);
+    if (model->unkA4 & 1) {
+        *arg1 = mode1;
+        *arg2 = mode2;
+        *arg3 = r;
+        *arg4 = g;
+        *arg5 = b;
+        *arg6 = full;
+        *arg9 = alpha = a;
+        *arg8 = alpha;
+        *arg7 = alpha;
+        *arg10 = full;
+        *arg11 = 0x100000;
+        *arg12 = 5;
+        *arg13 = 0x2F;
+    } else {
+        ret = func_151B498C(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13);
+    }
+    return ret;
+
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_1E0560/func_151B4B78.s")
 

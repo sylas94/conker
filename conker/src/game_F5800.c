@@ -141,7 +141,42 @@ void func_150C851C(s32 arg0) {
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_F5800/func_150C8600.s")
+typedef struct {
+    u8 unk0;
+    u8 pad1[3];
+    s16 unk4;
+    s16 unk6;
+    s16 unk8;
+} Struct150C8600;
+
+extern s32 D_80090230[5];
+extern s32 D_80090244[5];
+extern s32 func_1510D0EC(s32, s32 *, s32, s32);
+
+Gfx *func_150C8600(Gfx *gdl) {
+    s32 i;
+    s32 frame;
+    s32 seg;
+    s32 out;
+    s32 addr;
+    s32 *tables[2] = { D_80090230, D_80090244 };
+
+    for (i = 0; i < 10; i++) {
+        frame = ((Struct150C8600 *)D_800BE4E0)[i].unk4 >> 8;
+        if (frame < 0) {
+            frame = 0;
+        } else if (frame >= 5) {
+            frame = 4;
+        }
+        if (((Struct150C8600 *)D_800BE4E0)[i].unk0 >= 2) {
+            ((Struct150C8600 *)D_800BE4E0)[i].unk0 = 0;
+        }
+        addr = func_1510D0EC(tables[((Struct150C8600 *)D_800BE4E0)[i].unk0][frame], &out, 3, 0);
+        seg = i + 1;
+        gSPSegment(gdl++, seg, addr);
+    }
+    return gdl;
+}
 
 typedef struct {
     u8 pad0[0x34];

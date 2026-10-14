@@ -117,9 +117,8 @@ s32 func_151AC3CC(s16 *arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D92F0/func_151AC408.s")
-
 u8 func_151D8E20(void);
+void func_151DAB58(u8, f32, u8, f32 *, s32, u8, u8);
 
 typedef struct {
     f32 field_0x00;
@@ -148,6 +147,27 @@ typedef struct {
     ObjectEffectSample *field_0x94;
     ObjectEffectPayloadData *field_0x98;
 } ObjectEffectState;
+
+s32 func_151AC408(ObjectEffectState *arg0, s32 arg1, s32 arg2, s32 arg3, f32 arg4, s32 arg5) {
+    ObjectEffectPayloadData *ptr = arg0->field_0x98;
+    ObjectEffectSample *arr = arg0->field_0x94;
+    f32 sp4C[3];
+    u8 color;
+    s32 life;
+
+    sp4C[0] = arr[arg0->field_0x2D].field_0x00;
+    sp4C[1] = arg4;
+    sp4C[2] = arr[arg0->field_0x2D].field_0x08;
+    color = func_151D8E20();
+    if (func_150ADA20() & 1) {
+        life = ((u32)func_150ADA20() % 41) + 80;
+        func_151D9B8C(color, ptr->field_0x00 * 6.0f, ptr->field_0x1B, arg5, (struct17 *)sp4C, life, 1, 1, 0, arg0->field_0x0C, arg0->field_0x01);
+    } else {
+        func_151DAB58(color, ptr->field_0x00 * 1.5f, ptr->field_0x1B, sp4C, 1, arg0->field_0x0C, arg0->field_0x01);
+    }
+    ptr->field_0x20 = 4;
+    return 1;
+}
 
 s32 func_151AC550(ObjectEffectState *arg0, s32 arg1, s32 arg2, s32 arg3, f32 arg4, s32 arg5) {
     ObjectEffectPayloadData *ptr = arg0->field_0x98;

@@ -1,7 +1,9 @@
 #include <ultra64.h>
 #define func_150ADA20 func_150ADA20_u8_proto
 #define func_15083E90 func_15083E90_s32_proto
+#define func_15083568 func_15083568_void_proto
 #include "functions.h"
+#undef func_15083568
 #undef func_15083E90
 #undef func_150ADA20
 #include "variables.h"
@@ -256,7 +258,43 @@ void func_150832AC(struct127 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_AEB40/func_15083384.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_AEB40/func_15083568.s")
+typedef struct Part15083568 {
+    /* 0x00 */ u8 b0;
+    /* 0x01 */ u8 b1;
+    /* 0x02 */ u8 b2;
+    /* 0x03 */ u8 type;
+    /* 0x04 */ u8 b4;
+    /* 0x05 */ u8 b5;
+    /* 0x06 */ u8 b6;
+    /* 0x07 */ u8 b7;
+    /* 0x08 */ u8 data[6];
+    /* 0x0E */ u8 bE;
+    /* 0x0F */ u8 bF;
+} Part15083568;
+
+struct127 *func_15083AC8(struct127 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, f32 arg8);
+extern struct127 *func_15030AF4(struct127 *, s32, s32, s32, s32, s32, s32, s32, s32, u8 *, s32, s32, s32);
+
+struct127 *func_15083568(struct127 *arg0, s32 arg1, f32 arg2, s32 arg3) {
+    Part15083568 *parts;
+    struct127 *ret;
+    s32 i;
+
+    /* arg1 is a 1-based set id; decremented in place as in func_150836CC */
+    arg1--;
+    ret = NULL;
+    parts = (Part15083568 *)D_80086CC4[arg1].unk0;
+    for (i = 0; i < D_80086CC4[arg1].unk4; i++) {
+        if (parts[i].type == 0) {
+            ret = func_15083AC8(arg0, parts[i].b1, parts[i].b0, 0, parts[i].b2, parts[i].b4, parts[i].b5, parts[i].b6, arg2);
+        } else {
+            ret = func_15030AF4(arg0, parts[i].b0, parts[i].b1, parts[i].b7, parts[i].b4, parts[i].b5, arg3, arg1 + 1, parts[i].b2,
+                                parts[i].data, (parts[i].type == 2) ? parts[i].b6 : -1, parts[i].bE, parts[i].bF);
+        }
+    }
+    return ret;
+
+}
 
 void func_150836CC(struct127 *arg0, s32 arg1) {
     struct172 *temp_s2;

@@ -183,7 +183,30 @@ void func_150DF920(s32 arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_10CD70/func_150DFBD0.s")
+extern s32 D_80090324[];
+extern u8 D_800DD405;
+
+Gfx *func_150DFBD0(Gfx *gdl) {
+    s32 i;
+    s32 seg;
+    s32 addr;
+    s32 out;
+    s32 tex;
+    u8 idx;
+
+    for (i = 0; i < 3; i++) {
+        if (func_150DF8C0(i) != 0) {
+            idx = D_800DD405;
+            tex = D_80090324[idx + 9];
+        } else {
+            tex = D_80090324[8];
+        }
+        addr = func_1510D0EC(tex, &out, 3, 0);
+        seg = i + 2;
+        gSPSegment(gdl++, seg, addr);
+    }
+    return gdl;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_10CD70/func_150DFCA8.s")
 

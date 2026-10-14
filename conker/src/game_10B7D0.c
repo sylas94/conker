@@ -1,7 +1,9 @@
 #include <ultra64.h>
 #define func_15048A40 func_15048A40_hdr
+#define func_150DE32C func_150DE32C_hdr
 #include "functions.h"
 #undef func_15048A40
+#undef func_150DE32C
 #include "variables.h"
 extern f32 func_15048A40(u8 arg0);
 extern u8 D_80090204[];
@@ -42,7 +44,27 @@ typedef struct {
 void func_150DE320(s32 arg0) {
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_10B7D0/func_150DE32C.s")
+extern s32 func_150A32B4(struct178 *, s32, s32, s32);
+extern u8 *func_151149AC(u8);
+extern void func_150A2864(s32, s32);
+
+void func_150DE32C(s32 arg0, s32 arg1, s32 arg2) {
+    s32 i;
+    u8 *p;
+    u8 ids[8] = { 0x18, 0x19, 0x1A, 0x1B, 0x0D, 0x30, 0x31, 0x32 };
+    u8 alt[8] = { 0xF6, 0xF3, 0xF0, 0xED, 0, 0, 0, 0 };
+
+    for (i = 0; i < 8; i++) {
+        if (func_150A32B4(&((struct178 *)*(s32 *)&D_800D3098)[ids[i]], arg0, arg1, arg2) != 0) {
+            if (alt[i]) {
+                p = func_151149AC(alt[i]);
+                p[0x73] = (p[0x73] & ~3) | 3;
+            } else {
+                func_150A2864(ids[i], 1);
+            }
+        }
+    }
+}
 
 void func_150DE458(struct_150DE458 *arg0) {
     s32 pad[4];

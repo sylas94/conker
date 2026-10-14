@@ -637,7 +637,73 @@ s32 func_15159370(struct127 *arg0, u8 *arg1) {
     return ret;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_1515942C.s")
+typedef struct {
+    u8 pad0[0x2C];
+    u8 b2C;
+    u8 b2D;
+    u8 b2E;
+    u8 b2F;
+    u8 b30;
+} Slots1515942C;
+
+typedef struct {
+    u8 pad0[0x10];
+    Slots1515942C *slots;
+} Node1515942C;
+
+s32 func_1514ECE0(void *, s16, void *);
+
+u8 func_1515942C(struct102 *arg0, s16 arg1, s16 arg2, s16 arg3, s16 arg4, s16 arg5) {
+    Slots1515942C *slots;
+    Node1515942C *node;
+    u8 ret;
+    s32 m1;
+    s32 m2;
+    s32 m3;
+    s32 m4;
+    s32 m5;
+    s32 want;
+    s32 have;
+
+    ret = 0;
+    if (func_1514ECE0(*(void **)((u8 *)arg0 + 0x2F4), 0x13, &node) == 0) {
+        return 0;
+    }
+    slots = node->slots;
+    if (arg4 == -1) {
+        m4 = 0x1E00;
+    } else {
+        m4 = 1 << (arg4 + 9);
+    }
+    if (arg3 == -1) {
+        m3 = 0x1C0;
+    } else {
+        m3 = 1 << (arg3 + 6);
+    }
+    if (arg2 == -1) {
+        m2 = 0x38;
+    } else {
+        m2 = 1 << (arg2 + 3);
+    }
+    if (arg1 == -1) {
+        m1 = 7;
+    } else {
+        m1 = 1 << arg1;
+    }
+    if (arg5 == -1) {
+        m5 = 0x3E000;
+    } else {
+        m5 = 1 << (arg5 + 13);
+    }
+    have = (1 << slots->b2C) | (1 << (slots->b2D + 3)) | (1 << (slots->b2E + 6)) | (1 << (slots->b2F + 9)) |
+           (1 << (slots->b30 + 13));
+    want = m5 | m1 | m2 | m3 | m4;
+    if (want == (want | have)) {
+        ret = 1;
+    }
+    return ret;
+
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_185560/func_15159594.s")
 

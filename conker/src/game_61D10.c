@@ -135,6 +135,31 @@ Gfx *func_15035D6C(Gfx *gfx, struct Obj15035D6C *obj, s32 red, s32 green, s32 bl
     return gfx;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15035FE8.s")
+extern Gfx *func_1502CCFC(Gfx *, s32, s32, u32, s32, s32 *, s32, s32);
+
+Gfx *func_15035FE8(Gfx *gfx, s32 arg1) {
+    struct Entry150356C8 *e;
+    s32 col[4];
+    s32 i;
+
+    if (D_800C3F00 == 0) {
+        return gfx;
+    }
+    gSPSetGeometryMode(gfx++, G_SHADE | G_SHADING_SMOOTH);
+    gSPClearGeometryMode(gfx++, G_FOG | G_LOD);
+    gDPSetAlphaCompare(gfx++, G_AC_NONE);
+    for (i = 0; i < D_800C3F00; i++) {
+        e = &D_800C3F08[i];
+        if (e->unkB != 0) {
+            continue;
+        }
+        col[0] = e->pad5[0];
+        col[1] = e->pad5[1];
+        col[2] = e->pad5[2];
+        col[3] = 0xFF;
+        gfx = func_1502CCFC(gfx, e->pad5[3], arg1, e->unk0, e->unk4, col, 0, 1);
+    }
+    return gfx;
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_61D10/func_15036148.s")

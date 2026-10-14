@@ -344,17 +344,60 @@ void func_15030D54(void *arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5,
 }
 
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15030E08.s")
-
 struct S15030F94 {
     u8 unk0;
     u8 pad1[2];
     u8 unk3;
-    u8 pad4[0x50];
+    u8 unk4;
+    u8 pad5[0x4F];
     struct S15030F94 *unk54;
 };
 
+s32 func_1506196C(struct127 *, s32);
 s32 func_150311C4(s32, struct S15030F94 *, struct127 *, s32, s32);
+
+s32 func_15030E08(s32 arg0, s32 arg1, s32 arg2) {
+    struct S15030F94 *var;
+    struct S15030F94 *next;
+    struct127 *obj;
+    s32 v;
+
+    var = (struct S15030F94 *)D_800C3EE0;
+    while (var != NULL) {
+        next = var->unk54;
+        if (var->unk3 == 0) {
+            var = next;
+            continue;
+        }
+        obj = func_15083E90(var->unk0);
+        if ((obj == NULL) || (obj->unk1D4 == NULL) || ((obj->unk74 & (1 << arg1)) == (1 << arg1))) {
+            var = next;
+            continue;
+        }
+        if (arg2 == 2) {
+            if (obj->unk5 != 7) {
+                var = next;
+                continue;
+            }
+        } else {
+            v = func_1506196C(obj, arg1);
+            if (arg2 == 1) {
+                if (!(var->unk4 & 2) && (v == 0xFF) && (obj->unk5 != 1)) {
+                    var = next;
+                    continue;
+                }
+            } else if ((var->unk4 & 2) || (v < 0xFF) || (obj->unk5 == 1)) {
+                var = next;
+                continue;
+            }
+        }
+        arg0 = func_150311C4(arg0, var, obj, arg1, 0);
+        var = next;
+    }
+    return arg0;
+
+}
+
 
 s32 func_15030F94(s32 arg0, struct127 *arg1, s32 arg2, s32 arg3) {
     struct S15030F94 *var;
@@ -796,7 +839,71 @@ s32 func_150337E4(void *arg0, s32 arg1) {
     return 0;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_5D2C0/func_15033838.s")
+typedef struct Ctl15033838 {
+    u8 pad0[0x8A];
+    u16 unk8A;
+    u8 pad8C[0x197 - 0x8C];
+    u8 unk197;
+    u8 unk198;
+    u8 pad199[0x19E - 0x199];
+    u16 unk19E;
+} Ctl15033838;
+
+typedef struct Actor15033838 {
+    u8 pad0[0x84];
+    u16 unk84;
+    u8 pad86[0x31C - 0x86];
+    Ctl15033838 *unk31C;
+} Actor15033838;
+
+typedef struct Fx15033838 {
+    u8 pad0[0x6];
+    u8 unk6;
+    u8 pad7[0x38 - 0x7];
+    s32 unk38;
+} Fx15033838;
+
+void func_151026BC(Actor15033838 *, s32, s32, s32, s32, s32);
+void func_151027E8(Actor15033838 *);
+
+s32 func_15033838(Fx15033838 *arg0, Actor15033838 *arg1) {
+    s32 found;
+    s32 kind;
+
+    found = 0;
+    if (arg0->unk6 == 0x16) {
+        kind = 4;
+        if (arg1->unk84 == 0x165) {
+            found = 1;
+        }
+    } else if (arg0->unk6 == 0x89) {
+        kind = 6;
+        if ((arg1->unk84 == 0x221) || (arg1->unk84 == 0x223) || (arg1->unk84 == 0x31B)) {
+            if (arg1->unk31C->unk198 == 2) {
+                found = 1;
+            }
+        }
+    } else {
+        kind = 5;
+        if (arg1->unk84 == 0x157) {
+            found = 1;
+        }
+    }
+    if (arg0->unk38 == 0) {
+        if (found) {
+            Ctl15033838 *ctl = arg1->unk31C;
+            if (((ctl->unk197 != 0) || (kind == 6)) && ((ctl->unk8A & 0x2000) == 0x2000) && (ctl->unk19E == 0)) {
+                arg0->unk38 = 1;
+                func_151026BC(arg1, -1, kind, 1, 0xFF, 1);
+            }
+        }
+    } else if (!found || !(arg1->unk31C->unk8A & 0x2000) || ((arg1->unk31C->unk197 == 0) && (kind != 6))) {
+        arg0->unk38 = 0;
+        func_151027E8(arg1);
+    }
+    return 0;
+
+}
 
 s32 func_150339C8(Game5D2C0EffectState *arg0, Game5D2C0PositionState *arg1) {
     func_150334B8(arg0, arg1);

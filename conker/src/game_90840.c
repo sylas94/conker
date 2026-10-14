@@ -284,7 +284,40 @@ void func_150649A0(s32 arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_90840/func_15064A14.s")
+void func_15064A14(struct127 *arg0) {
+    struct127 *partner;
+    s32 anim;
+    s32 big;
+
+    partner = &D_800CC2D0[arg0->unk65 - 1];
+    anim = 0xF;
+    if (partner->id == 0xC) {
+        anim = 0x5A;
+        if (partner->unk84.uh == 0xC) {
+            anim = 0x5B;
+        } else if (partner->unk84.uh == 0xD) {
+            anim = 0x5C;
+        }
+    } else if (partner->id == 0x53) {
+        anim = 0x8C;
+        if (partner->unk84.uh == 0xB) {
+            anim = 0xA2;
+        } else if (partner->unk84.uh == 0xD) {
+            anim = 0xA3;
+        }
+    } else if (partner->id == 0x21) {
+        anim = 0x169;
+    } else if (partner->id == 0x8A) {
+        big = ((arg0->unk31C != NULL) && (((u8 *)arg0->unk31C)[0x1B2] != 0)) ? 1 : 0;
+        if (partner->unk232 == 4) {
+            anim = big ? 0x350 : 0x1A4;
+        } else {
+            anim = big ? 0x34F : 0x1A1;
+        }
+    }
+    func_1505E650(arg0, anim, 1.0f, 6.0f, 0.0f, 0.0f, 0);
+    func_150649A0(arg0->unk65 - 1, D_800C3E78);
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_90840/func_15064B94.s")
 

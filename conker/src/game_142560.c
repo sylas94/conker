@@ -236,7 +236,51 @@ void func_15115EDC(struct S_15115EDC *arg0, struct A_15115EDC *arg1) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_15116110.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511617C.s")
+struct Obj1511617C {
+    u8 pad0[0x10];
+    s16 x;
+    s16 y;
+    s16 z;
+    u8 pad16[0x26];
+    s32 vel;
+    u8 pad40[0xF];
+    u8 flags;
+    u8 pad50[0xC];
+    s16 dy;
+    u8 pad5E[0x1E];
+    f32 ground;
+};
+
+extern u16 D_800CC354;
+extern f32 D_800A2FA8;
+extern f32 D_800A2FAC;
+extern f32 func_1510F648(f32, f32, f32);
+
+void func_1511617C(struct Obj1511617C *arg0) {
+    f32 delta;
+    s32 target;
+    s16 oldY;
+
+    oldY = arg0->y;
+    arg0->ground = func_1510F648(arg0->x, arg0->y, arg0->z);
+    if (fabsf(arg0->ground - arg0->y) > 200.0f) {
+        arg0->vel = 0;
+    }
+    if (!(arg0->flags & 4)) {
+        delta = -arg0->vel;
+        arg0->vel += delta * D_800A2FA8;
+    } else {
+        target = -20;
+        if (D_800CC354 == 0x4B) {
+            target = -40;
+        }
+        delta = target - arg0->vel;
+        arg0->vel += delta * D_800A2FAC;
+    }
+    arg0->y = arg0->ground + arg0->vel;
+    arg0->dy = arg0->y - oldY;
+
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_151162D4.s")
 
@@ -944,7 +988,48 @@ void func_1511A7C0(struct A_1511A7C0 *arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511A838.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511AF30.s")
+struct Obj1511AF30 {
+    f32 pos;
+    u8 pad4[0x38];
+    s32 level;
+    u8 pad40[0x3C];
+    f32 base;
+    f32 wobble;
+    f32 wobbleTarget;
+};
+
+extern f32 D_800A3188;
+extern f32 D_800A318C;
+extern f32 D_800A3190;
+extern f32 D_800A3194;
+
+void func_1511AF30(struct Obj1511AF30 *arg0) {
+    f32 level;
+    f32 target;
+    f32 diff;
+    s32 r;
+
+    level = arg0->level;
+    target = 75.0f * level * D_800A3188;
+    if (target != arg0->base) {
+        diff = target - arg0->base;
+        if (fabsf(diff) < 1.0f) {
+            arg0->base = target;
+        } else {
+            arg0->base += (diff < 0.0f) ? -1 : 1;
+        }
+        arg0->wobble = 0.0f;
+    } else {
+        r = (u32)func_150ADA20() % 1000;
+        if (r < 500) {
+            arg0->wobbleTarget = r * 5.0f * level * D_800A318C * D_800A3190;
+        }
+        diff = arg0->wobbleTarget - arg0->wobble;
+        arg0->wobble += diff * D_800A3194;
+    }
+    arg0->pos = arg0->base + arg0->wobble;
+
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_142560/func_1511B07C.s")
 

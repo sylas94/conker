@@ -542,7 +542,53 @@ void func_1502EEF4(s32 arg0) {
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502F01C.s")
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502F264.s")
+void func_1502F264(s32 arg0) {
+    struct127 *obj;
+    struct127 *parent;
+    f32 (*bone)[4][4];
+    s32 i;
+
+    obj = &D_800CC2D0[arg0];
+    if (obj->unk65 == 0) {
+        return;
+    }
+    parent = &D_800CC2D0[obj->unk65 - 1];
+    if ((obj->unk101 & 2) == 2) {
+        return;
+    }
+    bone = (f32 (*)[4][4])parent->unk1D4;
+    if (bone == NULL) {
+        obj->x_position = parent->x_position;
+        obj->y_position = parent->y_position;
+        obj->z_position = parent->z_position;
+    } else {
+        bone += obj->unk5C;
+        obj->x_position = (*bone)[3][0];
+        obj->y_position = (*bone)[3][1];
+        obj->z_position = (*bone)[3][2];
+    }
+    obj->unk180 = parent->unk180;
+    obj->y_velocity = -4.0f;
+    if (!(obj->unk101 & 0x20)) {
+        obj->unk76 = parent->unk76;
+        obj->xz_velocity = parent->xz_velocity;
+        obj->unk40 = parent->unk40;
+        obj->unk76 = parent->unk76; /* copied twice in the original */
+        obj->unk7A = parent->unk7A;
+        obj->unk78 = parent->unk78;
+    }
+    if (!(obj->unk101 & 0x40)) {
+        obj->unk7 = parent->unk7;
+        obj->unk8 = parent->unk8;
+        obj->unk9 = parent->unk9;
+        obj->unkA = parent->unkA;
+        obj->unkE.ub[1] = parent->unkE.ub[1];
+        for (i = 0; i <= D_80082FA0; i++) {
+            (&obj->unkB)[i] = (&parent->unkB)[i];
+        }
+    }
+
+}
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_58F80/func_1502F3C8.s")
 

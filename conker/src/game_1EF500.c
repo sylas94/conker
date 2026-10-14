@@ -144,7 +144,78 @@ void func_151C436C(s32 a0, f32 *a1, s32 a2) {
     }
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1EF500/func_151C43E0.s")
+typedef struct {
+    s32 unk00;
+    f32 unk04;
+    struct17 unk08;
+    struct17 unk14;
+    struct17 unk20;
+    struct17 unk2C;
+    struct17 unk38;
+    u8 unk44[0x12];
+    s16 unk56;
+    u8 unk58;
+    u8 unk59;
+    u8 unk5A;
+    u8 pad5B;
+    s32 unk5C;
+    s32 unk60;
+    u8 pad64[0xC];
+} Ray151C43E0;
+
+typedef struct {
+    u8 unk0;
+    u8 pad1[0x5F];
+    f32 unk60;
+    f32 unk64;
+    f32 unk68;
+    u8 pad6C[0x20];
+    f32 unk8C;
+    s32 unk90;
+    u8 pad94[4];
+    f32 unk98;
+    u8 pad9C[0xC];
+    s8 unkA8;
+    u8 padA9[3];
+    s32 unkAC;
+} Mover151C43E0;
+
+typedef struct {
+    u8 pad0[0x34];
+    struct17 pos;
+} Pos151C43E0;
+
+void func_15081690(s32, f32, f32, f32, f32, f32, f32, Ray151C43E0 *, f32, s32, s32, s32, s32, s32, s32);
+
+u8 func_151C43E0(struct108 *arg0, Mover151C43E0 *arg1, f32 arg2) {
+    u8 result;
+    s32 obj;
+    f32 scale;
+    Ray151C43E0 ray;
+    s32 solid;
+
+    obj = arg1->unk90;
+    result = 1;
+    if (arg1->unk0 & 4) {
+        if (arg1->unk8C < arg2) {
+            scale = arg1->unk98 * arg1->unk8C;
+        } else {
+            scale = arg1->unk98 * arg2;
+        }
+        if (scale != 0.0f) {
+            struct17 *from = &((Pos151C43E0 *)arg0)->pos;
+
+            solid = !(arg1->unk0 & 8);
+            func_15081690(obj, from->unk0, from->unk4, from->unk8, arg1->unk60, arg1->unk64, arg1->unk68, &ray, scale, 1, 0,
+                          solid, arg1->unkA8, 0, arg1->unkAC);
+            if (ray.unk59 >= 2) {
+                func_151C2EF0(ray.unk00, obj, arg0, (s32)&ray.unk08, (s32)&ray.unk20, (s32)&ray);
+                result = 0;
+            }
+        }
+    }
+    return result;
+}
 
 typedef struct {
     u8 pad0[0x34];

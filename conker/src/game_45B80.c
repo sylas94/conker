@@ -413,23 +413,28 @@ void func_15019BB8(Gfx *arg0, s32 arg1) {
 //     func_151674F8(temp_v0, 4, sp2A, 1);
 // }
 
-// PERMUTER CANDIDATE (best 2868): instructions align 1:1 with target but IDO homes arg1 to
-// the 0x44 arg-slot and reloads instead of promoting it to s0 (target: `move s0,a1`). No C
-// form found that forces promotion (arg1 is only used in arithmetic + (s16) casts, never as a
-// direct register argument). Reconstruction preserved:
-// Gfx *func_15019CC8(Gfx *arg0, s32 arg1) {
-//     gSPViewport(arg0++, D_800BE628 + arg1 * 0x180 + D_800BE9C0 * 0x10 + 0x40);
-//     arg0 = (Gfx *)func_1501A490((s32)arg0, (s16)arg1, 0, 0, 0, 0);
-//     gSPMatrix(arg0++, &D_80089470, G_MTX_LOAD);
-//     gSPMatrix(arg0++, D_800BE628 + arg1 * 0x180 + D_800BE9C0 * 0x40 + 0x100, G_MTX_PROJECTION | G_MTX_LOAD);
-//     if (D_800BE9F0 == 0x1D) { arg0 = func_1502BAD0(arg0, 6, (s16)arg1); }
-//     arg0 = (Gfx *)func_151674F8(arg0, 5, 0, 0);
-//     arg0 = (Gfx *)func_151674F8(arg0, 5, 0, 1);
-//     gSPMatrix(arg0++, D_800BE628 + arg1 * 0x180 + D_800BE9C0 * 0x40 + 0x100, G_MTX_PROJECTION | G_MTX_LOAD);
-//     gSPMatrix(arg0++, ((s32 *)&D_800DC2A0)[D_800BE9C0] + arg1 * 0x40, G_MTX_PROJECTION);
-//     return arg0;
-// }
-#pragma GLOBAL_ASM("asm/nonmatchings/game_45B80/func_15019CC8.s")
+typedef struct Cam15019CC8 {
+    u8 pad0[0x40];
+    Vp vp[2];
+    u8 pad60[0x100 - 0x60];
+    Mtx proj[2];
+} Cam15019CC8;
+
+Gfx *func_15019CC8(Gfx *gfx, s32 arg1) {
+    gSPViewport(gfx++, &((Cam15019CC8 *)D_800BE628)[arg1].vp[D_800BE9C0]);
+    gfx = (Gfx *)func_1501A490((s32)gfx, (s16)arg1, 0, 0, 0, 0);
+    gSPMatrix(gfx++, &D_80089470, G_MTX_LOAD);
+    gSPMatrix(gfx++, &((Cam15019CC8 *)D_800BE628)[arg1].proj[D_800BE9C0], G_MTX_PROJECTION | G_MTX_LOAD);
+    if (D_800BE9F0 == 0x1D) {
+        gfx = func_1502BAD0(gfx, 6, (s16)arg1);
+    }
+    gfx = (Gfx *)func_151674F8(gfx, 5, 0, 0);
+    gfx = (Gfx *)func_151674F8(gfx, 5, 0, 1);
+    gSPMatrix(gfx++, &((Cam15019CC8 *)D_800BE628)[arg1].proj[D_800BE9C0], G_MTX_PROJECTION | G_MTX_LOAD);
+    gSPMatrix(gfx++, &((Mtx **)&D_800DC2A0)[D_800BE9C0][arg1], G_MTX_PROJECTION);
+    return gfx;
+
+}
 
 void func_15019E60(Gfx *arg0) {
     if (D_80082FA0 != 0) {

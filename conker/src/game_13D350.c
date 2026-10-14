@@ -375,7 +375,20 @@ void func_15114348(s32 arg0, f32 *arg1, f32 *arg2, f32 *arg3) {
     *arg3 += oz;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13D350/func_1511473C.s")
+extern f32 D_800A2F60;
+extern u16 D_800CBDA0[];
+
+void func_1511473C(struct127 *arg0, s32 arg1) {
+    if ((arg0 == NULL) || (arg1 >= D_800DBEF0)) {
+        return;
+    }
+    func_15114348(arg1, &arg0->x_position, &arg0->y_position, &arg0->z_position);
+    arg0->unk76 += ((Struct15114348 *)((u8 *)D_800DBEF4 + arg1 * 0xA0))->unk64 * D_800A2F60;
+    /* 0x137: flag byte inside struct127's pad134 */
+    if ((((u8 *)arg0)[0x137] != 0) && (D_800CBDA0[arg0 - D_800CC2D0] == arg1 + 1)) {
+        arg0->unk7A = arg0->unk76;
+    }
+}
 
 void func_150A7A48(f32 a[4][4], f32 b[4][4], f32 c[4][4]);
 
@@ -527,4 +540,30 @@ void func_15114F04(s32 arg0, s32 arg1, s32 arg2) {
     func_1001001C(func_15114CC4, arg0, 0, arg1, arg2);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_13D350/func_15114F44.s")
+extern s32 D_800DBF9C;
+extern s32 D_800DBFA0;
+extern s32 D_800DBFA4;
+
+void func_15114F44(s32 arg0, s32 arg1, s32 arg2) {
+    s32 j;
+    s32 i;
+    u32 (*list)[3];
+
+    if ((D_800BE9F0 == 0x12) || (D_800BE9F0 == 0x36) || (D_800BE9F0 == 0x13)) {
+        for (j = 0; j < 2; j++) {
+            list = (u32 (*)[3])D_800DBDD8[j];
+            for (i = 0; i < D_800DBE18[j]; i++) {
+                /* every command word must be a KSEG0 address, 4-byte aligned */
+                if (((list[i][0] & 0xF0000000) != 0x80000000) || ((list[i][1] & 0xF0000000) != 0x80000000) ||
+                    ((list[i][2] & 0xF0000000) != 0x80000000) ||
+                    (list[i][0] & 3) || (list[i][1] & 3) || (list[i][2] & 3)) {
+                    D_8003C8E0 = 0xC00005A;
+                    func_150AD770();
+                }
+            }
+        }
+        D_800DBF9C = arg0;
+        D_800DBFA0 = arg1;
+        D_800DBFA4 = arg2;
+    }
+}

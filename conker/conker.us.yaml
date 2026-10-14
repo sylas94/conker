@@ -841,16 +841,16 @@ segments:
       - [0x22D250, rodata]
       - [0x22D2A0, rodata]
       - [0x22D2C0, rodata]
-      - [0x22D2D0, rodata]
+      - [0x22D2D0, .data, game_F5800] # func_150C8600 tables[] initialiser (non-const -> .data)
       - [0x22D2E0, rodata]
       - [0x22D330, rodata]
       - [0x22D350, rodata]
       - [0x22D380, rodata]
-      - [0x22D3C0, rodata]
+      - [0x22D3C0, .data, game_1048D0] # func_150D765C tables[] initialiser (non-const -> .data)
       - [0x22D3D0, rodata]
       - [0x22D3F0, rodata]
       - [0x22D400, rodata]
-      - [0x22D410, rodata]
+      - [0x22D410, .data, game_10B7D0] # func_150DE32C ids[]/alt[] initialisers (non-const -> .data)
       - [0x22D420, rodata]
       - [0x22D440, rodata]
       - [0x22D450, rodata]
@@ -1486,7 +1486,7 @@ segments:
       - [0x24EDE0, rodata]
       - [0x24EE10, rodata]
       - [0x24EE40, rodata]
-      - [0x24EE90, rodata]
+      - [0x24EE90, .rodata, game_1E2180]
       - [0x24EEC0, rodata]
       - [0x24EEF0, rodata]
       - [0x24EF10, rodata]
