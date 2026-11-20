@@ -1205,131 +1205,150 @@ void func_151DBE80(u8 arg0, f32 arg1, f32 arg2, s16 arg3, struct17 *arg4, s32 ar
 }
 
 #pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC034.s")
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC260.s")
-// PERMUTER CANDIDATE best 1390 - first struct-build + func_15153F18 call matches byte-for-byte;
-// second struct-build (func_15150178) is a float register-rotation cascade: 7 floats fill
-// f0+f4-f18, the reconstruction is rotated one slot (0.0f->f6 vs f4) - uncontrollable from C
-// source order. Full reconstruction (DC484_A/DC484_B + func_151DC484) in scratchpad/dc484_best.c.
-// Sibling funcs func_151DC260 / func_151DC034 share the identical two-struct structure.
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC484.s")
+typedef struct {
+    /* 0x00 */ s16 unk0;
+    /* 0x02 */ s16 unk2;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ s16 unk6;
+    /* 0x08 */ struct three unk8;
+    /* 0x14 */ s16 unk14;
+    /* 0x16 */ s16 unk16;
+    /* 0x18 */ f32 unk18;
+    /* 0x1C */ f32 unk1C;
+    /* 0x20 */ s16 unk20;
+    /* 0x22 */ s16 unk22;
+    /* 0x24 */ f32 unk24;
+    /* 0x28 */ f32 unk28;
+    /* 0x2C */ u8 unk2C;
+    /* 0x2D */ u8 unk2D;
+    /* 0x30 */ f32 unk30;
+    /* 0x34 */ f32 unk34;
+    /* 0x38 */ s8 unk38;
+    /* 0x39 */ u8 unk39;
+    /* 0x3C */ f32 unk3C;
+    /* 0x40 */ s8 unk40;
+    /* 0x44 */ f32 unk44;
+} Struct151DC260;
 
-// typedef struct {
-//     s16 unk10; // sp24
-//     s16 unk12; // sp26
-//     s16 unk14;
-//     s16 unk16; // sp2A
-//     s32 unk18[3];
-//     s16 unk24; // sp38;
-//     s16 unk26; // sp3A
-//     f32 unk28; // sp3C
-//     f32 unk2C; // sp40
-//     s16 unk30; // sp44
-//     s16 unk32; // sp46
-//     f32 unk34; // sp48;
-//     f32 unk38; // sp4C;
-//     s8  unk3C; // sp50;
-//     s8  unk3D; // sp51;
-//     u8  unk3E[2]; //
-//     f32 unk40; // sp54
-//     f32 unk44; // sp58
-//     s8  unk48; // sp5C
-//     u8  unk49; // sp5D
-//     u8  unk4A[2];
-//     f32 unk4C; // sp60
-//     s8  unk50; // sp64
-//     u8  pad51[3];
-//     f32 unk54; // sp68
-// } struct217;
-//
-// typedef struct {
-//     s16 unk58; // sp6C
-//     s16 unk5A; // sp6E
-//     s16 unk5C; // sp70
-//     s16 unk5E; // sp72
-//     s32 unk60[3]; // sp74
-//     f32 unk6C; // sp80
-//     f32 unk70; // sp84
-//     f32 unk74; // sp88
-//     f32 unk78; // sp8C
-//     f32 unk7C; // sp90
-//     f32 unk80; // sp94
-//     s16 unk84; // sp98
-//     s16 unk86; // sp9A
-//     s16 unk88; // sp9C
-//     s16 unk8A; // sp9E
-//     s16 unk8C; // spA0
-//     s16 unk8E; // spA2
-//     s16 unk90; // spA4
-//     s16 unk92; // spA6
-//     u8  unk94; // spA8;
-//     u8  pad95[3];
-//     f32 unk98; // spAC;
-//     s16 unk9C; // spB0
-//     s16 unk9E; // spB2
-//     s32 unkA0; // spB4
-// } struct218;
-//
-// void func_151DC484(struct00 *arg0, s32 arg1, u8 arg2, u8 arg3, s32 arg4) {
-//     struct218 tmp2;
-//     struct217 tmp;
-//
-//     tmp2.unk60[0] = arg0->unk0; // sp74.unk0 = (s32) arg0->unk0;
-//     tmp2.unk60[1] = arg0->unk4; // sp74.unk4 = (s32) arg0->unk4;
-//     tmp2.unk60[2] = arg0->unk8; // sp74.unk8 = (s32) arg0->unk8;
-//
-//     tmp2.unk5A = 0xFF;   // sp6E = 0xFF;
-//     tmp2.unk5C = -0x40;  // sp70 = -0x40;
-//     tmp2.unk84 = 8;      // sp98 = 8;
-//     tmp2.unk86 = 6;      // sp9A = 6;
-//     tmp2.unk58 = 0;      // sp6C = 0;
-//     tmp2.unk88 = 3;      // sp9C = 3;
-//     tmp2.unk8A = 0;      // sp9E = 0;
-//     tmp2.unk5E = 0x28;   // sp72 = 0x28;
-//     tmp2.unk8C = 0x3C;   // spA0 = 0x3C;
-//     tmp2.unk8E = 0x28;   // spA2 = 0x28;
-//
-//     tmp2.unk6C = 3.0f;   // sp80 = 3.0f;
-//     tmp2.unk90 = 100;     // spA4 = 0x64;
-//     tmp2.unk92 = 100;     // spA6 = 0x64;
-//     tmp2.unk9C = 16;      // spB0 = 0x10;
-//     tmp2.unk9E = 15;      // spB2 = 0xF;
-//     tmp2.unk70 = 2.0f;       // sp84 = 2.0f;
-//     tmp2.unk74 = D_800AB4E4; // sp88 = D_800AB4E4;
-//     tmp2.unk78 = D_800AB4E8; // sp8C = D_800AB4E8;
-//     tmp2.unk7C = 8.0f;       // sp90 = 8.0f;
-//     tmp2.unk80 = 5.0f;       // sp94 = 5.0f;
-//     tmp2.unk98 = 1.0f;       // spAC = 1.0f; 0x3f80
-//     tmp2.unk94 = arg2;       // spA8 = arg2;
-//     tmp2.unkA0 = 0;      // spB4 = 0;
-//
-//     // func_15153F18(&sp6C, &sp74, arg1, arg3, arg4);
-//     func_15153F18(&tmp2, &tmp2, arg1, arg3, arg4);
-//
-//     tmp.unk18[0] = arg0->unk0; // sp2C.unk0 = (s32) arg0->unk0;
-//     tmp.unk18[1] = arg0->unk4; // sp2C.unk4 = (s32) arg0->unk4;
-//     tmp.unk18[2] = arg0->unk8; // sp2C.unk8 = (s32) arg0->unk8;
-//
-//     tmp.unk24 = 0xC; // sp38 = 0xC;
-//     tmp.unk12 = 0xFF;   // sp26 = 0xFF;
-//     tmp.unk26 = 6;      // sp3A = 6;
-//     tmp.unk10 = 0;      // sp24 = 0;
-//     tmp.unk14 = -0x40;  // sp28 = -0x40;
-//     tmp.unk16 = 0x1A;   // sp2A = 0x1A;
-//     tmp.unk30 = 0x23;   // sp44 = 0x23;
-//     tmp.unk32 = 0xF;    // sp46 = 0xF;
-//     tmp.unk3C = 0x9B;   // sp50 = 0x9B;
-//     tmp.unk3D = 0x64;   // sp51 = 0x64;
-//     tmp.unk40 = 59.0f;  // sp54 = 59.0f;
-//     tmp.unk44 = 59.0f;  // sp58 = 59.0f;
-//     tmp.unk48 = 1;      // sp5C = 1;
-//     tmp.unk50 = 1;      // sp64 = 1;
-//     tmp.unk54 = 0.0f;   // sp68 = 0.0f;
-//     tmp.unk28 = 7.0f;   // sp3C = 7.0f;
-//     tmp.unk2C = 3.0f;   // sp40 = 3.0f;
-//     tmp.unk34 = D_800AB4EC; // sp48 = D_800AB4EC;
-//     tmp.unk38 = D_800AB4F0; // sp4C = D_800AB4F0;
-//     tmp.unk49 = arg2;       // sp5D = arg2;
-//     tmp.unk4C = D_800AB4F4; // sp60 = D_800AB4F4;
-//     // func_15150178(&sp24, &sp2C, arg1, arg3, arg4);
-//     func_15150178(&tmp, &tmp.unk18, arg1, arg3, arg4);
-// }
+void func_15150178(Struct151DC260 *arg0, struct three *arg1, s32 arg2, u8 arg3, s32 arg4);
+
+extern f32 D_800AB4D0;
+extern f32 D_800AB4D4;
+extern f32 D_800AB4D8;
+extern f32 D_800AB4DC;
+extern f32 D_800AB4E0;
+
+void func_151DC260(struct00 *arg0, s32 arg1, u8 arg2, u8 arg3, s32 arg4) {
+    struct struct218XXX tmp2;
+
+    tmp2.unk8 = *(struct three *)arg0;
+    tmp2.unk2C = 0xA;
+    tmp2.unk2E = 0xA;
+    tmp2.unk2 = 0xFF;
+    tmp2.unk4 = -0x40;
+    tmp2.unk0 = 0;
+    tmp2.unk6 = 0x28;
+    tmp2.unk30 = 3;
+    tmp2.unk32 = 1;
+    tmp2.unk34 = 0x3C;
+    tmp2.unk36 = 0x28;
+    tmp2.unk14 = 3.0f;
+    tmp2.unk18 = 4.0f;
+    tmp2.unk1C = D_800AB4D0;
+    tmp2.unk20 = D_800AB4D4;
+    tmp2.unk24 = 12.0f;
+    tmp2.unk28 = 11.0f;
+    tmp2.unk38 = 0x64;
+    tmp2.unk3A = 0x64;
+    tmp2.unk44 = 0x10;
+    tmp2.unk46 = 0xF;
+    tmp2.unk48 = 0;
+    tmp2.unk40 = 1.0f;
+    tmp2.unk3C = arg2;
+    func_15153F18(&tmp2, &tmp2.unk8, arg1, arg3, arg4);
+
+    {
+        Struct151DC260 tmp;
+
+        tmp.unk8 = *(struct three *)arg0;
+        tmp.unk14 = 0xC;
+        tmp.unk16 = 6;
+        tmp.unk2 = 0xFF;
+        tmp.unk0 = 0;
+        tmp.unk4 = -0x40;
+        tmp.unk6 = 0x24;
+        tmp.unk20 = 0x23;
+        tmp.unk22 = 0xF;
+        tmp.unk18 = 6.0f;
+        tmp.unk1C = 8.0f;
+        tmp.unk24 = D_800AB4D8;
+        tmp.unk28 = D_800AB4DC;
+        tmp.unk2C = 0x9B;
+        tmp.unk2D = 0x64;
+        tmp.unk30 = 123.0f;
+        tmp.unk34 = 134.0f;
+        tmp.unk38 = 1;
+        tmp.unk39 = arg2;
+        tmp.unk3C = D_800AB4E0;
+        tmp.unk40 = 1;
+        tmp.unk44 = 0.0f;
+        func_15150178(&tmp, &tmp.unk8, arg1, arg3, arg4);
+    }
+}
+void func_151DC484(struct00 *arg0, s32 arg1, u8 arg2, u8 arg3, s32 arg4) {
+    struct struct218XXX tmp2;
+
+    tmp2.unk8 = *(struct three *)arg0;
+    tmp2.unk2C = 8;
+    tmp2.unk2E = 6;
+    tmp2.unk2 = 0xFF;
+    tmp2.unk4 = -0x40;
+    tmp2.unk0 = 0;
+    tmp2.unk6 = 0x28;
+    tmp2.unk30 = 3;
+    tmp2.unk32 = 0;
+    tmp2.unk34 = 0x3C;
+    tmp2.unk36 = 0x28;
+    tmp2.unk14 = 3.0f;
+    tmp2.unk18 = 2.0f;
+    tmp2.unk1C = D_800AB4E4;
+    tmp2.unk20 = D_800AB4E8;
+    tmp2.unk24 = 8.0f;
+    tmp2.unk28 = 5.0f;
+    tmp2.unk38 = 0x64;
+    tmp2.unk3A = 0x64;
+    tmp2.unk44 = 0x10;
+    tmp2.unk46 = 0xF;
+    tmp2.unk48 = 0;
+    tmp2.unk40 = 1.0f;
+    tmp2.unk3C = arg2;
+    func_15153F18(&tmp2, &tmp2.unk8, arg1, arg3, arg4);
+
+    {
+        Struct151DC260 tmp;
+
+        tmp.unk8 = *(struct three *)arg0;
+        tmp.unk14 = 0xC;
+        tmp.unk16 = 6;
+        tmp.unk2 = 0xFF;
+        tmp.unk0 = 0;
+        tmp.unk4 = -0x40;
+        tmp.unk6 = 0x1A;
+        tmp.unk20 = 0x23;
+        tmp.unk22 = 0xF;
+        tmp.unk18 = 7.0f;
+        tmp.unk1C = 3.0f;
+        tmp.unk24 = D_800AB4EC;
+        tmp.unk28 = D_800AB4F0;
+        tmp.unk2C = 0x9B;
+        tmp.unk2D = 0x64;
+        tmp.unk30 = 59.0f;
+        tmp.unk34 = 59.0f;
+        tmp.unk38 = 1;
+        tmp.unk39 = arg2;
+        tmp.unk3C = D_800AB4F4;
+        tmp.unk40 = 1;
+        tmp.unk44 = 0.0f;
+        func_15150178(&tmp, &tmp.unk8, arg1, arg3, arg4);
+    }
+}
