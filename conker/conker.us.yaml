@@ -208,6 +208,7 @@ segments:
       - [0x290D0, data] # could be larger/smaller
 
       - [0x2BF20, rodata]
+      - [0x2BF80, .rodata, init_2070]
       - [0x2C080, .rodata, init_2E50]
       - [0x2C0A0, rodata] # MIGRATION-READY -> [0x2C0A0, .rodata, init_49E0] (jtbl_8002C0A0, sole symbol/referrer func_100049E0). Apply ONLY together with the C decompilation: see note at top of file. PARKED 2026-08-15: C is structurally exact but loses a loop-invariant ranking tie (see tools/nearmiss/func_100049E0.c).
       - [0x2C0C0, rodata]
