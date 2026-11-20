@@ -833,7 +833,7 @@ segments:
       - [0x22D070, rodata]
       - [0x22D1A0, rodata]
       - [0x22D1B0, rodata]
-      - [0x22D1C0, rodata]
+      - [0x22D1C0, .data, game_DFBF0]
       - [0x22D1D0, rodata]
       - [0x22D1E0, rodata]
       - [0x22D1F0, rodata]
