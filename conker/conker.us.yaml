@@ -1479,6 +1479,8 @@ segments:
       - [0x24D960, rodata]
       - [0x24DA10, rodata]
       - [0x24DA30, rodata]
+      - [0x24DAA0, .rodata, game_1D6E80]
+      - [0x24DAB0, rodata]
       - [0x24DAE0, rodata]
       - [0x24DD30, rodata]
       - [0x24DD60, rodata]

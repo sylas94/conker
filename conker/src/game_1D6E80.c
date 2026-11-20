@@ -13,7 +13,6 @@ extern f32 D_800A8F84;
 extern f32 D_800A8F88;
 extern f32 D_800A8F8C;
 extern f32 D_800A8F90;
-extern f32 D_800A8FEC;
 extern f32 D_800A9014;
 extern s32 func_15045800(f32 *, s32, f32, s32);
 extern s32 func_151ABE40(f32 *, s32, s32, s32, s32);
@@ -601,13 +600,12 @@ s32 func_151AADBC(AlphaFadeOwner *arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1D6E80/func_151AADF8.s")
-
 extern u8   func_150ADA20(void);
 extern f32  func_150ADA68(void);
 
+/* Per-emitter state copied to the spawned object at +0xB0. */
 typedef struct {
-    /* 0x00 */ u8  pad0[0x4];
+    /* 0x00 */ void *unk0;
     /* 0x04 */ u8  unk4;
     /* 0x05 */ u8  pad5[0x3];
     /* 0x08 */ f32 unk8;
@@ -626,6 +624,108 @@ typedef struct {
     /* 0x28 */ u8  pad28[0x88];
     /* 0xB0 */ struct_AB090 unkB0;
 } struct_AB090_root;
+
+/* Descriptor passed to func_1513C73C. */
+typedef struct {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ u8 unk6;
+    /* 0x08 */ s32 unk8;
+    /* 0x0C */ s32 unkC;
+    /* 0x10 */ u8 unk10;
+    /* 0x11 */ u8 unk11;
+    /* 0x12 */ u8 unk12;
+    /* 0x13 */ u8 unk13;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ u8 unk16;
+    /* 0x17 */ u8 unk17;
+    /* 0x18 */ s32 unk18;
+    /* 0x1C */ u8 pad1C[0xC];
+} struct_151AADF8_desc; /* 0x28 */
+
+typedef struct {
+    /* 0x00 */ u8 pad0[0x18];
+    /* 0x18 */ struct_AB090_root *unk18;
+} struct_151AADF8_slot;
+
+typedef struct {
+    /* 0x00 */ u8 pad0[0x18];
+    /* 0x18 */ struct_151A9EC0_inner *unk18;
+    /* 0x1C */ u8 pad1C[0x18];
+    /* 0x34 */ f32 unk34;
+    /* 0x38 */ f32 unk38;
+    /* 0x3C */ u8 pad3C[0x1C];
+    /* 0x58 */ struct_151AADF8_slot unk58;
+} struct_151AADF8_arg;
+
+extern u8 D_800AB414[][3];
+
+void func_151AADF8(struct_151AADF8_arg *arg0) {
+    struct_151A9EC0_inner *actor = arg0->unk18;
+    struct_151AADF8_slot *slot;
+
+    /* The slot is tested as a plain word and then followed as a pointer (two separate loads). */
+    if (*(s32 *)&arg0->unk58.unk18 != 0) {
+        struct_AB090 *prev = &arg0->unk58.unk18->unkB0;
+
+        prev->unk4 = 1;
+    } else {
+        struct17 pos;
+        struct_151AADF8_desc desc;
+        struct_AB090 link;
+        f32 scale;
+        u8 color;
+        u32 r3;
+        u32 r2;
+        u32 r1;
+
+        pos.unk0 = actor->unk14;
+        if (-9500.0f < actor->unk118) {
+            pos.unk4 = actor->unk118 + 100.0f;
+        } else {
+            pos.unk4 = actor->unk18 + 150.0f;
+        }
+        pos.unk8 = actor->unk1C;
+        if (func_15045800(&pos.unk0, 0, pos.unk4 - 300.0f, (s32)&arg0->unk34) != 0) {
+            color = func_151D8E20();
+            pos.unk4 = arg0->unk34;
+            scale = func_150ADA68() * 30.0f + 50.0f;
+            link.unk0 = arg0;
+            link.unk4 = 1;
+            link.unk8 = 26214.4f;
+            link.unkC = 32768.0f;
+            link.unk10 = 0.0f;
+            link.unk14 = 0;
+            link.unk16 = 10;
+            link.unk18 = 10;
+            link.unk1C = 0.231f;
+            desc.unkC = link.unkC * 0.5f + link.unk8;
+            desc.unk6 = 0x38;
+            desc.unk0 = 0x60300;
+            desc.unk4 = 300;
+            desc.unk8 = 0;
+            desc.unk10 = 0x96;
+            desc.unk11 = 0xFF;
+            desc.unk12 = D_800AB414[color][0];
+            desc.unk13 = D_800AB414[color][1];
+            desc.unk14 = D_800AB414[color][2];
+            desc.unk15 = 0xFF;
+            desc.unk18 = 0x440001;
+            desc.unk16 = 0;
+            desc.unk17 = 6;
+            r1 = func_150ADA20();
+            r2 = func_150ADA20();
+            r3 = func_150ADA20();
+            slot = &arg0->unk58;
+            slot->unk18 = (struct_AB090_root *)func_1513C73C((s32)&desc, 7, 1, (s32)&arg0->unk38, pos.unk0, pos.unk4, pos.unk8,
+                                                             scale, scale, r1 & 0xFF, ((r3 & 1) << 1) + (r2 & 1), 0x20, 0xFF, 1);
+            if (slot->unk18 != NULL) {
+                memcpy(&slot->unk18->unkB0, &link, sizeof(link));
+            }
+        }
+    }
+}
 
 s32 func_151AB090(struct_AB090_root *arg0) {
     s8 ret = 1;
@@ -662,7 +762,7 @@ void func_151AB1C4(u8 *arg0) {
 
     goto dummy_label_151AB1C4; dummy_label_151AB1C4: ;
     sp30[0] = *((f32 *)(v1 + 0x14));
-    if (D_800A8FEC < (*((f32 *)(v1 + 0x118)))) {
+    if (-9500.0f < (*((f32 *)(v1 + 0x118)))) {
         sp30[1] = (*((f32 *)(v1 + 0x118))) + 100.0f;
     } else {
         sp30[1] = (*((f32 *)(v1 + 0x18))) + 150.0f;
