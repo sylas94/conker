@@ -1,5 +1,7 @@
 #include <ultra64.h>
+#define func_1513C73C func_1513C73C_hdr
 #include "functions.h"
+#undef func_1513C73C
 #include "variables.h"
 
 typedef struct {
@@ -43,7 +45,25 @@ typedef struct {
 } GameF3270Object;
 
 typedef struct {
-    char pad_0x0[0x58];
+    char pad_0x0[0x14];
+    f32 field_0x14;
+    f32 field_0x18;
+    f32 field_0x1C;
+    char pad_0x20[0x1B4];
+    s32 field_0x1D4;
+} GameF3270Actor;
+
+typedef struct {
+    char pad_0x0[0x1];
+    u8 field_0x1;
+    char pad_0x2[0xA];
+    u8 field_0xC;
+    char pad_0xD[0xB];
+    GameF3270Actor *field_0x18;
+    char pad_0x1C[0x18];
+    f32 field_0x34;
+    f32 field_0x38;
+    char pad_0x3C[0x1C];
     GameF3270Object *field_0x58;
 } GameF3270ObjectOwner58;
 
@@ -143,9 +163,6 @@ typedef struct {
     /* 0x08 */ f32 unk8;
 } GameF3270SpawnLink;
 
-extern f32 D_800A0410;
-extern f32 D_800A0414;
-extern f32 D_800A0418;
 extern s32 func_15045800(f32 *, s32, f32, f32 *);
 extern GameF3270SpawnedObject *func_1513418C(GameF3270SpawnDesc *, s32, u8, s32);
 
@@ -160,12 +177,12 @@ GameF3270SpawnedObject *func_150C5F94(GameF3270SpawnSource *arg0, GameF3270Spawn
         f32 pos[3];
 
         pos[0] = arg0->field_0x14;
-        pos[1] = arg0->field_0x18 + D_800A0410;
+        pos[1] = arg0->field_0x18 + 5000.0f;
         pos[2] = arg0->field_0x1C;
         if (func_15045800(pos, 0, arg0->field_0x18 - 100.0f, &arg1->field_0x34) != 0) {
             link.unk8 = arg1->field_0x34;
         } else {
-            link.unk8 = arg0->field_0x18 + D_800A0414;
+            link.unk8 = arg0->field_0x18 + 5000.0f;
         }
     }
     desc.unk0 = 0;
@@ -177,7 +194,7 @@ GameF3270SpawnedObject *func_150C5F94(GameF3270SpawnSource *arg0, GameF3270Spawn
     desc.unk18 = 0.0f;
     desc.unk1C = 0.0f;
     desc.unk20 = 25.0f;
-    desc.unk24 = D_800A0418;
+    desc.unk24 = 0.132485002f;
     desc.unk28 = 300;
     desc.unk2A = 10;
     desc.unk2B = 4;
@@ -190,7 +207,137 @@ GameF3270SpawnedObject *func_150C5F94(GameF3270SpawnSource *arg0, GameF3270Spawn
     return result;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_F3270/func_150C60D8.s")
+typedef struct {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s32 unk4;
+    /* 0x08 */ s16 unk8;
+    /* 0x0A */ s16 unkA;
+    /* 0x0C */ s32 unkC;
+    /* 0x10 */ s32 unk10;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ u8 unk16;
+    /* 0x17 */ u8 unk17;
+    /* 0x18 */ u8 unk18;
+    /* 0x19 */ u8 unk19;
+    /* 0x1A */ u8 unk1A;
+    /* 0x1B */ u8 unk1B;
+    /* 0x1C */ u8 unk1C;
+    /* 0x1D */ u8 unk1D;
+    /* 0x1E */ s16 unk1E;
+    /* 0x20 */ s16 unk20;
+    /* 0x22 */ s16 unk22;
+    /* 0x24 */ f32 unk24;
+    /* 0x28 */ f32 unk28;
+    /* 0x2C */ f32 unk2C;
+    /* 0x30 */ f32 unk30;
+    /* 0x34 */ f32 unk34;
+    /* 0x38 */ f32 unk38;
+    /* 0x3C */ f32 unk3C;
+    /* 0x40 */ f32 unk40;
+    /* 0x44 */ f32 unk44;
+    /* 0x48 */ f32 unk48;
+    /* 0x4C */ f32 unk4C;
+    /* 0x50 */ f32 unk50;
+    /* 0x54 */ f32 unk54;
+    /* 0x58 */ s32 unk58;
+    /* 0x5C */ u8 pad5C[4];
+    /* 0x60 */ u8 unk60;
+    /* 0x61 */ u8 unk61;
+    /* 0x62 */ u8 unk62;
+    /* 0x63 */ s8 unk63;
+    /* 0x64 */ u8 pad64[0x8];
+} GameF3270SplashDesc;
+
+typedef struct {
+    /* 0x00 */ f32 unk0;
+    /* 0x04 */ u8 unk4;
+    /* 0x05 */ u8 unk5;
+    /* 0x06 */ u8 unk6;
+    /* 0x07 */ u8 unk7;
+    /* 0x08 */ f32 unk8;
+    /* 0x0C */ f32 unkC;
+    /* 0x10 */ f32 unk10;
+    /* 0x14 */ f32 unk14;
+    /* 0x18 */ u8 unk18;
+    /* 0x19 */ u8 unk19;
+    /* 0x1A */ u8 unk1A;
+    /* 0x1B */ u8 unk1B;
+    /* 0x1C */ f32 unk1C;
+    /* 0x20 */ f32 unk20;
+    /* 0x24 */ f32 unk24;
+} GameF3270SplashState;
+
+typedef struct {
+    char pad_0x0[0x60];
+    f32 field_0x60;
+} GameF3270SplashOwner;
+
+extern void *func_151303BC(GameF3270SplashDesc *, s32, s32);
+
+void func_150C60D8(f32 arg0, f32 arg1, f32 arg2, f32 arg3, s32 arg4, f32 arg5, GameF3270SplashOwner *arg6) {
+    void *ret;
+    GameF3270SplashDesc desc;
+    f32 size;
+    GameF3270SplashState state;
+
+    desc.unk1D = 0x2F;
+    desc.unk8 = 0xC01;
+    desc.unk0 = 0x200005;
+    desc.unk4 = 0;
+    desc.unkC = desc.unk10 = desc.unk14 = desc.unk15 = desc.unk16 = desc.unk17 = desc.unk18 = desc.unk19 = desc.unk1A = 0;
+    desc.unk1C = 0xFF;
+    desc.unk22 = 0;
+    desc.unk24 = 0.0f;
+    desc.unk58 = 0x3207;
+    desc.unk60 = 5;
+    desc.unk61 = 5;
+    desc.unk62 = 4;
+    desc.unk63 = -1;
+    desc.unk30 = arg0;
+    desc.unk34 = arg1;
+    desc.unk3C = 0.0f;
+    desc.unk40 = 0.0f;
+    desc.unk44 = 0.0f;
+    desc.unk1E = 0x1E;
+    desc.unk20 = 8;
+    desc.unk38 = arg2;
+    state.unk24 = arg6->field_0x60;
+    state.unk10 = 4.0f;
+    state.unk14 = 0.25f;
+    state.unk4 = 0;
+    state.unk5 = 0;
+    state.unk18 = 0;
+    state.unk19 = 0;
+    desc.unk48 = -arg3 * 0.2f;
+    desc.unk4C = 0.0f;
+    desc.unk50 = -arg5 * 0.2f;
+    if (func_150ADA20() & 1) {
+        desc.unk58 |= 0x40;
+    }
+    if (func_150ADA20() & 1) {
+        desc.unk58 |= 0x80;
+    }
+    desc.unkA = func_150ADA20() % 51U + 0x6A;
+    desc.unk1B = func_150ADA20() % 101U + 100;
+    size = func_150ADA68() * 62.0f + 41.0f;
+    desc.unk28 = size;
+    state.unk0 = size;
+    desc.unk2C = size;
+    state.unk6 = func_150ADA20() % 5U + 4;
+    state.unk7 = func_150ADA20() % 5U + 4;
+    state.unk8 = (func_150ADA68() * 0.25f + 0.15f) * state.unk0;
+    state.unkC = (func_150ADA68() * 0.25f + 0.15f) * state.unk0;
+    state.unk1A = func_150ADA20() % 5U + 4;
+    state.unk1B = func_150ADA20() % 5U + 4;
+    state.unk1C = (func_150ADA68() * 0.1f + 0.08f) * state.unk0;
+    state.unk20 = (func_150ADA68() * 0.1f + 0.08f) * state.unk0;
+    desc.unk54 = (func_150ADA68() * 60.0f + 21.0f) * 0.001f;
+    ret = func_151303BC(&desc, 2, 0x28);
+    if (ret != NULL) {
+        memcpy((u8 *)ret + 0xA8, &state, sizeof(state));
+    }
+}
 
 s32 func_150C63EC(u8 *arg0) {
     s32 ret = 1;
@@ -214,4 +361,107 @@ void func_150C6438(struct102 *arg0) {
     func_1513470C(arg0);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_F3270/func_150C6460.s")
+typedef struct {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ u8 unk6;
+    /* 0x08 */ s32 unk8;
+    /* 0x0C */ s32 unkC;
+    /* 0x10 */ u8 unk10;
+    /* 0x11 */ u8 unk11;
+    /* 0x12 */ u8 unk12;
+    /* 0x13 */ u8 unk13;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ u8 unk16;
+    /* 0x17 */ u8 unk17;
+    /* 0x18 */ s32 unk18;
+    /* 0x1C */ u8 pad1C[0xC];
+} GameF3270EmitDesc;
+
+typedef struct {
+    /* 0x00 */ GameF3270ObjectOwner58 *owner;
+    /* 0x04 */ u8 unk4;
+    /* 0x08 */ f32 unk8;
+    /* 0x0C */ f32 unkC;
+    /* 0x10 */ f32 unk10;
+    /* 0x14 */ s16 unk14;
+    /* 0x16 */ s16 unk16;
+    /* 0x18 */ s16 unk18;
+    /* 0x1C */ f32 unk1C;
+} GameF3270EmitLink;
+
+extern u8 D_800AB414[][3];
+extern void func_15143134(void *, void *, s32);
+extern u8 func_151D8E20(void);
+struct210 *func_1513C73C(s32 arg0, u8 arg1, u8 arg2, s32 arg3, f32 arg4, f32 arg5, f32 arg6, f32 arg7, f32 arg8, u8 arg9, s32 argA, s32 argB, u8 argC, s32 argD);
+
+GameF3270Object *func_150C6460(GameF3270ObjectOwner58 *arg0) {
+    GameF3270Object *ret;
+    struct17 pos;
+    GameF3270Actor *actor;
+
+    ret = NULL;
+    actor = arg0->field_0x18;
+    if (actor->field_0x1D4) {
+        struct17 offset = { 0.0f, 0.0f, 0.0f };
+
+        func_15143134(&offset, &pos, actor->field_0x1D4);
+    } else {
+        pos.unk0 = actor->field_0x14;
+        pos.unk4 = actor->field_0x18;
+        pos.unk8 = actor->field_0x1C;
+    }
+    {
+    struct17 probe;
+    GameF3270EmitDesc desc;
+    GameF3270EmitLink link;
+    f32 scale;
+    u8 color;
+    u32 r3;
+    u32 r2;
+    u32 r1;
+
+    probe.unk0 = pos.unk0;
+    probe.unk4 = pos.unk4 + 200.0f;
+    probe.unk8 = pos.unk8;
+    if (func_15045800(&probe.unk0, 0, pos.unk4 - 200.0f, &arg0->field_0x34) != 0) {
+        color = func_151D8E20();
+        probe.unk4 = arg0->field_0x34;
+        scale = func_150ADA68() * 50.0f + 100.0f;
+        link.owner = arg0;
+        link.unk4 = 1;
+        link.unk8 = 26214.4f;
+        link.unkC = 32768.0f;
+        link.unk10 = 0.0f;
+        link.unk14 = 0;
+        link.unk16 = 10;
+        link.unk18 = 10;
+        link.unk1C = 0.231f;
+        desc.unkC = link.unkC * 0.5f + link.unk8;
+        desc.unk6 = 0x38;
+        desc.unk0 = 0x20300;
+        desc.unk4 = 300;
+        desc.unk8 = 0;
+        desc.unk10 = 0x96;
+        desc.unk11 = 0xFF;
+        desc.unk12 = D_800AB414[color][0];
+        desc.unk13 = D_800AB414[color][1];
+        desc.unk14 = D_800AB414[color][2];
+        desc.unk15 = 0xFF;
+        desc.unk18 = 0x440001;
+        desc.unk16 = 0;
+        desc.unk17 = 6;
+        r1 = func_150ADA20();
+        r2 = func_150ADA20();
+        r3 = func_150ADA20();
+        ret = (GameF3270Object *)func_1513C73C((s32)&desc, 8, 2, (s32)&arg0->field_0x38, probe.unk0, probe.unk4, probe.unk8,
+                                               scale, scale, r1 & 0xFF, ((r3 & 1) << 1) + (r2 & 1), 0x20, arg0->field_0xC, arg0->field_0x1);
+        if (ret != NULL) {
+            memcpy(&ret->field_0xB0, &link, sizeof(link));
+        }
+    }
+    }
+    return ret;
+}
+
