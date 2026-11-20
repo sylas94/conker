@@ -1073,11 +1073,64 @@ void func_151DBBD4(struct17 *arg0, s32 arg1, u8 *arg2, u8 arg3, s32 arg4) {
     func_151D9B8C(tmp2.unkF, (tmp2.unk0 * 25.0f) + 10.0f, ((tmp2.unk4 % 0x38U) + 200), arg1 + 4, &tmp, (func_150ADA20() % 0x97U) + 150, 0, 1, 0, arg3, arg4);
 }
 
-// PERMUTER CANDIDATE best 2152 — both call paths match byte-for-byte; only the ~40-instr
-// constant-init block diverges (target schedules the D_800AB414 palette address computation
-// first; IDO front-loads constants). Pure scheduler cascade. Reconstruction in
-// scratchpad/dbcbc_best.c (StructC151DBCBC + func_151DBCBC).
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DBCBC.s")
+typedef struct {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ s8 unk6;
+    /* 0x07 */ s8 unk7;
+    /* 0x08 */ s32 unk8;
+    /* 0x0C */ s32 unkC;
+    /* 0x10 */ u8 unk10;
+    /* 0x11 */ u8 unk11;
+    /* 0x12 */ u8 unk12;
+    /* 0x13 */ u8 unk13;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ s8 unk16;
+    /* 0x17 */ s8 unk17;
+    /* 0x18 */ s32 unk18;
+    /* 0x1C */ s32 unk1C;
+    /* 0x20 */ u8 unk20;
+    /* 0x22 */ s16 unk22;
+    /* 0x24 */ u16 unk24;
+} Struct151DBCBC;
+
+void func_151DBCBC(u8 arg0, f32 arg1, s16 arg2, s32 arg3, void *arg4, u8 arg5, s32 arg6) {
+    Struct151DBCBC tmp;
+    s32 r3;
+    s32 r2;
+    s32 r1;
+
+    tmp.unk6 = 0x38;
+    tmp.unkC = 0x8000;
+    tmp.unk0 = 0x67B02;
+    tmp.unk4 = 0x12C;
+    tmp.unk8 = 0;
+    tmp.unk10 = arg2;
+    tmp.unk11 = 0xFF;
+    tmp.unk12 = D_800AB414[arg0 * 3];
+    tmp.unk13 = D_800AB414[arg0 * 3 + 1];
+    tmp.unk14 = D_800AB414[arg0 * 3 + 2];
+    tmp.unk15 = 0xFF;
+    tmp.unk18 = 0x440001;
+    tmp.unk7 = 0;
+    tmp.unk16 = 0;
+    tmp.unk17 = 6;
+    tmp.unk22 = 1;
+    tmp.unk24 = 0xFF;
+    tmp.unk20 = 0xFF;
+    tmp.unk1C = 0;
+    if (arg3 != 0) {
+        r1 = func_150ADA20();
+        r2 = func_150ADA20();
+        r3 = func_150ADA20();
+        func_1513C73C((s32)&tmp, 0, 0, arg3, ((struct17 *)arg4)->unk0, ((struct17 *)arg4)->unk4, ((struct17 *)arg4)->unk8, arg1, arg1,
+                      r1 & 0xFF, ((r3 & 1) << 1) + (r2 & 1), 0, arg5, arg6);
+    } else {
+        func_1513C5B0((s32)&tmp, 0, 0, 0, ((struct17 *)arg4)->unk0, ((struct17 *)arg4)->unk4, ((struct17 *)arg4)->unk8, arg1, arg1, 0, 0, 0, arg5, arg6);
+    }
+}
+
 
 struct Struct151DBE80 {
     s8 unk0;
