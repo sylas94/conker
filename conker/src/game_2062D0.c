@@ -1204,7 +1204,99 @@ void func_151DBE80(u8 arg0, f32 arg1, f32 arg2, s16 arg3, struct17 *arg4, s32 ar
     func_1513D668((s32)&tmp, 0, 0xB, 0x11, 0, (func_150ADA20() & 1) + (func_150ADA20() & 1), (s16)(func_150ADA20() & 0xFF), arg1, arg1, 0, arg5, 0, 0, arg8, arg9);
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_2062D0/func_151DC034.s")
+/* Particle descriptor passed to func_15130280 (0x70 bytes). */
+typedef struct {
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s32 unk4;
+    /* 0x08 */ s16 unk8;
+    /* 0x0A */ s16 unkA;
+    /* 0x0C */ s32 unkC;
+    /* 0x10 */ s32 unk10;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ u8 unk16;
+    /* 0x17 */ u8 unk17;
+    /* 0x18 */ u8 unk18;
+    /* 0x19 */ u8 unk19;
+    /* 0x1A */ u8 unk1A;
+    /* 0x1B */ u8 unk1B;
+    /* 0x1C */ u8 unk1C;
+    /* 0x1D */ u8 unk1D;
+    /* 0x1E */ s16 unk1E;
+    /* 0x20 */ s16 unk20;
+    /* 0x22 */ s16 unk22;
+    /* 0x24 */ f32 unk24;
+    /* 0x28 */ f32 unk28;
+    /* 0x2C */ f32 unk2C;
+    /* 0x30 */ struct17 pos;
+    /* 0x3C */ struct17 unk3C;
+    /* 0x48 */ struct17 vel;
+    /* 0x54 */ f32 unk54;
+    /* 0x58 */ u32 unk58;
+    /* 0x5C */ s32 unk5C;
+    /* 0x60 */ u8 unk60;
+    /* 0x61 */ u8 unk61;
+    /* 0x62 */ s8 unk62;
+    /* 0x63 */ s8 unk63;
+    /* 0x64 */ s8 unk64;
+    /* 0x65 */ u8 unk65;
+    /* 0x66 */ u8 unk66;
+    /* 0x67 */ u8 pad67;
+    /* 0x68 */ s16 unk68;
+    /* 0x6A */ u8 pad6A[2];
+    /* 0x6C */ f32 unk6C;
+} ParticleDesc151DC034; /* 0x70 */
+
+extern void *func_15130280(void *, u8, s32, s32, u8, s32);
+extern u8 D_800AB320[];
+
+void func_151DC034(struct17 *arg0, f32 arg1, u8 arg2, s16 arg3, u8 arg4, u8 arg5, s32 arg6) {
+    ParticleDesc151DC034 spawn;
+    s32 flags3;
+    s32 flags2;
+    s32 flags;
+
+    spawn.unk1D = D_800AB320[arg4];
+    spawn.unk8 = 0x4403;
+    spawn.unk0 = 0x200005;
+    spawn.unk4 = 0x9F0600;
+    spawn.unkA = arg3;
+    spawn.unkC = 0;
+    spawn.unk10 = 0;
+    spawn.unk14 = 0xFF;
+    spawn.unk15 = 0xFF;
+    spawn.unk16 = 0xFF;
+    spawn.unk17 = 0xFF;
+    spawn.unk18 = 0xFF;
+    spawn.unk19 = 0xFF;
+    spawn.unk1A = 0xFF;
+    spawn.unk1B = arg2;
+    spawn.unk1C = 0xFF;
+    spawn.unk28 = spawn.unk2C = arg1;
+    spawn.pos = *arg0;
+    spawn.unk3C = *(struct17 *)&D_800A5480;
+    spawn.vel = *(struct17 *)&D_800A5480;
+    spawn.unk54 = 0.0f;
+    spawn.unk1E = 4;
+    spawn.unk20 = 0x3F;
+    spawn.unk22 = 1;
+    spawn.unk24 = 1.0f;
+    flags = (func_150ADA20() & 1) ? 0x80 : 0;
+    flags2 = (func_150ADA20() & 1) ? 0x40 : 0;
+    flags3 = D_800AB330[arg4] ? 0x800000 : 0;
+    spawn.unk58 = flags3 | 1 | flags2 | flags | 0x200 | 0x4000 | 0x8000 | 0x10000;
+    spawn.unk60 = 6;
+    spawn.unk61 = 8;
+    spawn.unk62 = -1;
+    spawn.unk63 = -1;
+    spawn.unk64 = -1;
+    spawn.unk65 = 0;
+    spawn.unk5C = 0;
+    spawn.unk66 = 0xFF;
+    spawn.unk68 = 1000;
+    spawn.unk6C = 1000.0f;
+    func_15130280(&spawn, 1, 0, 0, arg5, arg6);
+}
 typedef struct {
     /* 0x00 */ s16 unk0;
     /* 0x02 */ s16 unk2;
