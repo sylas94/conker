@@ -1464,6 +1464,7 @@ segments:
       - [0x24CCD0, rodata]
       - [0x24D1D0, rodata]
       - [0x24D640, rodata]
+      - [0x24D780, .rodata, game_1CBE20]
       - [0x24D7A0, rodata]
       - [0x24D7D0, rodata]
       - [0x24D7E0, rodata]
