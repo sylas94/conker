@@ -32,11 +32,6 @@ struct Src1519EA78 {
     /* 0x00 */ struct Vec1519EA78 unk00;
 };
 
-extern f32 D_800A8CC0;
-extern f32 D_800A8CC4;
-extern f32 D_800A8CC8;
-extern f32 D_800A8CCC;
-extern f32 D_800A8CD0;
 
 void func_15152190(struct Conker1519EA78 *arg0, s32 *arg1, f32 *arg2, s32 arg3, f32 arg4, s32 arg5, s32 arg6, s32 arg7);
 
@@ -110,19 +105,17 @@ void func_1519EA78(struct Src1519EA78 *arg0, u16 arg1, f32 arg2, u8 arg3, s32 ar
     sp34.unk1A = 0x18;
     sp34.unk1C = 10.0f;
     sp34.unk20 = 8.0f;
-    sp34.unk24 = D_800A8CC0;
-    sp34.unk28 = D_800A8CC4;
+    sp34.unk24 = -1.32400012f;
+    sp34.unk28 = 0.744f;
     sp34.unk2C = 0x32;
     sp34.unk2E = 0x14;
-    sp34.unk30 = D_800A8CC8;
-    sp34.unk34 = D_800A8CCC;
-    sp34.unk38 = D_800A8CD0;
+    sp34.unk30 = 0.6f;
+    sp34.unk34 = 0.8f;
+    sp34.unk38 = 26.18200111f;
     sp30 = arg1;
     sp2C = arg2;
     func_15152190(&sp34, &sp30, &sp2C, 1, 0.0f, 0, arg3, arg4);
 }
-
-#pragma GLOBAL_ASM("asm/nonmatchings/game_1CBE20/func_1519EB8C.s")
 
 struct Src1519ED24 {
     /* 0x00 */ f32 unk00;
@@ -134,6 +127,98 @@ struct Src1519ED24 {
     /* 0x18 */ f32 unk18;
     /* 0x1C */ f32 unk1C;
 };
+
+typedef struct {
+    /* 0x00 */ f32 unk00;
+    /* 0x04 */ f32 unk04;
+    /* 0x08 */ f32 unk08;
+    /* 0x0C */ f32 unk0C;
+    /* 0x10 */ f32 unk10;
+    /* 0x14 */ f32 unk14;
+    /* 0x18 */ f32 unk18;
+    /* 0x1C */ f32 unk1C;
+    /* 0x20 */ f32 unk20;
+    /* 0x24 */ f32 unk24;
+    /* 0x28 */ struct17 unk28;
+    /* 0x34 */ struct17 unk34;
+    /* 0x40 */ struct17 unk40;
+    /* 0x4C */ f32 unk4C;
+    /* 0x50 */ s32 unk50;
+    /* 0x54 */ s16 unk54;
+    /* 0x56 */ s16 unk56;
+    /* 0x58 */ u8 unk58;
+    /* 0x59 */ u8 pad59[3];
+    /* 0x5C */ s32 unk5C;
+    /* 0x60 */ u8 unk60;
+    /* 0x61 */ u8 unk61;
+    /* 0x62 */ u8 unk62;
+    /* 0x63 */ u8 unk63;
+    /* 0x64 */ u8 unk64;
+    /* 0x65 */ u8 unk65;
+    /* 0x66 */ u8 unk66;
+    /* 0x67 */ u8 unk67;
+    /* 0x68 */ u8 unk68;
+    /* 0x69 */ s8 unk69;
+    /* 0x6A */ u8 unk6A;
+    /* 0x6B */ u8 pad6B;
+    /* 0x6C */ s32 unk6C;
+    /* 0x70 */ u8 unk70;
+    /* 0x71 */ u8 pad71;
+    /* 0x72 */ s16 unk72;
+    /* 0x74 */ s16 unk74;
+    /* 0x76 */ u8 pad76[2];
+    /* 0x78 */ s32 unk78;
+} Spawn1519EB8C;
+
+extern s32 func_1513264C(void *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, u8 arg5, s32 arg6);
+
+void func_1519EB8C(struct Src1519ED24 *arg0, u16 arg1, s16 arg2, u8 arg3, s32 arg4) {
+    Spawn1519EB8C spawn;
+    s32 sp38;
+    s32 ret;
+
+    sp38 = (s32)arg0;
+    spawn.unk00 = 1.0f;
+    spawn.unk04 = 1.0f;
+    spawn.unk08 = arg0->unk18 * 0.1f;
+    spawn.unk0C = arg0->unk1C * 0.1f;
+    spawn.unk10 = arg0->unk0C;
+    spawn.unk14 = arg0->unk10;
+    spawn.unk18 = arg0->unk14;
+    spawn.unk1C = 1.0f;
+    spawn.unk20 = 1.0f;
+    spawn.unk24 = 1.0f;
+    spawn.unk28.unk0 = arg0->unk00;
+    spawn.unk28.unk4 = arg0->unk04;
+    spawn.unk28.unk8 = arg0->unk08;
+    spawn.unk34 = *(struct17 *)&D_800A5480;
+    spawn.unk40 = *(struct17 *)&D_800A5480;
+    spawn.unk4C = 0.0f;
+    spawn.unk50 = 0x980;
+    spawn.unk54 = arg2;
+    spawn.unk56 = arg1;
+    spawn.unk58 = 0;
+    spawn.unk5C = 0;
+    spawn.unk60 = 0xFF;
+    spawn.unk61 = 0x15;
+    spawn.unk62 = 0;
+    spawn.unk63 = 0;
+    spawn.unk64 = 0;
+    spawn.unk65 = 0;
+    spawn.unk66 = 0;
+    spawn.unk67 = 0;
+    spawn.unk68 = 2;
+    spawn.unk6A = 0;
+    spawn.unk6C = 0;
+    spawn.unk70 = 0;
+    spawn.unk72 = 1;
+    spawn.unk74 = 0xFF;
+    spawn.unk78 = 0;
+    ret = func_1513264C(&spawn, 3, 0xFF, 0, 4, arg3, arg4);
+    if (ret != 0) {
+        memcpy((void *)(ret + 0x170), &sp38, 4);
+    }
+}
 
 struct Obj1519ED24 {
     char pad0[0x18];
@@ -150,14 +235,13 @@ struct Obj1519ED24 {
     /* 0x170 */ struct Src1519ED24 *unk170;
 };
 
-extern f32 D_800A8CD8;
 
 /* scale is read once into a local; src lives in a nested block (a -g3 scheduling barrier),
  * which is what lets the scale load win the cycle-0 tie against the arg0->unk170 load. */
 s32 func_1519ED24(struct Obj1519ED24 *arg0) {
     f32 scale;
 
-    scale = D_800A8CD8;
+    scale = 0.1f;
     {
         struct Src1519ED24 *src = arg0->unk170;
 

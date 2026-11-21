@@ -333,7 +333,52 @@ s32 func_150DDFAC(EffectSpawnSource *arg0, s32 arg1, s32 arg2, s32 arg3, f32 arg
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm/nonmatchings/game_108E90/func_150DE12C.s")
+s32 func_150DE12C(EffectSpawnSource *arg0, s32 arg1, s32 arg2, s32 arg3, f32 arg4, s32 arg5) {
+    EffectSpawnParams tmp;
+    f32 scale;
+    s32 rand2;
+    s32 rand1;
+    s32 rand0;
+
+    tmp.field_0x2C = arg0->field_0x98;
+    tmp.field_0x28 = arg0->field_0x94;
+    scale = func_150ADA68() * 10.0f + 10.0f;
+    tmp.field_0x2C->field_0x20 = 4;
+
+    switch (func_150ADA20() & 1) {
+    case 0:
+        tmp.field_0x06 = 0x1B;
+        break;
+    case 1:
+        tmp.field_0x06 = 0x1C;
+        break;
+    }
+
+    tmp.field_0x08 = 0;
+    tmp.field_0x0C = 0;
+    tmp.field_0x00 = 0x11;
+    tmp.field_0x04 = 0x64;
+    tmp.field_0x10 = 0xFF;
+    tmp.field_0x11 = 0xFF;
+    tmp.field_0x12 = 0;
+    tmp.field_0x13 = 0;
+    tmp.field_0x14 = 0;
+    tmp.field_0x15 = 0xAA;
+    tmp.field_0x18 = 0x30002;
+
+    rand0 = func_150ADA20();
+    rand1 = func_150ADA20();
+    rand2 = func_150ADA20();
+
+    func_1513C73C((s32)&tmp, 5, 0, arg5,
+                  tmp.field_0x28[arg0->field_0x2D].field_0x00,
+                  arg4,
+                  tmp.field_0x28[arg0->field_0x2D].field_0x08,
+                  scale, scale,
+                  rand0 & 0xFF, (rand2 & 1) + (rand1 & 1), 0,
+                  arg0->field_0x0C, arg0->field_0x01);
+    return 1;
+}
 
 s32 func_150DE2A4(void *arg0) {
     s16 temp = *(s16 *)((u8 *)arg0 + 0x1C);

@@ -208,6 +208,7 @@ segments:
       - [0x290D0, data] # could be larger/smaller
 
       - [0x2BF20, rodata]
+      - [0x2BF80, .rodata, init_2070]
       - [0x2C080, .rodata, init_2E50]
       - [0x2C0A0, rodata] # MIGRATION-READY -> [0x2C0A0, .rodata, init_49E0] (jtbl_8002C0A0, sole symbol/referrer func_100049E0). Apply ONLY together with the C decompilation: see note at top of file. PARKED 2026-08-15: C is structurally exact but loses a loop-invariant ranking tie (see tools/nearmiss/func_100049E0.c).
       - [0x2C0C0, rodata]
@@ -832,14 +833,16 @@ segments:
       - [0x22D070, rodata]
       - [0x22D1A0, rodata]
       - [0x22D1B0, rodata]
-      - [0x22D1C0, rodata]
+      - [0x22D1C0, .data, game_DFBF0]
       - [0x22D1D0, rodata]
       - [0x22D1E0, rodata]
       - [0x22D1F0, rodata]
       - [0x22D210, rodata]
       - [0x22D220, rodata]
       - [0x22D250, rodata]
-      - [0x22D2A0, rodata]
+      - [0x22D290, .data, game_F3270] # func_150C6460 offset initialiser (non-const -> .data)
+      - [0x22D2A0, .data, game_F3BA0] # func_150C6D90 offset initialiser (non-const -> .data)
+      - [0x22D2B0, rodata]
       - [0x22D2C0, rodata]
       - [0x22D2D0, .data, game_F5800] # func_150C8600 tables[] initialiser (non-const -> .data)
       - [0x22D2E0, rodata]
@@ -1285,8 +1288,8 @@ segments:
       - [0x244E00, rodata]
       - [0x244EB0, .rodata, game_F21D0]
       - [0x244EC0, rodata]
-      - [0x244ED0, rodata]
-      - [0x244F10, rodata]
+      - [0x244ED0, .rodata, game_F3270]
+      - [0x244F10, .rodata, game_F3BA0]
       - [0x244F50, rodata]
       - [0x244F70, rodata]
       - [0x244F80, rodata]
@@ -1463,6 +1466,7 @@ segments:
       - [0x24CCD0, rodata]
       - [0x24D1D0, rodata]
       - [0x24D640, rodata]
+      - [0x24D780, .rodata, game_1CBE20]
       - [0x24D7A0, rodata]
       - [0x24D7D0, rodata]
       - [0x24D7E0, rodata]
@@ -1475,6 +1479,8 @@ segments:
       - [0x24D960, rodata]
       - [0x24DA10, rodata]
       - [0x24DA30, rodata]
+      - [0x24DAA0, .rodata, game_1D6E80]
+      - [0x24DAB0, rodata]
       - [0x24DAE0, rodata]
       - [0x24DD30, rodata]
       - [0x24DD60, rodata]
