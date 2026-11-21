@@ -1,17 +1,17 @@
 # Conker's Bad Fur Day Decompilation
 
-![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-38.85%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4382%2F5909-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
+![Conker's Bad Fur Day (US) Progress](https://img.shields.io/badge/Conker's%20Bad%20Fur%20Day%20(US)-39.36%25-critical) ![all Functions](https://img.shields.io/badge/funcs-4398%2F5909-blue) ![Build Status](https://github.com/sylas94/conker/workflows/build/badge.svg)
 
 | Progress                                                                                                                                           | Functions                                                |
 |----------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| ![init Progress](https://img.shields.io/badge/init-60.65%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-350%2F536-blue)      |
-| ![game Progress](https://img.shields.io/badge/game-36.94%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-3995%2F5331-blue) |
+| ![init Progress](https://img.shields.io/badge/init-62.65%25-yellow)      | ![init Functions](https://img.shields.io/badge/funcs-352%2F536-blue)      |
+| ![game Progress](https://img.shields.io/badge/game-37.34%25-critical)     | ![game Functions](https://img.shields.io/badge/funcs-4009%2F5331-blue) |
 | ![debugger Progress](https://img.shields.io/badge/debugger-58.28%25-yellow) | ![debugger Functions](https://img.shields.io/badge/funcs-37%2F42-blue) |
 
 The **Progress** badges are decompiled-byte percentages and the **Functions** badges are
 function counts. A function counts as decompiled when a C translation unit implements it
-and no `#pragma GLOBAL_ASM` stub for it remains. Of the 5910 functions in the three code
-sections, **4284 are decompiled, 1445 are still GLOBAL_ASM stubs, and 181 come from
+and no `#pragma GLOBAL_ASM` stub for it remains. Of the 5911 functions in the three code
+sections, **4400 are decompiled, 1330 are still GLOBAL_ASM stubs, and 181 come from
 handwritten `.s` objects** (libultra leaf routines and the like, which are not decompilation
 targets). The ROM built from this tree is byte-identical to the retail US cartridge: inner
 code bin sha1 `842e3d348e3c8ae0039e2ab367ad492f9b5266d8`, full ROM sha1
@@ -20,8 +20,8 @@ code bin sha1 `842e3d348e3c8ae0039e2ab367ad492f9b5266d8`, full ROM sha1
 Two independent tools produce these figures and are expected to agree:
 `tools/progress.py` parses the linker map (and writes the `progress.*.csv` files via
 `make -C conker progress`), while `tools/progress_check.py` reads the linked ELF's symbol
-table and the input objects instead. They currently agree to within a function --
-4284/5910 against 4283/5909, the difference being file-local symbols that a linker map does
+table and the input objects instead. They currently agree to within two functions --
+4400/5911 against 4398/5909, the difference being file-local symbols that a linker map does
 not list.
 
 > **The `debugger` byte percentage is not a real measurement.** A linker map gives a symbol's
